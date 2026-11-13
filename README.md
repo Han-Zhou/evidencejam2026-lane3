@@ -1,3 +1,21 @@
+# Questions
+
+- where does the use of an LLM come from? Transitions between sections in the websites?
+- what type (graph, tabular) etc.
+
+
+# Notes
+
+- rank sources by relevance
+- look at examples from slides
+
+
+
+
+
+
+original readme under here -----
+
 # Lane 3 — Decision Support
 
 ## The challenge
