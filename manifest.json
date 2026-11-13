@@ -1,0 +1,66 @@
+{
+  "title": "Evidence Jam 2026 — Lane 3",
+  "built_by": "make_answers.py",
+  "rule": "lane3-barebones-1",
+  "source_graph": "graph/causal_graph.yaml",
+  "schema": "graph/causalmosaic.yaml (CAMO 0.10.0)",
+  "groups": "groups/lane3_groups.yaml",
+  "graph": {
+    "claims": 5554,
+    "nodes": 6814,
+    "source_documents": 293
+  },
+  "answers": {
+    "q1-tree-planting": {
+      "file": "answers/q1_tree_planting.json",
+      "findings": 13,
+      "gaps": 1,
+      "claims": 239,
+      "papers": 29,
+      "certainty": {
+        "high": 6,
+        "low": 4,
+        "moderate": 3
+      }
+    },
+    "q2-created-marshes": {
+      "file": "answers/q2_created_marshes.json",
+      "findings": 11,
+      "gaps": 8,
+      "claims": 27,
+      "papers": 5,
+      "certainty": {
+        "high": 1,
+        "low": 1,
+        "moderate": 1,
+        "very_low": 5
+      }
+    },
+    "q3-grassland-gaps": {
+      "file": "answers/q3_grassland_gaps.json",
+      "findings": 123,
+      "gaps": 261,
+      "claims": 663,
+      "papers": 36,
+      "certainty": {
+        "high": 14,
+        "low": 28,
+        "moderate": 65,
+        "very_low": 16
+      }
+    }
+  },
+  "graph_answers": {
+    "q1-tree-planting-graph": {
+      "file": "answers/q1_tree_planting_graph.json",
+      "nodes": 12,
+      "edges": {
+        "effect": 28,
+        "moderation": 1
+      },
+      "gaps": 1,
+      "claims": 330,
+      "papers": 33
+    }
+  }
+}

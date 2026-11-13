@@ -1,0 +1,1048 @@
+{
+ "id": "q2-created-marshes",
+ "question": "How long do created marshes take to reach biodiversity and function comparable to natural reference wetlands, and which attributes lag?",
+ "rule": "lane3-barebones-1",
+ "how_built": "Claims from marsh, prairie-pothole, salt-marsh and constructed-wetland papers (ecosystem context plus a wetland word in the title). A claim is a comparison when its comparator is an undisturbed reference or its cause names the natural or reference site; its direction is turned into 'above_reference', 'comparable' or 'below_reference' for the created marsh. A claim whose cause is site age or time since restoration is a trajectory. Outcomes are pooled by outcome group.",
+ "short_answer": {
+  "time_to_reference": null,
+  "time_to_reference_note": "No study in this corpus reports how long a created marsh takes to match a reference. The few time points come from chronosequences of restored prairie wetlands and are listed with each finding.",
+  "lagging_attributes": [
+   "Growth, size & biomass",
+   "Plant & vegetation cover",
+   "Species richness & diversity",
+   "Survival & mortality"
+  ]
+ },
+ "findings": [
+  {
+   "id": "q2:created_marsh:abundance_density",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "abundance_density",
+    "label": "Abundance & density (plants & other)"
+   },
+   "studies": 1,
+   "claims": 1,
+   "direction": "above_reference",
+   "study_directions": {
+    "above_reference": 1
+   },
+   "claim_directions": {
+    "above_reference": 1
+   },
+   "certainty": "very_low",
+   "certainty_rationale": "start low (best design in the body of evidence); -1 single study -> very low",
+   "edge_ids": [
+    "camo:edge_5e8ce7360bdf"
+   ],
+   "document_ids": [
+    "10.1016/j.soilbio.2010.05.010"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": false,
+   "attribute_kind": "biodiversity",
+   "time_points": [
+    "4-6 years"
+   ]
+  },
+  {
+   "id": "q2:created_marsh:animal_abundance",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "animal_abundance",
+    "label": "Animal abundance & occurrence"
+   },
+   "studies": 1,
+   "claims": 5,
+   "direction": "mixed",
+   "study_directions": {
+    "mixed": 1
+   },
+   "claim_directions": {
+    "above_reference": 3,
+    "comparable": 2
+   },
+   "certainty": "very_low",
+   "certainty_rationale": "start low (best design in the body of evidence); -1 single study; -1 studies disagree -> very low",
+   "edge_ids": [
+    "camo:edge_282ad2248b10",
+    "camo:edge_4ba4dcd78f3c",
+    "camo:edge_8ecd7ff1b500",
+    "camo:edge_91ee59c209be",
+    "camo:edge_fd5b13000066"
+   ],
+   "document_ids": [
+    "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": false,
+   "attribute_kind": "biodiversity",
+   "time_points": []
+  },
+  {
+   "id": "q2:created_marsh:community_composition",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "community_composition",
+    "label": "Community composition & similarity"
+   },
+   "studies": 1,
+   "claims": 1,
+   "direction": "unclear",
+   "study_directions": {
+    "unclear": 1
+   },
+   "claim_directions": {
+    "unclear": 1
+   },
+   "certainty": "very_low",
+   "certainty_rationale": "start low (best design in the body of evidence); -1 single study -> very low",
+   "edge_ids": [
+    "camo:edge_fb9e7a674929"
+   ],
+   "document_ids": [
+    "10.1111/rec.12890"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": false,
+   "attribute_kind": "biodiversity",
+   "time_points": [
+    "11-15 years",
+    "20-30 years",
+    "3-5 years",
+    "6-10 years"
+   ]
+  },
+  {
+   "id": "q2:created_marsh:growth_size",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "growth_size",
+    "label": "Growth, size & biomass"
+   },
+   "studies": 3,
+   "claims": 6,
+   "direction": "below_reference",
+   "study_directions": {
+    "below_reference": 3
+   },
+   "claim_directions": {
+    "below_reference": 5,
+    "comparable": 1
+   },
+   "certainty": "high",
+   "certainty_rationale": "start moderate (best design in the body of evidence); +1 3 studies agree -> high",
+   "edge_ids": [
+    "camo:edge_0d7b42c4d6ca",
+    "camo:edge_3689dfd18b18",
+    "camo:edge_c476d65288b8",
+    "camo:edge_ee0d9336749c",
+    "camo:edge_f9c7802c23a5",
+    "camo:edge_fd1d7b78bdcf"
+   ],
+   "document_ids": [
+    "10.1016/j.ecoleng.2013.01.024",
+    "10.1016/j.envpol.2005.09.013",
+    "10.1016/j.soilbio.2010.05.010"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": true,
+   "attribute_kind": "biodiversity",
+   "time_points": []
+  },
+  {
+   "id": "q2:created_marsh:plant_cover",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "plant_cover",
+    "label": "Plant & vegetation cover"
+   },
+   "studies": 1,
+   "claims": 1,
+   "direction": "below_reference",
+   "study_directions": {
+    "below_reference": 1
+   },
+   "claim_directions": {
+    "below_reference": 1
+   },
+   "certainty": "very_low",
+   "certainty_rationale": "start low (best design in the body of evidence); -1 single study -> very low",
+   "edge_ids": [
+    "camo:edge_d058f0ae0498"
+   ],
+   "document_ids": [
+    "10.1016/j.ecoleng.2013.01.024"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": true,
+   "attribute_kind": "biodiversity",
+   "time_points": []
+  },
+  {
+   "id": "q2:created_marsh:reproduction",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "reproduction",
+    "label": "Reproduction & breeding success"
+   },
+   "studies": 1,
+   "claims": 2,
+   "direction": "above_reference",
+   "study_directions": {
+    "above_reference": 1
+   },
+   "claim_directions": {
+    "above_reference": 2
+   },
+   "certainty": "very_low",
+   "certainty_rationale": "start low (best design in the body of evidence); -1 single study -> very low",
+   "edge_ids": [
+    "camo:edge_92eeefec00e0",
+    "camo:edge_e180b5bd113c"
+   ],
+   "document_ids": [
+    "10.1016/j.envpol.2005.09.013"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": false,
+   "attribute_kind": "biodiversity",
+   "time_points": []
+  },
+  {
+   "id": "q2:created_marsh:richness_diversity",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "richness_diversity",
+    "label": "Species richness & diversity"
+   },
+   "studies": 3,
+   "claims": 4,
+   "direction": "below_reference",
+   "study_directions": {
+    "above_reference": 1,
+    "below_reference": 2
+   },
+   "claim_directions": {
+    "above_reference": 1,
+    "below_reference": 3
+   },
+   "certainty": "moderate",
+   "certainty_rationale": "start low (best design in the body of evidence); +1 3 studies agree -> moderate",
+   "edge_ids": [
+    "camo:edge_3ebf5281f698",
+    "camo:edge_4a38f9ec93b0",
+    "camo:edge_922bc2593ad9",
+    "camo:edge_9e28e8c79050"
+   ],
+   "document_ids": [
+    "10.1016/j.soilbio.2010.05.010",
+    "10.1111/rec.12890",
+    "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": true,
+   "attribute_kind": "biodiversity",
+   "time_points": [
+    "11-15 years",
+    "20-30 years",
+    "6-10 years"
+   ]
+  },
+  {
+   "id": "q2:created_marsh:survival_mortality",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "survival_mortality",
+    "label": "Survival & mortality"
+   },
+   "studies": 1,
+   "claims": 1,
+   "direction": "below_reference",
+   "study_directions": {
+    "below_reference": 1
+   },
+   "claim_directions": {
+    "below_reference": 1
+   },
+   "certainty": "low",
+   "certainty_rationale": "start moderate (best design in the body of evidence); -1 single study -> low",
+   "edge_ids": [
+    "camo:edge_fa465baa4074"
+   ],
+   "document_ids": [
+    "10.1016/j.envpol.2005.09.013"
+   ],
+   "direction_meaning": "created marsh relative to the natural reference",
+   "lags": true,
+   "attribute_kind": "biodiversity",
+   "time_points": []
+  }
+ ],
+ "with_time": [
+  {
+   "id": "q2:time_since_creation:community_composition",
+   "subject": {
+    "id": "time_since_creation",
+    "label": "Time since creation or restoration"
+   },
+   "outcome": {
+    "id": "community_composition",
+    "label": "Community composition & similarity"
+   },
+   "studies": 3,
+   "claims": 4,
+   "direction": "no_effect",
+   "study_directions": {
+    "no_effect": 2,
+    "unclear": 1
+   },
+   "claim_directions": {
+    "no_effect": 3,
+    "unclear": 1
+   },
+   "certainty": "moderate",
+   "certainty_rationale": "start low (best design in the body of evidence); +1 3 studies agree -> moderate",
+   "edge_ids": [
+    "camo:edge_1107dc4d1096",
+    "camo:edge_1941cf4291bf",
+    "camo:edge_6c76393d8b9f",
+    "camo:edge_e9f249d67651"
+   ],
+   "document_ids": [
+    "10.1016/j.ecoleng.2013.01.024",
+    "10.1016/j.soilbio.2010.05.010",
+    "10.1111/rec.12890"
+   ],
+   "direction_meaning": "change in the attribute as the created marsh ages",
+   "time_points": [
+    "11 years",
+    "3 years",
+    "4-6 years",
+    "7-11 years",
+    "9 years"
+   ]
+  },
+  {
+   "id": "q2:time_since_creation:invasive_abundance",
+   "subject": {
+    "id": "time_since_creation",
+    "label": "Time since creation or restoration"
+   },
+   "outcome": {
+    "id": "invasive_abundance",
+    "label": "Invasive / non-native species abundance"
+   },
+   "studies": 1,
+   "claims": 1,
+   "direction": "no_effect",
+   "study_directions": {
+    "no_effect": 1
+   },
+   "claim_directions": {
+    "no_effect": 1
+   },
+   "certainty": "very_low",
+   "certainty_rationale": "start low (best design in the body of evidence); -1 single study -> very low",
+   "edge_ids": [
+    "camo:edge_07c3ff579547"
+   ],
+   "document_ids": [
+    "10.1111/rec.12890"
+   ],
+   "direction_meaning": "change in the attribute as the created marsh ages",
+   "time_points": []
+  },
+  {
+   "id": "q2:time_since_creation:richness_diversity",
+   "subject": {
+    "id": "time_since_creation",
+    "label": "Time since creation or restoration"
+   },
+   "outcome": {
+    "id": "richness_diversity",
+    "label": "Species richness & diversity"
+   },
+   "studies": 1,
+   "claims": 1,
+   "direction": "no_effect",
+   "study_directions": {
+    "no_effect": 1
+   },
+   "claim_directions": {
+    "no_effect": 1
+   },
+   "certainty": "very_low",
+   "certainty_rationale": "start low (best design in the body of evidence); -1 single study -> very low",
+   "edge_ids": [
+    "camo:edge_93ee158ecda2"
+   ],
+   "document_ids": [
+    "10.1016/j.soilbio.2010.05.010"
+   ],
+   "direction_meaning": "change in the attribute as the created marsh ages",
+   "time_points": [
+    "7-11 years"
+   ]
+  }
+ ],
+ "gaps": [
+  {
+   "id": "q2:created_marsh:behaviour_habitat_use",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "behaviour_habitat_use",
+    "label": "Behaviour, habitat use & interactions"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on behaviour, habitat use & interactions"
+  },
+  {
+   "id": "q2:created_marsh:contaminants",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "contaminants",
+    "label": "Contaminants & toxicity"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on contaminants & toxicity"
+  },
+  {
+   "id": "q2:created_marsh:ecosystem_function",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "ecosystem_function",
+    "label": "Ecosystem fluxes & processes"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on ecosystem fluxes & processes"
+  },
+  {
+   "id": "q2:created_marsh:establishment_regeneration",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "establishment_regeneration",
+    "label": "Establishment, germination & recruitment"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on establishment, germination & recruitment"
+  },
+  {
+   "id": "q2:created_marsh:hydrology_geomorphology",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "hydrology_geomorphology",
+    "label": "Hydrology, erosion & geomorphology"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on hydrology, erosion & geomorphology"
+  },
+  {
+   "id": "q2:created_marsh:invasive_abundance",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "invasive_abundance",
+    "label": "Invasive / non-native species abundance"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on invasive / non-native species abundance"
+  },
+  {
+   "id": "q2:created_marsh:soil_physical",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "soil_physical",
+    "label": "Soil physical properties & microclimate"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on soil physical properties & microclimate"
+  },
+  {
+   "id": "q2:created_marsh:soil_water_chemistry",
+   "subject": {
+    "id": "created_marsh",
+    "label": "Created or restored marsh vs natural reference"
+   },
+   "outcome": {
+    "id": "soil_water_chemistry",
+    "label": "Soil, water & tissue chemistry"
+   },
+   "status": "no_evidence",
+   "studies": 0,
+   "searched_for": "claims in marsh or constructed-wetland settings comparing a created or restored site with a natural reference on soil, water & tissue chemistry"
+  }
+ ],
+ "limitations": [
+  "Thin evidence: 5 papers in all, most of them observational.",
+  "'Restored' and 'created' marshes are pooled; the corpus rarely says which, and drained-then-restored prairie potholes dominate.",
+  "A reference comparison at one age says nothing about the trajectory; do not read a lag at 4-6 years as a lag at 20.",
+  "Side reading is by keyword ('natural', 'reference' vs 'restored', 'reclaimed'): open the claims."
+ ],
+ "evidence": {
+  "camo:edge_07c3ff579547": {
+   "subject": "Wetland age",
+   "predicate": "causes",
+   "negated": true,
+   "object": "Cover of non-native species",
+   "direction": "no_effect",
+   "causal_language": "no_relationship",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "ANOVA results suggest no significant difference in percent cover of non-native species among age groups and natural wetlands (*F*[6,22] =0.257, *p*=0.951, partial <sup>2</sup> =0.066, observed power=0.103) (Table 1; Fig. 2C",
+   "document_id": "10.1111/rec.12890",
+   "title": "Incomplete recovery of plant diversity in restored prairie wetlands on agricultural landscapes",
+   "year": 2019,
+   "doi": "10.1111/rec.12890"
+  },
+  "camo:edge_0d7b42c4d6ca": {
+   "subject": "Reference site status",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Increased PLFA biomass",
+   "direction": "below_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "Specifically, the reference sites had higher values for PLFA biomass (calculated based on the sum of 96 PLFAs), evenness and diversity (Fig. 2).",
+   "document_id": "10.1016/j.soilbio.2010.05.010",
+   "title": "Microbial community structure in restored riparian soils of the Canadian prairie pothole region",
+   "year": 2010,
+   "doi": "10.1016/j.soilbio.2010.05.010"
+  },
+  "camo:edge_1107dc4d1096": {
+   "subject": "Age group within 'wet' sites",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Microbial community structure",
+   "direction": "no_effect",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "not_applicable",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "A significant difference was also found within the soil microbial community of the \"wet\" sites (P-PE ranging from -205 mm to -252 mm), as shown on Fig. 4, between Group 1, the younger restored sites (1-3 and 4-6 yrs) and Group 2, the older restored (7-11 yrs) and reference sites.",
+   "document_id": "10.1016/j.soilbio.2010.05.010",
+   "title": "Microbial community structure in restored riparian soils of the Canadian prairie pothole region",
+   "year": 2010,
+   "doi": "10.1016/j.soilbio.2010.05.010"
+  },
+  "camo:edge_1941cf4291bf": {
+   "subject": "site age",
+   "predicate": "causes",
+   "negated": true,
+   "object": "vegetation community type",
+   "direction": "no_effect",
+   "causal_language": "no_relationship",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "permanent_marshes",
+   "quote": "The age of reclaimed sites with the recsedge community was not significantly different from reclaimed sites with the distsal community (17 ± 2.9 years and 15 ± 4.3 years, respectively; One-way ANOVA; F(1, 16) = 0.063, p = 0.81); that is, age was not a determining factor in the vegetation communities we observed at oil sands sites.",
+   "document_id": "10.1016/j.ecoleng.2013.01.024",
+   "title": "A Carex species-dominated marsh community represents the best short-term target for reclaiming wet meadow habitat following oil sands mining in Alberta, Canada",
+   "year": 2013,
+   "doi": "10.1016/j.ecoleng.2013.01.024"
+  },
+  "camo:edge_282ad2248b10": {
+   "subject": "restoration of wetlands by dredging of sediments",
+   "predicate": "causes",
+   "negated": true,
+   "object": "Abundance index of American toads",
+   "direction": "comparable",
+   "causal_language": "no_relationship",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "American toad abundance indices were not significantly different between years (df 5 1,19, F 5 2.05, p 5 0.17) or between restored and reference wetlands (df 5 1,44, F 5 1.27, p 5 0.27).",
+   "document_id": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2",
+   "title": "Anuran call surveys on small wetlands in Prince Edward Island, Canada restored by dredging of sediments",
+   "year": 2002,
+   "doi": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+  },
+  "camo:edge_3689dfd18b18": {
+   "subject": "presence of natural saline sub-community",
+   "predicate": "causes",
+   "negated": false,
+   "object": "August peak aboveground biomass",
+   "direction": "below_reference",
+   "causal_language": "direct_causal",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "permanent_marshes",
+   "quote": "Aboveground biomass in the natsal1 sub-community was significantly greater than the disturbed1 sub-community ([Fig.](#page-5-0) 3C; One-way ANOVA with Tukey's multiple comparisons; F(2, 8) = 11.86, p < 0.01).",
+   "document_id": "10.1016/j.ecoleng.2013.01.024",
+   "title": "A Carex species-dominated marsh community represents the best short-term target for reclaiming wet meadow habitat following oil sands mining in Alberta, Canada",
+   "year": 2013,
+   "doi": "10.1016/j.ecoleng.2013.01.024"
+  },
+  "camo:edge_3ebf5281f698": {
+   "subject": "Natural reserve wetland",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Increased estimated species richness",
+   "direction": "below_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "As well, natural reserve wetlands had significantly higher species richness than restored wetlands aged 6–10 years (*p*=0.0303), 11–15 years (*p*=0.0004), 20–30 years (*p*=0.0021), and agricultural natural wetlands (*p*=0.010) (Table 1; Fig. 3",
+   "document_id": "10.1111/rec.12890",
+   "title": "Incomplete recovery of plant diversity in restored prairie wetlands on agricultural landscapes",
+   "year": 2019,
+   "doi": "10.1111/rec.12890"
+  },
+  "camo:edge_4a38f9ec93b0": {
+   "subject": "restoration of wetlands by dredging of sediments",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "increased number of anuran species calling",
+   "direction": "above_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "The number of species detected by our call surveys was higher on restored versus reference wetlands (df 5 1,44, F 5 9.72, p , 0.01)",
+   "document_id": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2",
+   "title": "Anuran call surveys on small wetlands in Prince Edward Island, Canada restored by dredging of sediments",
+   "year": 2002,
+   "doi": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+  },
+  "camo:edge_4ba4dcd78f3c": {
+   "subject": "restoration of wetlands by dredging of sediments",
+   "predicate": "causes",
+   "negated": true,
+   "object": "Abundance index of wood frogs",
+   "direction": "comparable",
+   "causal_language": "no_relationship",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Wood frog abundance indices did not differ between restored and reference wetlands using 1998 and 1999 data (df 5 1,44, F 5 0.4, p 5 0.53)",
+   "document_id": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2",
+   "title": "Anuran call surveys on small wetlands in Prince Edward Island, Canada restored by dredging of sediments",
+   "year": 2002,
+   "doi": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+  },
+  "camo:edge_5e8ce7360bdf": {
+   "subject": "Restoration age of 4-6 years",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Increased percentage of actinomycetes",
+   "direction": "above_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "A significant difference in the percent of actinomycetes was found between the reference sites and the 4-6 yr age grouping, with the 4-6 yr age grouping having a significantly higher percentage of actinomycetes than the reference sites (p = 0.009).",
+   "document_id": "10.1016/j.soilbio.2010.05.010",
+   "title": "Microbial community structure in restored riparian soils of the Canadian prairie pothole region",
+   "year": 2010,
+   "doi": "10.1016/j.soilbio.2010.05.010"
+  },
+  "camo:edge_6c76393d8b9f": {
+   "subject": "Wetland age",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Changed community composition",
+   "direction": "unclear",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "PERMANOVA further confirmed differences in community composition (pseudo-*F*[6,22] =3.63, *p*=0.0001",
+   "document_id": "10.1111/rec.12890",
+   "title": "Incomplete recovery of plant diversity in restored prairie wetlands on agricultural landscapes",
+   "year": 2019,
+   "doi": "10.1111/rec.12890"
+  },
+  "camo:edge_8ecd7ff1b500": {
+   "subject": "restoration of wetlands by dredging of sediments",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "increased abundance index of northern leopard frogs",
+   "direction": "above_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Northern leopard frog (df 5 1,44, F 5 4.62, p 5 0.037) and green frog (df 5 1,44, F 5 6.75, p 5 0.013) abundance indices were significantly greater on restored versus reference wetlands.",
+   "document_id": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2",
+   "title": "Anuran call surveys on small wetlands in Prince Edward Island, Canada restored by dredging of sediments",
+   "year": 2002,
+   "doi": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+  },
+  "camo:edge_91ee59c209be": {
+   "subject": "restoration of wetlands by dredging of sediments",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "increased abundance index of spring peepers",
+   "direction": "above_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Spring peeper abundance indices were significantly higher on restored versus reference wetlands (df 5 1,44, F 5 4.3, p 5 0.043).",
+   "document_id": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2",
+   "title": "Anuran call surveys on small wetlands in Prince Edward Island, Canada restored by dredging of sediments",
+   "year": 2002,
+   "doi": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+  },
+  "camo:edge_922bc2593ad9": {
+   "subject": "Reference site status",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Increased PLFA diversity",
+   "direction": "below_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "Specifically, the reference sites had higher values for PLFA biomass (calculated based on the sum of 96 PLFAs), evenness and diversity (Fig. 2).",
+   "document_id": "10.1016/j.soilbio.2010.05.010",
+   "title": "Microbial community structure in restored riparian soils of the Canadian prairie pothole region",
+   "year": 2010,
+   "doi": "10.1016/j.soilbio.2010.05.010"
+  },
+  "camo:edge_92eeefec00e0": {
+   "subject": "Natural Wetlands site location",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "lower number of fledglings",
+   "direction": "above_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Fewer chicks fledged from nests on NW (P ¼ 0.006) than on PC.",
+   "document_id": "10.1016/j.envpol.2005.09.013",
+   "title": "Effects of oil sands tailings compounds and harsh weather on mortality rates, growth and detoxification efforts in nestling tree swallows (Tachycineta bicolor)",
+   "year": 2006,
+   "doi": "10.1016/j.envpol.2005.09.013"
+  },
+  "camo:edge_93ee158ecda2": {
+   "subject": "Restoration age of 7-11 years",
+   "predicate": "causes",
+   "negated": true,
+   "object": "PLFA richness",
+   "direction": "no_effect",
+   "causal_language": "no_relationship",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "not_applicable",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "Although no significant difference was found in PLFA richness between age groups the graph shows an increasing trend with age.",
+   "document_id": "10.1016/j.soilbio.2010.05.010",
+   "title": "Microbial community structure in restored riparian soils of the Canadian prairie pothole region",
+   "year": 2010,
+   "doi": "10.1016/j.soilbio.2010.05.010"
+  },
+  "camo:edge_9e28e8c79050": {
+   "subject": "Reference site status",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Increased PLFA evenness",
+   "direction": "below_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "Specifically, the reference sites had higher values for PLFA biomass (calculated based on the sum of 96 PLFAs), evenness and diversity (Fig. 2).",
+   "document_id": "10.1016/j.soilbio.2010.05.010",
+   "title": "Microbial community structure in restored riparian soils of the Canadian prairie pothole region",
+   "year": 2010,
+   "doi": "10.1016/j.soilbio.2010.05.010"
+  },
+  "camo:edge_c476d65288b8": {
+   "subject": "Consolidated Tailings Wetland site location",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Decreased weight at 12 days",
+   "direction": "below_reference",
+   "causal_language": "associational",
+   "certainty_grade": "moderate",
+   "evidence_types": [
+    "randomized_experiment"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Chicks on CT (P ¼ 0.03) weighed 1.1 g less than those on PC",
+   "document_id": "10.1016/j.envpol.2005.09.013",
+   "title": "Effects of oil sands tailings compounds and harsh weather on mortality rates, growth and detoxification efforts in nestling tree swallows (Tachycineta bicolor)",
+   "year": 2006,
+   "doi": "10.1016/j.envpol.2005.09.013"
+  },
+  "camo:edge_d058f0ae0498": {
+   "subject": "presence of natural saline sub-community",
+   "predicate": "causes",
+   "negated": false,
+   "object": "vegetation percent cover",
+   "direction": "below_reference",
+   "causal_language": "direct_causal",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "permanent_marshes",
+   "quote": "Vegetation percent cover in the natsal1 sub-community was also significantly greater than the disturbed1 sub-community ([Fig.](#page-5-0) 3D; One-wayANOVA with Tukey's multiple comparisons; F(2, 8) = 19.26, p < 0.01).",
+   "document_id": "10.1016/j.ecoleng.2013.01.024",
+   "title": "A Carex species-dominated marsh community represents the best short-term target for reclaiming wet meadow habitat following oil sands mining in Alberta, Canada",
+   "year": 2013,
+   "doi": "10.1016/j.ecoleng.2013.01.024"
+  },
+  "camo:edge_e180b5bd113c": {
+   "subject": "Natural Wetlands site location",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "lower fledging success and nest success",
+   "direction": "above_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Compared with PC, fledging success (chicks fledged/chicks hatched) and nest success (chicks fledged/eggs laid) were lower on NW than on PC (P ¼ 0.02 and P ¼ 0.007, respectively).",
+   "document_id": "10.1016/j.envpol.2005.09.013",
+   "title": "Effects of oil sands tailings compounds and harsh weather on mortality rates, growth and detoxification efforts in nestling tree swallows (Tachycineta bicolor)",
+   "year": 2006,
+   "doi": "10.1016/j.envpol.2005.09.013"
+  },
+  "camo:edge_e9f249d67651": {
+   "subject": "Time since restoration",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Microbial community structure",
+   "direction": "no_effect",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "not_applicable",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "The MRPP analysis for time since restoration (Table 3) showed both strong separation between groups and strong within group homogeneity (T = -9.67, A = 0.11,  $p = <10^{-8}$ ). Significant differences in microbial community structure between sites of varying time since restoration were found (Table 3), with the reference and older sites (9, 10, and 11 yrs) grouping closer in ordination space, and farther away from the younger sites (3 yrs",
+   "document_id": "10.1016/j.soilbio.2010.05.010",
+   "title": "Microbial community structure in restored riparian soils of the Canadian prairie pothole region",
+   "year": 2010,
+   "doi": "10.1016/j.soilbio.2010.05.010"
+  },
+  "camo:edge_ee0d9336749c": {
+   "subject": "presence of natural sedge vegetation community",
+   "predicate": "causes",
+   "negated": false,
+   "object": "August peak aboveground biomass",
+   "direction": "below_reference",
+   "causal_language": "direct_causal",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "permanent_marshes",
+   "quote": "The natsedge community produced significantly higher August peak aboveground biomass than either the recsedge or distsal communities (One-way ANOVA with Tukey's multiple comparisons; F(2, 42) = 17.42, p < 0.001), with nearly 50% greater peak aboveground biomass ([Fig.](#page-5-0) 3A).",
+   "document_id": "10.1016/j.ecoleng.2013.01.024",
+   "title": "A Carex species-dominated marsh community represents the best short-term target for reclaiming wet meadow habitat following oil sands mining in Alberta, Canada",
+   "year": 2013,
+   "doi": "10.1016/j.ecoleng.2013.01.024"
+  },
+  "camo:edge_f9c7802c23a5": {
+   "subject": "Consolidated Tailings Wetland site location",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Decreased weight at 12 days",
+   "direction": "below_reference",
+   "causal_language": "associational",
+   "certainty_grade": "moderate",
+   "evidence_types": [
+    "randomized_experiment"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "those on NW (P ¼ 0.03) and DP (P ¼ 0.01) weighted 1.4 g less than nestlings on PC.",
+   "document_id": "10.1016/j.envpol.2005.09.013",
+   "title": "Effects of oil sands tailings compounds and harsh weather on mortality rates, growth and detoxification efforts in nestling tree swallows (Tachycineta bicolor)",
+   "year": 2006,
+   "doi": "10.1016/j.envpol.2005.09.013"
+  },
+  "camo:edge_fa465baa4074": {
+   "subject": "Consolidated Tailings Wetland site location",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Increased mortality risk",
+   "direction": "below_reference",
+   "causal_language": "associational",
+   "certainty_grade": "moderate",
+   "evidence_types": [
+    "randomized_experiment"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Nestlings on NW were 11.4 times more likely to die than those on the PC site (95% CI of the odds ratio ¼ 1.4e91.9, P ¼ 0.02).",
+   "document_id": "10.1016/j.envpol.2005.09.013",
+   "title": "Effects of oil sands tailings compounds and harsh weather on mortality rates, growth and detoxification efforts in nestling tree swallows (Tachycineta bicolor)",
+   "year": 2006,
+   "doi": "10.1016/j.envpol.2005.09.013"
+  },
+  "camo:edge_fb9e7a674929": {
+   "subject": "Natural reserve wetland",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "Changed community composition",
+   "direction": "unclear",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "alternative_treatment",
+   "ecosystem_context": "seasonal_floodplain_marshes",
+   "quote": "Likewise, natural reserve wetlands were also significantly different from wetlands restored 3–5 years (*p*=0.018), 6–10 years (*p*=0.004), 11–15 years (*p*=0.007), 20–30 years (*p*=0.013), and agricultural natural wetlands (*p*=0.045",
+   "document_id": "10.1111/rec.12890",
+   "title": "Incomplete recovery of plant diversity in restored prairie wetlands on agricultural landscapes",
+   "year": 2019,
+   "doi": "10.1111/rec.12890"
+  },
+  "camo:edge_fd1d7b78bdcf": {
+   "subject": "Reclaimed wetland site location",
+   "predicate": "causes",
+   "negated": true,
+   "object": "Wing length at 12 days",
+   "direction": "comparable",
+   "causal_language": "no_relationship",
+   "certainty_grade": "moderate",
+   "evidence_types": [
+    "randomized_experiment"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "Wing length for chicks from reclaimed wetlands was similar to controls at d12 (P ¼ 0.4).",
+   "document_id": "10.1016/j.envpol.2005.09.013",
+   "title": "Effects of oil sands tailings compounds and harsh weather on mortality rates, growth and detoxification efforts in nestling tree swallows (Tachycineta bicolor)",
+   "year": 2006,
+   "doi": "10.1016/j.envpol.2005.09.013"
+  },
+  "camo:edge_fd5b13000066": {
+   "subject": "restoration of wetlands by dredging of sediments",
+   "predicate": "associated_with",
+   "negated": false,
+   "object": "increased abundance index of green frogs",
+   "direction": "above_reference",
+   "causal_language": "associational",
+   "certainty_grade": "low",
+   "evidence_types": [
+    "observational_cross_sectional"
+   ],
+   "comparator": "reference_undisturbed",
+   "ecosystem_context": "constructed_lacustrine_wetlands",
+   "quote": "green frog (df 5 1,44, F 5 6.75, p 5 0.013) abundance indices were significantly greater on restored versus reference wetlands",
+   "document_id": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2",
+   "title": "Anuran call surveys on small wetlands in Prince Edward Island, Canada restored by dredging of sediments",
+   "year": 2002,
+   "doi": "10.1672/0277-5212(2002)022[0090:ACSOSW]2.0.CO;2"
+  }
+ }
+}

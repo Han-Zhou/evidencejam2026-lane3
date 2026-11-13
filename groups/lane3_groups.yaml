@@ -1,0 +1,189 @@
+# Intervention and outcome groups for the Lane 3 evidence products.
+#
+# The Lane 2 graph names 2,383 candidate levers and ~4,400 outcome states in
+# free text; only 4 cause-outcome node pairs are reported by more than one
+# study. An evidence gap map, and any certainty grade, needs a body of evidence
+# per cell, so nodes are pooled into the named groups below.
+#
+# Matching is case-insensitive regex over a node's readable labels, parsed out
+# of its `embedding_text` (CURIEs already carry their labels there):
+#   lever   entity label + node name
+#   measure attribute label + node name
+#   target  entity label + applied_to + node name
+#
+# Intervention groups are MULTI-LABEL: "fertilization combined with soil
+# turnover" is evidence on both levers. Outcome groups are FIRST MATCH, in the
+# order listed, so put specific groups before generic ones.
+#
+# Every assignment is written to `grouping_audit.csv` with the pattern that
+# matched. Each group is an ecological judgement call; tune it here, not in code.
+
+intervention_groups:
+  - id: seeding
+    label: Seeding / sowing
+    lever: '\bseed(ing|ed|s)?\b(?!.*\b(bank|source|predation|rain|production|size|mass)\b)|\bsow(n|ing)?\b|seed mix|hydroseed|direct seeding'
+
+  - id: planting
+    label: Planting & transplanting
+    lever: '\bplant(ing|ed|ings)\b|transplant|\bplugs?\b|nursery|container (type|stock)|out-?plant|seedlings? (planted|planting)|\bplantation|sod placement|live stak|afforest|reforest'
+
+  - id: invasive_removal
+    label: Invasive / unwanted plant removal
+    removal_is_action: true
+    lever: '(remov|eradicat|pull|weed(ing|ed)|control)\w*.*\b(invasive|exotic|non-?native|alien|weed|garlic mustard|alliaria|buckthorn|rhamnus|phragmites|reed canary|phalaris|knapweed|centaurea|brome|bromus|honeysuckle|lonicera|cattail|typha)\b|\b(invasive|exotic|non-?native|alien)\b.*\b(remov|eradicat|control|pull)|hand-?pull|\bweeding\b|weed\w* (removal|control|management)|non-?native (plant|species) (management|control|removal)'
+
+  - id: herbicide
+    label: Herbicide & chemical vegetation control
+    lever: 'herbicid|glyphosate|triclopyr|imazapyr|picloram|clopyralid|aminopyralid|2,4-?d\b|metsulfuron|hexazinone|chemical (control|site preparation)|growth inhibitor|\bSGI\b'
+
+  - id: burning
+    label: Prescribed burning
+    lever: '\bburn(ing|ed|s)?\b|prescribed fire|\bfire\b(?!.*\b(severity|history|since)\b)'
+
+  - id: mowing_cutting
+    label: Vegetation control (mowing, cutting, release)
+    lever: '\bmow(ing|n|ed)?\b|\bclip(ping|ped)?\b|brush(ing|ed| cutting)|(?<!strip-)(?<!strip )(?<!clear)(?<!clear-)\bcut(ting|s)?\b(?![- ]?(over|block|line|bank))|(woody|herb|vegetation|competition|brush)[\w -]{0,12}suppression|vegetation (control|management|removal)|girdl|\brelease (treatment|cut)|mechanical (release|treatment)|neighbou?r control|competing vegetation|overstor(e)?y removal'
+
+  - id: timber_harvest
+    label: Timber harvest & thinning
+    removal_is_action: true
+    lever: 'harvest(ing|ed)?|clear-?fell|logging|logged|clear-?cut|thinn(ing|ed)|silvicultur|selection cut|partial cut|variable retention|retention (harvest|patch)|salvage'
+
+  - id: herbivore_exclusion
+    label: Herbivore exclusion (fencing, shelters)
+    lever: 'exclos|exclusion|fenc(e|ed|ing)|tree ?shelter|browse protection|deer protection|caging|\bcages?\b|protect(ion|ed) from (deer|browsing|herbiv|grazing)'
+
+  - id: grazing
+    label: Livestock grazing management
+    lever: '\bgraz(ing|ed|e)\b|livestock|cattle|sheep|stocking rate'
+
+  - id: fertilization
+    label: Fertilization & nutrient addition
+    lever: 'fertili[sz]|\bNPK\b|rock phosphate|(nitrogen|phosphorus|nutrient|N|P) (addition|amendment|application|enrichment)|\burea\b'
+
+  - id: mulch
+    label: Mulch & surface cover
+    lever: 'mulch|\bstraw\b|\bhay\b|wood ?chips?|erosion (control )?blanket|\bcover crop|nurse crop|companion crop'
+
+  - id: organic_amendment
+    label: Organic & biosolid amendments
+    lever: 'compost|biosolid|sewage|sludge|manure|biochar|organic (amendment|residual)|soil amendment|amendment|peat-?mineral mix|\bPMM\b|paper ?mill|pulp|peat moss|sediment application|sawdust|carbon addition|impoverish'
+
+  - id: topsoil_transfer
+    label: Topsoil, forest floor & inoculum transfer
+    lever: 'topsoil|cover soil|forest floor (material|transfer|salvage)|\bFFMM?\b|forest floor-?mineral|\bLFH\b|root (placement|cuttings)|donor (soil|material)|soil (inoculat|transfer)|inoculat|mycorrhiza|moss layer transfer|sphagnum (fragment|diaspore|spread)|propagule'
+
+  - id: soil_preparation
+    label: Site & soil preparation
+    lever: 'scarif|tillage|\btill(ed|ing)?\b|ripp(ing|ed)|decompact|subsoil(ing|er)|mound(ing|s)?\b|disk(ing|ed)|plou?gh|soil turnover|microtopograph|surface roughness|roughen|seedbed|site preparation|loosen|(soil|floor|microsite)[\w -]{0,10}mixing'
+
+  - id: liming
+    label: Liming & pH amendment
+    lever: '\blim(e|ing|ed)\b|dolomit|calcium (carbonate|source|addition|application)|neutrali[sz]|wood ash'
+
+  - id: smoke_ash
+    label: Smoke & ash treatments
+    lever: '\bsmoke\b|\bash (treatment|addition|application)'
+
+  - id: irrigation
+    label: Irrigation & watering
+    lever: 'irrigat|\bwatering\b|water (addition|supplement)|added water|high water treatment'
+
+  - id: hydrological_restoration
+    label: Hydrological restoration & rewetting
+    lever: 'rewet|ditch (block|fill)|(block|fill)(ed|ing)? ditch|drain(age)? block|water (table|level) (raise|manipulat|management|control|regulat)|dam removal|culvert|reflood|flood(ing)? (restoration|regime)|hydrolog\w* (restoration|reconnect)|reconnect|causeway|breach|pond (construction|creation|enhancement)|(construction|enhancement) of ponds|fishway|fish passage|barrier (removal|installation)'
+
+  - id: structures_erosion
+    label: Structures, wood placement & erosion control
+    lever: 'weir|groin|groyne|riprap|gabion|engineered|bioengineer|fascine|wattle|geotextile|sand fence|erosion control|bank stabili|woody debris (structure|placement|addition|added|installation|presence|treatment)|presence of (coarse )?woody debris|placement of (woody|boulder|log|rock)|boulder|log (placement|structure)|instream structure|artificial (reef|structure|habitat|nest)|nest box|perch'
+
+  - id: reintroduction_stocking
+    label: Species reintroduction, translocation & stocking
+    lever: 'reintroduc|translocat|(fish|trout|salmon|walleye|hatchery|lake)\w* stock|stocking of|stocked (fish|trout|lake)|hatchery|captive|release(d)? of|head-?start|supplementation'
+
+  - id: predator_competitor_control
+    label: Predator, parasite & competitor control
+    removal_is_action: true
+    lever: 'cowbird|predator (control|removal|exclusion)|cull(ing|ed)?|trapping|lethal control|parasite removal|nest protection'
+
+  - id: reclamation
+    label: Mine & industrial reclamation (multi-component)
+    lever: 'reclamation|reclaimed|recontour|capping|cover (system|design)|landform (design|reconstruction)|tailings (capping|reclamation|revegetation)|revegetat|capillary break|waste rock|subsoil (material|application|treatment|b)|monolayer|process material|cover (thickness|depth)'
+
+  - id: passive_recovery
+    label: Passive / natural recovery
+    lever: 'natural (recovery|regeneration|recolonization|succession)|passive|unassisted|abandon(ed|ment)|spontaneous (succession|revegetation)|left to recover|no intervention'
+
+  - id: restoration_general
+    label: Restoration (general or multi-component)
+    lever: '\brestor(ation|ed|ing)\b|rehabilitat|\bremediat'
+
+outcome_groups:
+  - id: invasive_abundance
+    label: Invasive / non-native species abundance
+    target: '\b(invasive|exotic|non-?native|alien|introduced species|weed(s|y)?)\b|garlic mustard|alliaria|buckthorn|rhamnus|phragmites|reed canary|phalaris|knapweed|centaurea|bromus inermis|smooth brome|cheatgrass|bromus tectorum|honeysuckle|lonicera|canada thistle|cirsium arvense|melilotus|sweet clover|leafy spurge|euphorbia esula'
+    measure: 'cover|abundan|density|biomass|frequen|occurren|dominan|amount|number|spread|invasi|presence|stem|count|establishment|proportion|percent'
+
+  - id: contaminants
+    label: Contaminants & toxicity
+    measure: '\bPCBs?\b|contamina|toxic|hydrocarbon|\boil\b|naphthenic|\bmetals?\b|mercury|arsenic|cadmium|\blead\b|\bzinc\b|copper|selenium|nickel|salinity|\bsalt|sodium adsorption'
+
+  - id: ecosystem_function
+    label: Ecosystem fluxes & processes
+    measure: '\bflux|respiration|photosynthe|decomposi|sequestrat|mineraliz|nitrific|methane|\bCO2\b|carbon (uptake|exchange|balance|accumulation)|productivity|net ecosystem|evapotransp|litter (mass )?loss'
+
+  - id: richness_diversity
+    label: Species richness & diversity
+    measure: 'richness|diversity|evenness|shannon|simpson|number of (species|taxa)|species (number|count)|taxon(omic)? (number|richness)'
+
+  - id: community_composition
+    label: Community composition & similarity
+    measure: 'composition|similarity|dissimilarity|assemblage|community (structure|type)|ordination|\bNMDS\b|fidelity|turnover|resemblance|functional (group|type) (proportion|composition)'
+
+  - id: survival_mortality
+    label: Survival & mortality
+    measure: 'surviv|mortality|\bdeath|persistence|\bdie(-| )?(back|off)|dieback'
+
+  - id: establishment_regeneration
+    label: Establishment, germination & recruitment
+    measure: 'establish|germinat|emergence|recruit|regenerat|colonizat|recoloniz|seedling (density|abundance|number|count)|stocking|seedbank|seed bank'
+
+  - id: reproduction
+    label: Reproduction & breeding success
+    measure: 'flower|fruit|seed (production|set|output|mass)|\bnest|clutch|hatch|fledg|breeding|fecundity|reproduct|spawn|egg'
+
+  - id: plant_cover
+    label: Plant & vegetation cover
+    measure: '\bcover\b|canopy closure|ground cover|percent cover|vegetated'
+
+  - id: animal_abundance
+    label: Animal abundance & occurrence
+    target: '\b(birds?|avian|fish|insects?|arthropods?|invertebrates?|macroinvertebrates?|mammals?|amphibians?|reptiles?|beetles?|carabid|spiders?|bees?|pollinators?|butterfl|moths?|ants?|deer|caribou|moose|elk|bats?|frogs?|salamanders?|turtles?|snakes?|songbirds?|warblers?|trout|salmon|sucker|walleye|zooplankton|earthworms?|collembola|mites?|nematodes?|rodents?|voles?|mice|hares?)\b|wd:Q'
+    measure: 'abundan|density|occurren|presence|number|count|catch|captures?|activity|detection|occupancy|population'
+
+  - id: soil_water_chemistry
+    label: Soil, water & tissue chemistry
+    measure: 'concentrat|content|nitrogen|\bN\b|carbon|phosph|potassium|calcium|magnesium|\bpH\b|acidity|nutrient|conductiv|exchangeable|extractable|cation|organic matter|nitrate|ammonium|sulfate|sulphate|dissolved|alkalinity|chlorophyll|foliar|C:N|ratio'
+
+  - id: soil_physical
+    label: Soil physical properties & microclimate
+    measure: 'bulk density|moisture|water content|temperature|compaction|penetration resistance|infiltration|porosity|aggregate|texture|soil depth|organic layer|thickness|frost|light|shade|microclimate|albedo'
+
+  - id: hydrology_geomorphology
+    label: Hydrology, erosion & geomorphology
+    measure: 'water table|water level|depth to water|hydraul|discharge|\bflow|velocity|erosion|sediment|deposition|runoff|elevation|accretion|subsidence|turbidity|inundation|hydroperiod|channel|bank|dune|morpholog'
+
+  - id: growth_size
+    label: Growth, size & biomass
+    measure: 'biomass|growth|height|diameter|basal area|\bsize\b|length|\bmass\b|increment|yield|production|volume|leaf area|shoot|\broot|vigou?r|weight|body condition|stem'
+
+  - id: abundance_density
+    label: Abundance & density (plants & other)
+    measure: 'abundan|density|occurren|presence|number|count|frequen|dominan|amount|population|proportion|percent|prevalence'
+
+  - id: behaviour_habitat_use
+    label: Behaviour, habitat use & interactions
+    measure: 'movement|preference|selection|habitat use|forag|brows|predation|herbivory|visitation|dispersal|use\b|behavio'
+
+# If-then links between results that restoration practice assumes. A results
+# chain shows each one as evidenced, contradicted, or untested in this corpus.
