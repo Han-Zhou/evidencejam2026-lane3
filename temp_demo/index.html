@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restoration Evidence Demo</title>
+<style>
+  :root { --fg:#1d1d1f; --muted:#5a5a60; --bg:#fff; --line:#ddd; --card:#f7f7f8;
+          --inc:#1a7f37; --dec:#b42318; --mix:#8a6100; --none:#3b5bdb; --gap:#999; }
+  * { box-sizing:border-box; }
+  body { font:15px/1.5 system-ui, sans-serif; color:var(--fg); background:var(--bg); margin:0; }
+  header, main { max-width:1000px; margin:0 auto; padding:16px; }
+  nav a { margin-right:16px; }
+  h2 { margin-top:2.5rem; border-bottom:2px solid var(--line); padding-bottom:4px; }
+  .q { font-style:italic; color:var(--muted); }
+  .note { background:#fff8e1; border-left:4px solid #e0a800; padding:8px 12px; margin:12px 0; }
+  table { border-collapse:collapse; width:100%; margin:12px 0; font-size:14px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }
+  th { background:var(--card); }
+  .dir { font-weight:600; white-space:nowrap; }
+  .increase, .above_reference { color:var(--inc); }
+  .decrease, .below_reference { color:var(--dec); }
+  .mixed { color:var(--mix); }
+  .no_effect, .comparable { color:var(--none); }
+  .rat { color:var(--muted); font-size:12px; display:block; }
+  details { margin:4px 0; }
+  summary { cursor:pointer; color:#0b57d0; }
+  .ev { font-size:13px; border-left:3px solid var(--line); padding:4px 8px; margin:6px 0; }
+  .ev q { display:block; margin-bottom:2px; }
+  .gap { color:var(--gap); font-style:italic; }
+  .grid-wrap { overflow-x:auto; }
+  .grid td, .grid th { font-size:12px; padding:3px; text-align:center; min-width:34px; }
+  .grid th.row { text-align:left; white-space:nowrap; }
+  .grid th.col { writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap; height:170px; }
+  .grid td.empty { background:repeating-linear-gradient(45deg,#fafafa,#fafafa 4px,#eee 4px,#eee 8px); color:var(--gap); }
+  .grid td button { font:inherit; border:0; background:none; cursor:pointer; padding:0; width:100%; }
+  #cell { min-height:2em; }
+  ul.lim { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Restoration evidence: three questions</h1>
+  <p>A rudimentary demo. Every direction, certainty grade and count below is read unchanged from the evidence pack's answer files.</p>
+  <nav><a href="#q1">Q1 Tree planting</a><a href="#q2">Q2 Created marshes</a><a href="#q3">Q3 Grassland gaps</a></nav>
+</header>
+<main>
+  <section id="q1"></section>
+  <section id="q2"></section>
+  <section id="q3"></section>
+</main>
+<script>
+const DIR_SYMBOL = { increase:'▲ increase', decrease:'▼ decrease', mixed:'◆ mixed', no_effect:'● no effect',
+  above_reference:'▲ above reference', below_reference:'▼ below reference', comparable:'● comparable', unclear:'? unclear' };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dir = d => `<span class="dir ${esc(d)}">${esc(DIR_SYMBOL[d] || d)}</span>`;
+
+function evidenceList(ids, evidence) {
+  return `<details><summary>${ids.length} source claim${ids.length === 1 ? '' : 's'}</summary>` +
+    ids.map(id => {
+      const e = evidence[id];
+      if (!e) return `<div class="ev">${esc(id)} (missing)</div>`;
+      const link = e.doi ? `<a href="https://doi.org/${esc(e.doi)}">${esc(e.doi)}</a>` : esc(e.document_id);
+      return `<div class="ev"><q>${esc(e.quote)}</q>
+        <small>${esc(e.subject)} → ${esc(e.object)} (${dir(e.direction)})<br>
+        ${esc(e.title)} (${esc(e.year)}) · ${link}</small></div>`;
+    }).join('') + '</details>';
+}
+
+function findingsTable(findings, evidence) {
+  return `<table><thead><tr><th>Intervention</th><th>Outcome</th><th>Direction</th>
+    <th>Certainty</th><th>Studies / claims</th><th>Evidence</th></tr></thead><tbody>` +
+    findings.map(f => `<tr><td>${esc(f.subject.label)}</td><td>${esc(f.outcome.label)}</td>
+      <td>${dir(f.direction)}</td>
+      <td><strong>${esc(f.certainty)}</strong><span class="rat">${esc(f.certainty_rationale)}</span></td>
+      <td>${f.studies} / ${f.claims}</td><td>${evidenceList(f.edge_ids, evidence)}</td></tr>`).join('') +
+    '</tbody></table>';
+}
+
+function gapsList(gaps) {
+  if (!gaps.length) return '';
+  return `<h3>Gaps (no study tested these)</h3><p>A gap is not a negative result: it means the corpus has no study of the pairing.</p><ul>` +
+    gaps.map(g => `<li class="gap">${esc(g.subject.label)} → ${esc(g.outcome.label)}</li>`).join('') + '</ul>';
+}
+
+const limitations = l => `<h3>Limitations</h3><ul class="lim">${l.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+const head = (n, d) => `<h2>Q${n}</h2><p class="q">${esc(d.question)}</p><p><small>${esc(d.how_built)}</small></p>`;
+
+function renderQ1(d) {
+  const inter = d.interactions.length ? `<h3>Interactions & combined treatments</h3>
+    <p>These claims involve a combination of factors or a moderating condition, so they are kept apart from the single-factor findings.</p>
+    <table><thead><tr><th>Claim</th><th>Direction</th><th>Source</th></tr></thead><tbody>` +
+    d.interactions.map(i => { const e = d.evidence[i.edge_id] || {};
+      return `<tr><td>${esc(e.subject)} → ${esc(e.object)}</td><td>${dir(i.direction)}</td><td>${evidenceList([i.edge_id], d.evidence)}</td></tr>`; }).join('') +
+    '</tbody></table>' : '';
+  document.getElementById('q1').innerHTML = head(1, d) + '<h3>Findings</h3>' +
+    findingsTable(d.findings, d.evidence) + inter + gapsList(d.gaps) + limitations(d.limitations);
+}
+
+function renderQ2(d) {
+  const s = d.short_answer;
+  document.getElementById('q2').innerHTML = head(2, d) +
+    `<div class="note"><strong>How long?</strong> ${s.time_to_reference === null ? 'No answer in this corpus.' : esc(s.time_to_reference)} ${esc(s.time_to_reference_note)}</div>
+     <p><strong>Attributes lagging behind reference:</strong> ${s.lagging_attributes.map(esc).join(', ')}</p>
+     <h3>Created vs natural reference</h3>${findingsTable(d.findings, d.evidence)}
+     <h3>Effect of time since creation</h3>${findingsTable(d.with_time, d.evidence)}` +
+    gapsList(d.gaps) + limitations(d.limitations);
+}
+
+function renderQ3(d) {
+  const subj = [], out = [], seen = new Set(), cells = {};
+  for (const x of [...d.findings, ...d.gaps]) {
+    if (!seen.has('s' + x.subject.id)) { seen.add('s' + x.subject.id); subj.push(x.subject); }
+    if (!seen.has('o' + x.outcome.id)) { seen.add('o' + x.outcome.id); out.push(x.outcome); }
+    cells[x.subject.id + '|' + x.outcome.id] = x;
+  }
+  const s = d.summary;
+  let grid = `<div class="grid-wrap"><table class="grid"><thead><tr><th></th>` +
+    out.map(o => `<th class="col" scope="col">${esc(o.label)}</th>`).join('') + '</tr></thead><tbody>';
+  for (const sb of subj) {
+    grid += `<tr><th class="row" scope="row">${esc(sb.label)}</th>`;
+    for (const o of out) {
+      const c = cells[sb.id + '|' + o.id];
+      if (!c || c.status === 'no_evidence') grid += `<td class="empty" title="No evidence: ${esc(sb.label)} → ${esc(o.label)}">–</td>`;
+      else grid += `<td><button class="${esc(c.direction)}" data-id="${esc(c.id)}"
+        aria-label="${esc(sb.label)} → ${esc(o.label)}: ${c.studies} studies, ${esc(c.direction)}">${c.studies}</button></td>`;
+    }
+    grid += '</tr>';
+  }
+  grid += '</tbody></table></div>';
+  document.getElementById('q3').innerHTML = head(3, d) +
+    `<p>${s.grassland_claims} grassland claims, ${s.claims_pooled} pooled into ${s.cells} intervention × outcome cells:
+     <strong>${s.filled}</strong> with evidence (${s.thin} thin), <strong>${s.empty}</strong> empty.</p>
+     <p>Each number is the study count. Hatched “–” cells are gaps: no study tested that pairing (not a negative result). Click a number for details.</p>
+     ${grid}<div id="cell" aria-live="polite"></div>` + limitations(d.limitations);
+  const byId = Object.fromEntries(d.findings.map(f => [f.id, f]));
+  document.querySelectorAll('#q3 .grid button').forEach(b => b.addEventListener('click', () => {
+    document.getElementById('cell').innerHTML = findingsTable([byId[b.dataset.id]], d.evidence);
+  }));
+}
+
+Promise.all(['q1_tree_planting', 'q2_created_marshes', 'q3_grassland_gaps']
+  .map(n => fetch(`data/${n}.json`).then(r => r.json())))
+  .then(([q1, q2, q3]) => { renderQ1(q1); renderQ2(q2); renderQ3(q3); })
+  .catch(err => { document.querySelector('main').innerHTML =
+    `<p>Could not load data (${esc(err)}). Serve this folder with <code>python3 -m http.server</code>.</p>`; });
+</script>
+</body>
+</html>
