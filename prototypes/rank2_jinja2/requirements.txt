@@ -1,0 +1,5 @@
+# Vendored in ./vendor as pure-Python source. Nothing is installed at build time.
+# MarkupSafe ships without its C speedups (_speedups.c / .so). It falls back to
+# markupsafe/_native.py, so it runs on aarch64 with no compiler.
+Jinja2==3.1.6
+MarkupSafe==3.0.4

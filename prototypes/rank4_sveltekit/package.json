@@ -1,0 +1,25 @@
+{
+  "name": "q1-rank4-sveltekit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Evidence Jam 2026 Lane 3, Q1 prototype: SvelteKit (adapter-static, prerendered) with D3 modules.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.17"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "4.0.1",
+    "@sveltejs/kit": "3.2.0",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "d3-selection": "3.0.1",
+    "d3-shape": "3.2.1",
+    "d3-zoom": "3.0.1",
+    "svelte": "5.57.3",
+    "vite": "8.3.8"
+  }
+}

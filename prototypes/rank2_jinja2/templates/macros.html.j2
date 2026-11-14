@@ -1,0 +1,154 @@
+{# Repeated parts. Every value is printed from the JSON; autoescape is on. #}
+
+{% macro glyph(d) -%}
+<span class="g d-{{ d }}" aria-hidden="true">{{ DIR_GLYPH[d] }}</span>
+{%- endmacro %}
+
+{% macro dir_label(d) -%}
+<span class="dl d-{{ d }}">{{ glyph(d) }} {{ DIR_WORD[d] }}</span>
+{%- endmacro %}
+
+{% macro dots(c) -%}
+<span class="dots" aria-hidden="true">{{ "●" * CERT_DOTS[c] }}{{ "○" * (4 - CERT_DOTS[c]) }}</span>
+{%- endmacro %}
+
+{% macro cert_label(c) -%}
+<span class="cl">{{ dots(c) }} {{ CERT_WORD[c] }}</span>
+{%- endmacro %}
+
+{# study_directions as printed numbers: "↑5 ↕4" plus words for screen readers #}
+{% macro sd_text(sd) -%}
+<span class="sd">{% for d, n in sd %}<span class="sdi d-{{ d }}">{{ glyph(d) }}<span class="vh">{{ DIR_WORD[d] }}: </span>{{ n }}</span>{% endfor %}</span>
+{%- endmacro %}
+
+{# the same numbers as a small bar; each segment prints its number #}
+{% macro sd_bar(sd, total) -%}
+<div class="sdbar" role="img" aria-label="Study directions: {% for d, n in sd %}{{ DIR_WORD[d] }} {{ n }}{{ ', ' if not loop.last }}{% endfor %}">
+{% for d, n in sd %}<span class="sbs d-{{ d }}" style="flex:{{ n }}" aria-hidden="true">{{ DIR_GLYPH[d] }} {{ n }}</span>{% endfor %}
+</div>
+{%- endmacro %}
+
+{% macro paper_ref(e) -%}
+{% if e.doi %}<a href="https://doi.org/{{ e.doi }}">{{ e.doi }}</a>{% else %}<span class="mono" title="No DOI in the record">{{ e.document_id }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro year(y) -%}
+{% if y %}{{ y }}{% else %}<span title="No year in the record">–</span>{% endif %}
+{%- endmacro %}
+
+{# ------------------------------------------------------------ table rows #}
+{% macro item_row(it, p) -%}
+<tr id="{{ it.anchor }}" {{ 'data-edge-id' if p.is_b else 'data-finding-id' }}="{{ it.id }}" data-direction="{{ it.direction }}" data-certainty="{{ it.certainty }}" data-studies="{{ it.studies }}" data-claims="{{ it.claims }}">
+<td data-label="From"><a class="pin" href="#{{ it.group }}" data-k="{{ it.key }}">{{ it.src_label }}</a></td>
+<td data-label="To">{% if it.kind == 'moderation' %}<span class="modto"><span aria-hidden="true">◆</span> effect of {{ it.tgt_label }}</span>{% else %}{{ it.tgt_label }}{% endif %}</td>
+<td data-label="Direction">{{ dir_label(it.direction) }}</td>
+<td data-label="Certainty">{{ cert_label(it.certainty) }}<span class="rat">{{ it.certainty_rationale }}</span></td>
+<td data-label="Studies" class="num">{{ it.studies }}</td>
+<td data-label="Claims" class="num"><a href="#{{ it.group }}">{{ it.claims }}</a></td>
+<td data-label="Study directions">{{ sd_text(it.sd) }}</td>
+</tr>
+{%- endmacro %}
+
+{# subject -> predicate -> object, then a small line (evidence types and comparator, or the claim id) #}
+{% macro claim_text(e, tail) -%}
+<b>{{ e.subject }}</b> → <i>{{ e.predicate }}</i>{% if e.negated %} <span class="neg">negated</span>{% endif %} → <b>{{ e.object }}</b><small>{{ tail }}</small>
+{%- endmacro %}
+
+{# Compact on purpose: 569 of these rows are the bulk of the page. The drawer
+   reads its claim cards from these cells (by position), so keep the order:
+   claim, direction, grade, quote, paper. data-doc only when it differs from the DOI. #}
+{% macro claim_row(pre, cid, e) -%}
+<tr id="{{ pre }}-{{ cid }}" data-d="{{ e.direction }}" data-g="{{ e.certainty_grade }}"{% if not e.doi or e.doi != e.document_id %} data-doc="{{ e.document_id }}"{% endif %}>
+<td>{{ claim_text(e, e.evidence_types|join(", ") ~ " · " ~ e.comparator) }}</td>
+<td class="d-{{ e.direction }}"><i aria-hidden="true">{{ DIR_GLYPH[e.direction] }}</i> {{ DIR_WORD[e.direction] }}</td>
+<td>{{ CERT_WORD[e.certainty_grade] }}</td>
+<td><q>{{ e.quote }}</q></td>
+<td>{% if e.doi %}<a href="https://doi.org/{{ e.doi }}">{{ e.doi }}</a>{% else %}<code>{{ e.document_id }}</code>{% endif %} <small>{{ e.year or "–" }}</small></td>
+</tr>
+{%- endmacro %}
+
+{# ------------------------------------------------------------ cards (hover card and drawer header) #}
+{% macro card_item(it, p) -%}
+<div class="card">
+{% if it.kind == 'moderation' %}
+<p class="card-k">Moderation edge</p>
+<p class="card-t">{{ it.src_label }} <span class="card-mid">changes the effect of</span> {{ it.tgt_label }}</p>
+<p class="card-dm"><span class="lbl">Direction means:</span> {{ it.direction_meaning }}</p>
+{% else %}
+<p class="card-k">{{ 'Edge' if p.is_b else 'Finding' }}</p>
+<p class="card-t">{{ it.src_label }} → {{ it.tgt_label }}</p>
+{% endif %}
+<p class="card-dc">{{ dir_label(it.direction) }} <span class="sep" aria-hidden="true">·</span> {{ cert_label(it.certainty) }}</p>
+<p class="card-r"><span class="lbl">Certainty rationale:</span> {{ it.certainty_rationale }}</p>
+<p class="card-n">{{ plural(it.studies, 'study', 'studies') }} · {{ plural(it.claims, 'claim', 'claims') }}</p>
+{{ sd_bar(it.sd, it.sd_total) }}
+<ul class="card-p">
+{% for pp in it.papers[:3] %}<li>{{ pp.title }} ({{ year(pp.year) }})</li>{% endfor %}
+</ul>
+{% if it.papers|length > 3 %}<p class="card-more">+{{ it.papers|length - 3 }} more</p>{% endif %}
+<p class="card-hint">Click to pin and read the quotes</p>
+</div>
+{%- endmacro %}
+
+{% macro card_gap(g, p) -%}
+<div class="card">
+<p class="card-k">Gap</p>
+<p class="card-t">{{ g.src_label }} → {{ g.tgt_label }}</p>
+<p class="card-gap"><span class="gapword">No evidence</span></p>
+<p>No study in this corpus tested this pairing. This is a gap, not a negative result.</p>
+<p class="card-r"><span class="lbl">Searched for:</span> {{ g.searched_for }}</p>
+</div>
+{%- endmacro %}
+
+{% macro mini_edge(it, other, p) -%}
+<li><button type="button" class="mini" data-k="{{ it.key }}">{{ glyph(it.direction) }}{{ dots(it.certainty) }} <span class="vh">{{ DIR_WORD[it.direction] }}, certainty {{ CERT_WORD[it.certainty] }}: </span><span>{{ other }}</span></button></li>
+{%- endmacro %}
+
+{% macro card_node(n, p) -%}
+<div class="card">
+<p class="card-k">{{ n.role }}</p>
+<p class="card-t">{{ n.label }}</p>
+{% if p.is_b and n.kind_text %}<p class="card-kt">{{ n.kind_text }}</p>{% endif %}
+{% if n.member_labels %}<p class="card-mem"><span class="lbl">Members:</span> {{ n.member_labels|join(" + ") }}</p>{% endif %}
+<p class="card-n">{{ plural(n.in|length, 'in-edge', 'in-edges') }} · {{ plural(n.out|length, 'out-edge', 'out-edges') }}</p>
+{% if n.in %}<p class="lbl">In</p><ul class="mini-l">{% for it in n.in %}{{ mini_edge(it, it.src_label, p) }}{% endfor %}</ul>{% endif %}
+{% if n.out %}<p class="lbl">Out</p><ul class="mini-l">{% for it in n.out %}{{ mini_edge(it, it.tgt_label if it.kind != 'moderation' else '◆ ' ~ it.tgt_label, p) }}{% endfor %}</ul>{% endif %}
+{% if n.gaps %}<p class="lbl">Gaps</p><ul class="mini-l">{% for g in n.gaps %}<li><button type="button" class="mini" data-k="{{ g.key }}"><span class="gapword">No evidence</span> <span>{{ g.tgt_label if g.src == n.id else g.src_label }}</span></button></li>{% endfor %}</ul>{% endif %}
+{% if p.is_b and n.kind == 'condition' %}<p class="card-note"><span class="lbl">Paths through this node:</span> {{ p.D.limitations[0] }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{# ------------------------------------------------------------ SVG parts #}
+{% macro svg_chip(it, p) -%}
+<g class="chip d-{{ it.direction }}{{ ' mod' if it.kind == 'moderation' }}" transform="translate({{ it.chip[0]|n }} {{ it.chip[1]|n }})" tabindex="0" role="button" data-k="{{ it.key }}" {{ 'data-edge-id' if p.is_b else 'data-finding-id' }}="{{ it.id }}" aria-label="{{ it.aria }}">
+<rect x="{{ (-CHIP_W / 2)|n }}" y="{{ (-CHIP_H / 2)|n }}" width="{{ CHIP_W }}" height="{{ CHIP_H }}" rx="{{ (CHIP_H / 2)|n }}"/>
+<text x="-18" y="4.6" text-anchor="middle">{{ DIR_GLYPH[it.direction] }}</text>
+<use href="#{{ p.pre }}-dots{{ CERT_DOTS[it.certainty] }}" x="-6"/>
+</g>
+{%- endmacro %}
+
+{% macro svg_badge(n) -%}
+{% set c = n.h / 2 %}
+{% if n.group == 'planting_stock' %}<path class="bdg" d="M12 {{ (c + 5)|n }}L17.5 {{ (c - 5)|n }}L23 {{ (c + 5)|n }}z"/>
+{% elif n.group == 'site_treatment' %}<rect class="bdg" x="13" y="{{ (c - 5)|n }}" width="10" height="10" rx="1"/>
+{% elif n.group == 'condition' %}<circle class="bdg" cx="18" cy="{{ c|n }}" r="5.5"/>
+{% elif n.group == 'factor' %}<rect class="bdg" x="14" y="{{ (c - 8)|n }}" width="3" height="16" rx="1.5"/>
+{% endif %}
+{%- endmacro %}
+
+{% macro svg_node(n, p) -%}
+<g class="node k-{{ n.group }}" transform="translate({{ n.x|n }} {{ n.y|n }})" tabindex="0" role="button" data-k="n:{{ n.id }}" {{ 'data-node-id' if p.is_b else 'data-anode' }}="{{ n.id }}" aria-label="{{ n.aria }}">
+<rect class="box" width="{{ n.w|n }}" height="{{ n.h|n }}" rx="{{ 18 if n.group == 'outcome' else 10 }}"/>
+{% if n.chips %}
+<text class="cap" x="12" y="17">Combined treatment</text>
+{% for c in n.chips %}
+<rect class="mchip" x="12" y="{{ 26 + loop.index0 * 24 }}" width="{{ (n.w - 24)|n }}" height="20" rx="10"/>
+<text class="mtext" x="22" y="{{ 40 + loop.index0 * 24 }}">{{ c.text }}</text>
+{% endfor %}
+{% else %}
+{{ svg_badge(n) }}
+{% set y0 = n.h / 2 - n.lines|length * LABEL_LH / 2 + 12 %}
+<text class="nl">{% for l in n.lines %}<tspan x="{{ TEXT_X if n.group != 'outcome' else 18 }}" y="{{ (y0 + loop.index0 * LABEL_LH)|n }}">{{ l }}</tspan>{% endfor %}</text>
+{% endif %}
+</g>
+{%- endmacro %}

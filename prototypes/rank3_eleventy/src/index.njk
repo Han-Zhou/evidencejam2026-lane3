@@ -1,0 +1,54 @@
+---
+permalink: index.html
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Q1 · Tree planting in Canadian forest restoration</title>
+<meta name="description" content="Evidence on how planting-stock traits and site treatments act on seedling survival and growth in Canadian forest restoration: each finding with its certainty grade, its claims and the source sentences.">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="assets/site.css">
+<script>(function(d){d.className="js";d.setAttribute("data-p",/^#network/.test(location.hash)?"network":"findings")})(document.documentElement)</script>
+<script src="assets/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="wrap">
+<p class="eyebrow">Evidence Jam 2026 · Lane 3 · Question 1</p>
+<h1>Q1 · Tree planting in Canadian forest restoration</h1>
+<p class="q">{{ q1.question }}</p>
+<nav aria-label="Panels">
+<div class="cards" id="cards">
+{% for P in q1.panels %}
+<a class="card" href="#{{ P.id }}" id="tab-{{ P.id }}" data-tab="{{ P.id }}">
+<span class="cn">{{ P.name }}</span>
+<span class="cb">{{ P.blurb }}</span>
+{% if P.key == "a" %}
+<span class="cc"><b>{{ P.counts.items }}</b> findings · <b>{{ P.counts.gaps }}</b> gap{{ "s" if P.counts.gaps != 1 }}</span>
+{% else %}
+<span class="cc"><b>{{ P.counts.nodes }}</b> nodes · <b>{{ P.counts.items }}</b> edges · <b>{{ P.counts.gaps }}</b> gap{{ "s" if P.counts.gaps != 1 }}</span>
+{% endif %}
+<span class="cc"><b>{{ P.counts.claims }}</b> claims · <b>{{ P.counts.papers }}</b> papers</span>
+</a>
+{% endfor %}
+</div>
+</nav>
+</div>
+</header>
+<main id="main">
+{% for P in q1.panels %}
+{% include "panel.njk" %}
+{% endfor %}
+</main>
+<footer class="foot">
+<div class="wrap">
+<p>Built from <code>answers/q1_tree_planting.json</code> (Findings) and <code>answers/q1_tree_planting_graph.json</code> (Network), certainty rule <code>{{ q1.a.rule }}</code>. Every direction, certainty grade, count, quote and title on this page is copied from those files. No LLM text.</p>
+<p>Static page: it works offline and makes no requests. Links leave the site only to doi.org.</p>
+</div>
+</footer>
+<div id="hc" class="hc" hidden></div>
+</body>
+</html>
