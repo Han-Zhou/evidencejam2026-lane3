@@ -38,7 +38,7 @@
 <g class="gp" data-pin="g:{{ x.id }}" data-s="{{ x.s }}" data-t="{{ x.t }}"><path class="go" d="{{ x.d }}"/><path class="gi" d="{{ x.d }}"/></g>
 {% endfor %}
 {% for e in G.edges %}
-<g class="e d-{{ e.row.direction }}" data-pin="{{ e.row.pin }}" data-s="{{ e.s }}" data-t="{{ e.t }}" data-lens="{{ e.row.lens }}"><path d="{{ e.d }}" stroke-width="{{ e.sw }}"/><polygon points="{{ e.arrow }}"/></g>
+<g class="e d-{{ e.row.direction }}" data-pin="{{ e.row.pin }}" data-s="{{ e.s }}" data-t="{{ e.t }}" data-lens="{{ e.row.lens }}"><path d="{{ e.d }}" style="--w:{{ e.sw }}px"/><polygon points="{{ e.arrow }}"/></g>
 {% endfor %}
 {% for m in G.moderations %}
 <g class="e md d-{{ m.row.direction }}" data-pin="{{ m.row.pin }}" data-s="{{ m.s }}" data-te="{{ m.te }}" data-lens="{{ m.row.lens }}"><path d="{{ m.d }}" stroke-width="{{ m.sw }}"/></g>

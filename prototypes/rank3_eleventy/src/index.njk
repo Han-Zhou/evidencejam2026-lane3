@@ -9,15 +9,20 @@ permalink: index.html
 <title>Q1 · Tree planting in Canadian forest restoration</title>
 <meta name="description" content="Evidence on how planting-stock traits and site treatments act on seedling survival and growth in Canadian forest restoration: each finding with its certainty grade, its claims and the source sentences.">
 <meta name="color-scheme" content="light dark">
-<link rel="stylesheet" href="assets/site.css">
+<link rel="icon" href="data:,">
+{% include "theme-head.njk" %}
 <script>(function(d){d.className="js";d.setAttribute("data-p",/^#network/.test(location.hash)?"network":"findings")})(document.documentElement)</script>
+<link rel="stylesheet" href="assets/site.css">
 <script src="assets/app.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="top">
 <div class="wrap">
+<div class="bar">
 <p class="eyebrow">Evidence Jam 2026 · Lane 3 · Question 1</p>
+<button type="button" class="theme jsonly" id="theme" aria-pressed="false" aria-label="Switch to dark theme"><svg class="i-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1z"/></svg><svg class="i-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></button>
+</div>
 <h1>Q1 · Tree planting in Canadian forest restoration</h1>
 <p class="q">{{ q1.question }}</p>
 <nav aria-label="Panels">
@@ -46,9 +51,8 @@ permalink: index.html
 <footer class="foot">
 <div class="wrap">
 <p>Built from <code>answers/q1_tree_planting.json</code> (Findings) and <code>answers/q1_tree_planting_graph.json</code> (Network), certainty rule <code>{{ q1.a.rule }}</code>. Every direction, certainty grade, count, quote and title on this page is copied from those files. No LLM text.</p>
-<p>Static page: it works offline and makes no requests. Links leave the site only to doi.org.</p>
+<p>Static page: it works offline. It loads the claims of a panel from this site only when you open them. Links leave the site only to doi.org.</p>
 </div>
 </footer>
-<div id="hc" class="hc" hidden></div>
 </body>
 </html>

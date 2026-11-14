@@ -15,16 +15,16 @@ right", "Provenance") and `CLAUDE.md` before you start.
 ## 0. Founding principle: breadth first, then depth
 
 Every panel is a ladder. The reader starts with the whole picture and goes down one
-step at a time, and can always go back up. Each step must stay one click (or one
-hover) from the next.
+step at a time, and can always go back up. Each step must stay one click from the
+next.
 
 | Level | What the reader sees | Where |
 | --- | --- | --- |
 | L0 Breadth | Question, the two panel cards with headline counts | Top of page |
 | L1 Summary | "At a glance" strip for the open panel: counts by direction and by certainty, gaps, how it was built | Top of the panel |
 | L2 Structure | The graph (node-link), with a Matrix toggle | Middle of the panel |
-| L3 Preview | Hover card on any node or edge (also on keyboard focus) | Floats over the graph |
-| L4 Detail | Pinned detail drawer: all claims of an edge, grouped by paper | Side drawer (bottom sheet on mobile) |
+| L3 Focus | Click a node: only its active pathways stay bright (section 3.6). Click an edge: that edge and its ends stay bright | In the graph itself. Nothing floats over the graph |
+| L4 Detail | Detail drawer: all claims of an edge, grouped by paper, or all edges of a node | Side column (in the page flow under the graph on narrow screens). Never over the graph |
 | L5 Source | The quote, paper title, year, DOI link | Inside the drawer and in the tables |
 
 The tables (section 5) are a second road down to L4/L5 for readers who prefer rows.
@@ -125,8 +125,9 @@ site files (HTML or JSON), together with its quote. Run the checker until it pas
   (`data/findings.json`, `data/network.json`) loaded when needed. No CDN, no web
   fonts, no external requests. Report the byte size of each file you ship.
 - Without JavaScript (ranks 1–3), the page must still show both panels stacked, the
-  static graph SVG, and all tables with quotes. JavaScript adds tabs, hover cards, the
-  drawer, search, filters and the matrix toggle.
+  static graph SVG, and all tables with quotes. JavaScript adds tabs, click
+  highlighting, the drawer, search, filters, the matrix toggle and the theme toggle.
+- The URL hash also records a selected node (`#network/node/site_preparation`).
 
 ## 3. The graph (both panels)
 
@@ -171,9 +172,9 @@ Each edge carries an always-visible **chip** at its midpoint:
 ```
 
 - Direction glyph and word: `↑` Increase, `↓` Decrease, `↕` Mixed, `=` No effect,
-  `?` Unclear. Colour is redundant only: increase = teal, decrease = rust, mixed =
-  ochre, no effect = slate grey, unclear = light grey. Check text contrast (WCAG AA)
-  on both light and dark themes.
+  `?` Unclear. Colour is redundant only. Use the direction tokens of section 4
+  (`--inc` blue, `--dec` red, `--mix` amber, `--null` grey, `--unc` grey) for the
+  line, the arrowhead, the chip outline and the chip text, in both themes.
 - Certainty as GRADE-style dots (filled of 4): High ●●●●, Moderate ●●●○, Low ●●○○,
   Very low ●○○○. The chip has an `aria-label` / `<title>` with the full words.
 - Line width = number of studies (for example 1.5 px + 0.6 px per study, capped).
@@ -187,25 +188,54 @@ Each edge carries an always-visible **chip** at its midpoint:
 `fertilization_at_planting~>site_preparation->growth` has `target: null` and
 `target_edge: "site_preparation->growth"`. Draw it as a **dotted** curve from the
 source node that ends with a diamond marker (◆) **on the chip of the target edge**.
-Its own chip shows its direction and certainty. Its hover card shows
+Its own chip shows its direction and certainty. Its drawer entry shows
 `direction_meaning` verbatim and names the target edge.
 
 ### 3.5 Gaps
 
 Draw each gap as a **dashed, hollow** link (no arrowhead, light stroke) with a text
-label "No evidence" on it. Hover card: "No study in this corpus tested this pairing.
-This is a gap, not a negative result." plus `searched_for` verbatim. Never draw a
-gap like a weak or negative edge.
+label "No evidence" on it. Clicking it opens the drawer with: "No study in this
+corpus tested this pairing. This is a gap, not a negative result." plus
+`searched_for` verbatim. Never draw a gap like a weak or negative edge.
 
 ### 3.6 Focus + context (scalability)
 
 These are what keep a large graph readable. Implement all of them:
 
-1. **Hover / focus highlight.** Hovering or focusing a node keeps the node, its
-   edges and its neighbours at full opacity and fades the rest to about 15%.
-   Hovering an edge keeps the edge and its two ends (for a moderation edge: the
-   source and the target edge). For a condition node, highlight in-edges and
-   out-edges in two visibly different styles and show the path-honesty note.
+1. **Click to highlight active pathways (no hover).** Hover changes nothing in
+   the graph except the cursor (`pointer`) and a thin outline on the hovered
+   element itself. **No hover cards, no tooltips over the graph, no hover fading.**
+   Keyboard focus shows only the focus ring. (SVG `<title>` elements stay for
+   screen readers, but do not build any custom floating card.)
+
+   **Click a node** (or Enter / Space on it) to select it:
+
+   - The **active pathways** of node N are the effect edges on any directed path
+     that passes through N: every edge reachable downstream from N, plus every
+     edge that leads upstream into N. Also include: gaps that touch N; a
+     moderation edge whose source is N or whose `target_edge` is an active edge
+     (and then also its target edge); the membership connectors and the
+     combination node when N is a member, or the member nodes when N is the
+     combination.
+   - Active edges, their chips and their end nodes stay at full strength.
+     Everything else fades to about 10–15% opacity. The selected node gets a
+     strong outline.
+   - **Path honesty:** edges attached to N (one step) are drawn at full width.
+     Edges two or more steps away stay bright but are drawn visibly different
+     (for example 65% opacity, or a thinner line), and the status line says:
+     "Edges beyond the first step are separate bodies of evidence. A path is not
+     one tested effect." Never add or multiply anything along a path.
+   - A status line above the graph says what is selected, with counts made by
+     counting edges, for example "Pathways through Site preparation: 9 edges (6
+     direct, 3 further) · Clear". "Clear" resets the view.
+   - The drawer shows the node's details (kind text from `node_kinds`, its
+     edges, members for a combination, the path-honesty note for a condition).
+   - Click the same node again, click empty canvas, press Esc, or press Clear to
+     reset.
+
+   **Click an edge or its chip** to select it: the edge, its two end nodes (for a
+   moderation edge: its source, its diamond and its target edge) stay bright,
+   the rest fades, and the drawer shows the edge's claims and quotes.
 2. **Lenses** (preset views, a segmented control): `All` (default) · `Direct`
    (edges into outcomes from stock and treatments = the Q1 findings) · `Via
    conditions` (edges into and out of condition nodes) · `Interactions`
@@ -225,47 +255,94 @@ These are what keep a large graph readable. Implement all of them:
    empty cell with no edge and no listed gap is blank with a `title` "No claims in
    this corpus link these two" — never a negative.
 
-### 3.7 Hover card (L3) and drawer (L4)
+### 3.7 Drawer (L4)
 
-Hover card (on mouse hover, and on keyboard focus; a short delay is fine):
+There is no hover card. A click (or Enter / Space) selects an item (3.6) and
+shows it in the drawer:
 
-- Edge: `Source → Target`, direction glyph + word, certainty dots + word,
-  `certainty_rationale` verbatim, "N studies · M claims", a small horizontal bar of
-  `study_directions` (numbers printed, not colour only), and up to 3 paper titles
-  (year) with "+K more". Footer hint: "Click to pin and read the quotes".
-- Node: label, kind text from `node_kinds`, number of in-edges and out-edges, and a
-  mini list of its edges (glyph + dots + other end). Combination: its members.
+- Edge or finding: `Source → Target`, direction glyph + word, certainty dots +
+  word, `certainty_rationale` verbatim, "N studies · M claims", a small bar of
+  `study_directions` (numbers printed, not colour only). Then its claims grouped
+  by paper (paper title, year, DOI link or document_id), each claim with
+  `subject` → `predicate` → `object`, its own direction, `certainty_grade`,
+  `evidence_types`, `comparator`, and the **quote** in a block quote. Order papers
+  by number of claims.
+- Node: label, kind text from `node_kinds`, all its edges (each one selects that
+  edge), members for a combination, and for a condition node the path-honesty
+  note.
 - Gap / moderation: as in 3.4 and 3.5.
+- **The drawer never covers the graph.** On wide screens it is a column beside
+  the graph. On narrow screens it sits in the page flow under the graph (no
+  bottom sheet, no overlay). It has a close button, traps nothing, and returns
+  focus to the item that opened it. Esc closes it.
 
-Click (or Enter / Space) **pins** the item into the drawer:
+## 4. Visual style: cool monochrome editorial (Kimi-like)
 
-- Edge or finding: the header as in the hover card, then its claims grouped by paper
-  (paper title, year, DOI link or document_id), each claim with `subject` →
-  `predicate` → `object`, its own direction, `certainty_grade`, `evidence_types`,
-  `comparator`, and the **quote** in a block quote. Order papers by number of claims.
-- Node: all its edges (each one opens that edge), and for a condition node the
-  path-honesty note.
-- The drawer has a close button, traps nothing, and returns focus to the item that
-  opened it. Esc closes it.
+The look follows the Kimi blog (kimi.ai/blog): a cool grey page, flat near-white
+cards, near-black text with grey secondary text, serif reading text, sans UI, mono
+numbers, black pill buttons, and vivid colour only in the data. Do not copy any
+logo, name or brand asset.
 
-## 4. Visual style: hip and minimal
+### 4.1 Tokens (use exactly these; all text pairs pass WCAG AA)
 
-Aim for a calm, editorial look (in the spirit of the Anthropic and Kimi sites), but
-do not copy any brand, logo, name or font.
+| Token | Light | Dark | Use |
+| --- | --- | --- | --- |
+| `--bg` | `#E8E8E8` | `#0F151A` | page background |
+| `--surface` | `#F7F7F7` | `#161D23` | cards, graph canvas, table body |
+| `--raised` | `#FFFFFF` | `#1D252C` | drawer, inputs, chips, nodes |
+| `--line` | `rgba(0,0,0,.08)` | `rgba(255,255,255,.08)` | hairlines, card borders |
+| `--line-strong` | `rgba(0,0,0,.18)` | `rgba(255,255,255,.20)` | node borders, inputs |
+| `--text` | `#1A1A1A` | `#DADCDE` | headings, labels, numbers |
+| `--text-2` | `#555555` | `#9EA4AA` | reading text, secondary |
+| `--text-3` | `#636363` | `#8A9097` | captions, hints (smallest text) |
+| `--pill` / `--pill-text` | `#111111` / `#FFFFFF` | `#F2F2F2` / `#0F151A` | selected tab, selected segment, primary button |
+| `--focus` | `#0B6FE8` | `#1A88FF` | 2 px focus ring, selected node outline |
+| `--inc` | `#0A5FC2` | `#4DA3FF` | Increase |
+| `--dec` | `#C21F33` | `#FF6B76` | Decrease |
+| `--mix` | `#8F5100` | `#F5A524` | Mixed |
+| `--null` | `#5F6368` | `#A3A9AF` | No effect |
+| `--unc` | `#626262` | `#8E949A` | Unclear |
 
-- Light theme: warm off-white page (about `#FAF9F5`), near-black text (about
-  `#1F1E1D`), muted grey secondary text, 1 px hairline borders, 12–16 px radius
-  cards, almost no shadow. One accent colour (a warm clay, about `#C96442`) for
-  focus rings, the selected tab and links.
-- Dark theme with `prefers-color-scheme: dark` (warm near-black background).
-- Type: system stacks only (no web fonts). Headings `ui-serif, Georgia, "Iowan Old
-  Style", serif`; body `ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-  sans-serif`; ids `ui-monospace, SFMono-Regular, Menlo, monospace`. Generous line
-  height, max text width about 72 ch.
-- Lots of white space. Motion is short (150–200 ms) and off with
+Links are `--text` with a 1 px underline in `--line-strong` (thicker on hover), not a
+coloured link. Gaps use `--text-3` dashes.
+
+### 4.2 Light and dark themes with a toggle
+
+- Default follows the system: `@media (prefers-color-scheme: dark)` sets the dark
+  tokens under `:root:not([data-theme="light"])`; `:root[data-theme="dark"]` sets
+  them too.
+- A small theme toggle button sits at the top right of the header (sun / moon
+  icon as inline SVG, `aria-label="Switch to dark theme"` / `"... light theme"`,
+  `aria-pressed`). It sets `data-theme` on `<html>` and stores the choice in
+  `localStorage` (wrap every storage call in `try/catch`; the page works without
+  it). Apply the stored choice in a tiny inline script in `<head>` so there is no
+  flash. Without JavaScript, the system theme still works.
+- The graph SVG uses the CSS variables (no hard-coded colours), so both themes
+  apply to nodes, edges, chips, markers and lane titles.
+
+### 4.3 Type, shape, space
+
+- No web fonts. Headings and reading text (question, how built, limitations,
+  rationales, quotes) use a serif stack close to Lora: `"Iowan Old Style",
+  "Palatino Linotype", Charter, Georgia, ui-serif, serif`. Headings weight 500,
+  letter-spacing -0.02em; h1 about 40 px, h2 about 28 px. Reading text in
+  `--text-2`, 16–17 px, line height 1.6.
+- UI (tabs, chips, buttons, tables, node labels, drawer meta) uses `-apple-system,
+  BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Arial, sans-serif`.
+- Numbers, counts, ids and certainty dots use `"SF Mono", ui-monospace, Menlo,
+  Monaco, Consolas, monospace` with `font-variant-numeric: tabular-nums`.
+- Cards: `--surface`, radius 16 px, a 1 px `--line` border or none, **no shadow**.
+  Buttons, tabs, segmented controls and filter chips are pills (radius 999 px). A
+  selected tab or segment is a solid `--pill` pill with `--pill-text`; unselected
+  ones are `--raised` with `--text-2` text.
+- The two panel cards at the top: the selected card has a 1.5 px `--text` border;
+  the other has a `--line` border.
+- Graph nodes: `--raised` fill, `--line-strong` border, radius 12 px, `--text`
+  label. Edge chips: `--raised` fill with a 1 px border in the direction colour.
+- Lots of white space (section gaps 48–64 px). Motion 150–200 ms, off with
   `prefers-reduced-motion`.
-- Responsive: at phone width the drawer becomes a bottom sheet, the graph scrolls
-  horizontally inside its own box (not the page), and tables become stacked cards.
+- Responsive: the graph scrolls horizontally inside its own box (not the page);
+  the drawer moves under the graph; tables become stacked cards.
 
 ## 5. Tables (L3–L5, the row road)
 

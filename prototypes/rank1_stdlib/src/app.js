@@ -1,6 +1,7 @@
 // Q1 prototype, rank 1. Vanilla JS, no framework, no external requests.
-// The page works without this file. It adds tabs, hover cards, the drawer,
-// search, lenses, filters, the matrix toggle, sorting and paging.
+// The page works without this file. It adds tabs, click highlighting of
+// pathways, the drawer, search, lenses, filters, the matrix toggle, sorting,
+// paging and the theme toggle. Nothing in the graph reacts to hover.
 (function () {
 'use strict';
 var doc = document, root = doc.documentElement;
@@ -9,8 +10,11 @@ var DIR = {increase: ['↑', 'Increase'], decrease: ['↓', 'Decrease'], mixed: 
 var DORD = ['increase', 'decrease', 'mixed', 'no_effect', 'unclear'];
 var CERT = {high: [4, 'High'], moderate: [3, 'Moderate'], low: [2, 'Low'], very_low: [1, 'Very low']};
 var AR = ' → ';
-var P = {}, cur = 'findings', hov = null;
-var hc = doc.getElementById('hc');
+var P = {}, cur = 'findings';
+var GAPN = 'No study in this corpus tested this pairing. This is a gap, not a negative result.';
+var PATHN = 'Edges beyond the first step are separate bodies of evidence. A path is not one tested effect.';
+var HINT = 'Click a node to show its pathways. Click an edge or its chip to read its claims.';
+var wide = matchMedia('(min-width: 900px)');
 
 function $(s, el) { return (el || doc).querySelector(s); }
 function $$(s, el) { return Array.prototype.slice.call((el || doc).querySelectorAll(s)); }
@@ -25,6 +29,7 @@ function lab(it) { return it.kind === 'moderation' ? it.sl + AR + 'effect of ' +
 function go(ref, html) { return '<button type="button" class="lk" data-go="' + esc(ref) + '">' + html + '</button>'; }
 function doiH(d, doi) { return doi ? '<a href="https://doi.org/' + esc(doi) + '">' + esc(doi) + '</a>' : '<span class="mono">' + esc(d) + '</span>'; }
 function paperT(P_) { return esc(P_[0]) + (P_[1] != null ? ' (' + P_[1] + ')' : ''); }
+function kindOf(ref) { return ref.split(':')[0]; }
 // Elements are hooked by the machine-check attributes; data-ref covers the rest.
 var HOOK = '[data-ref],[data-finding-id],[data-edge-id],[data-gap-id],[data-interaction-id],[data-node-id],[data-go]';
 function refOf(n) {
@@ -39,7 +44,6 @@ function aria(it) {
   return (it.kind === 'moderation' ? it.sl + ' changes the effect of ' + it.tl : it.sl + ' to ' + it.tl) + ': ' + DIR[it.dir][1] +
     ', certainty ' + CERT[it.cert][1] + ', ' + pl(it.studies, 'study', 'studies') + ', ' + pl(it.claims, 'claim', 'claims');
 }
-var GAPN = 'No study in this corpus tested this pairing. This is a gap, not a negative result.';
 
 function load(p) {
   if (p.data) return Promise.resolve(p.data);
@@ -61,6 +65,25 @@ function load(p) {
   return p.wait;
 }
 
+// ---------- theme toggle (SPEC 4.2) ----------
+var tbtn = $('.theme'), dark = matchMedia('(prefers-color-scheme: dark)');
+function theme() { return root.getAttribute('data-theme') || (dark.matches ? 'dark' : 'light'); }
+function syncTheme() {
+  var d = theme() === 'dark';
+  tbtn.setAttribute('aria-pressed', d ? 'true' : 'false');
+  tbtn.setAttribute('aria-label', d ? 'Switch to light theme' : 'Switch to dark theme');
+}
+if (tbtn) {
+  tbtn.addEventListener('click', function () {
+    var t = theme() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('q1-theme', t); } catch (e) {}
+    syncTheme();
+  });
+  if (dark.addEventListener) dark.addEventListener('change', syncTheme);
+  syncTheme();
+}
+
 // ---------- tabs and hash ----------
 var tabs = $$('[data-tab]');
 function select(k) {
@@ -71,7 +94,6 @@ function select(k) {
     t.setAttribute('aria-selected', on ? 'true' : 'false');
     t.tabIndex = on ? 0 : -1;
   });
-  hideCard();
 }
 function setHash(h) {
   if (decodeURIComponent(location.hash.slice(1)) !== h) history.replaceState(null, '', '#' + h);
@@ -81,34 +103,131 @@ function route() {
   var m = /^(findings|network)(?:\/([a-z]+)\/(.+))?$/.exec(h);
   if (!m) { if (!h) select(cur); return; }
   select(m[1]);
-  if (m[2]) pin(P[m[1]], m[2] + ':' + m[3], null, true);
-  else if (P[m[1]].pin) closeDrawer(P[m[1]], true);
+  if (m[2]) pin(P[m[1]], m[2] + ':' + m[3], null, 'hash');
+  else if (P[m[1]].pin) clear(P[m[1]], false, true);
 }
 
-// ---------- hover card ----------
-function hideCard() { hov = null; hc.hidden = true; }
-function placeCard(x, y) {
-  var w = hc.offsetWidth, h = hc.offsetHeight, L = x + 16, T = y + 16;
-  if (L + w > innerWidth - 8) L = Math.max(8, x - w - 16);
-  if (T + h > innerHeight - 8) T = Math.max(8, y - h - 16);
-  hc.style.left = L + 'px'; hc.style.top = T + 'px';
+// ---------- graph: click selection and active pathways (SPEC 3.6) ----------
+// Pathways of node N: every effect edge downstream of N and every effect edge
+// upstream into N (breadth-first, so each edge gets its step count from N),
+// gaps that touch N, moderation edges from N or onto an active edge, and
+// combination membership. Nothing is added or multiplied along a path.
+function related(p, ref) {
+  var t = kindOf(ref), id = ref.slice(t.length + 1);
+  var R = {keep: {}, far: {}, mem: {}, direct: 0, further: 0, gaps: 0, hid: 0, node: t === 'node'};
+  var keep = R.keep;
+  function ends(r) { var g = p.g[r]; keep['node:' + g.s] = 1; if (g.t) keep['node:' + g.t] = 1; }
+  function add(r) { keep[r] = 1; ends(r); var te = p.g[r].te; if (te) { keep[te] = 1; ends(te); } }
+  if (t === 'node') {
+    var hop = {}, outs = {}, ins = {}, all = Object.keys(p.g);
+    keep[ref] = 1;
+    all.forEach(function (r) {
+      var g = p.g[r];
+      if (g.te || kindOf(r) === 'gap') return;
+      (outs[g.s] = outs[g.s] || []).push(r);
+      (ins[g.t] = ins[g.t] || []).push(r);
+    });
+    [[outs, 't'], [ins, 's']].forEach(function (w) {
+      var dist = {}, q = [id];
+      dist[id] = 0;
+      while (q.length) {
+        var x = q.shift();
+        (w[0][x] || []).forEach(function (r) {
+          var d = dist[x] + 1, y = p.g[r][w[1]];
+          if (!hop[r] || hop[r] > d) hop[r] = d;
+          if (!(y in dist)) { dist[y] = d; q.push(y); }
+        });
+      }
+    });
+    all.forEach(function (r) {
+      var g = p.g[r];
+      if (kindOf(r) === 'gap' && (g.s === id || g.t === id)) hop[r] = 1;
+    });
+    all.forEach(function (r) {
+      var g = p.g[r];
+      if (!g.te) return;
+      if (g.s === id) { hop[r] = 1; if (!hop[g.te]) hop[g.te] = 2; }
+      else if (hop[g.te]) hop[r] = 2;
+    });
+    Object.keys(hop).forEach(function (r) {
+      add(r);
+      if (hop[r] > 1) R.far[r] = 1;
+      if (!passes(p, r)) R.hid++;
+      else if (kindOf(r) === 'gap') R.gaps++;
+      else if (hop[r] > 1) R.further++;
+      else R.direct++;
+    });
+    p.mems.forEach(function (m, i) {
+      if (m.m === id || m.c === id) { R.mem[i] = 1; keep['node:' + m.m] = 1; keep['node:' + m.c] = 1; }
+    });
+    return R;
+  }
+  if (p.g[ref]) { add(ref); return R; }
+  if (t === 'paper' && p.docRefs) {
+    (p.docRefs[id] || []).forEach(function (r) { if (p.g[r]) { add(r); R.direct++; } });
+    return R;
+  }
+  return null;
 }
-function showCard(p, ref, x, y, el) {
-  hov = {p: p, ref: ref, x: x, y: y};
-  hc.innerHTML = p.data ? card(p, ref) : '<p>' + esc(el.getAttribute('aria-label')) + '</p>';
-  hc.hidden = false; placeCard(x, y);
-  if (!p.data) load(p).then(function () {
-    if (hov && hov.ref === ref) { hc.innerHTML = card(p, ref); placeCard(hov.x, hov.y); }
-  }, function () {});
+function highlight(p, ref) {
+  var R = ref ? related(p, ref) : null;
+  p.svg.classList.toggle('sel', !!R);
+  p.gEls.forEach(function (n) {
+    var r = refOf(n);
+    n.classList.toggle('on', !!R && !!R.keep[r]);
+    n.classList.toggle('far', !!R && !!R.far[r]);
+  });
+  p.mems.forEach(function (m, i) { m.el.classList.toggle('on', !!R && !!R.mem[i]); });
+  $$('.pin', p.el).forEach(function (n) { n.classList.remove('pin'); });
+  if (ref) (p.refs[ref] || []).forEach(function (n) { if (n.closest('svg') || n.closest('.mx')) n.classList.add('pin'); });
+  return R;
 }
-function topPapers(p, it, n) {
-  var c = {}, order = [];
-  it.ids.forEach(function (id) { var d = p.data.claims[id].doc; if (!c[d]) { c[d] = 0; order.push(d); } c[d]++; });
-  var ix = {}; order.forEach(function (d, i) { ix[d] = i; });
-  order.sort(function (a, b) { return c[b] - c[a] || ix[a] - ix[b]; });
-  var h = order.slice(0, n).map(function (d) { return '<li>' + paperT(p.data.papers[d]) + '</li>'; }).join('');
-  return '<ul>' + h + '</ul>' + (order.length > n ? '<p>+' + (order.length - n) + ' more</p>' : '');
+function nameOf(p, ref) {
+  var it = p.data && p.data.items[ref], t = kindOf(ref);
+  if (t === 'paper') return p.data && p.data.papers[ref.slice(6)] ? p.data.papers[ref.slice(6)][0] : '';
+  if (it) return it.ty === 'node' ? it.label : it.ty === 'inter' ? 'Interaction claim' : it.ty === 'gap' ? it.sl + AR + it.tl : lab(it);
+  var n = focusable(p, ref);
+  return n ? n.getAttribute('aria-label').split(/ \(|: /)[0] : '';
 }
+function status(p, R) {
+  var ref = p.pin, h, note = '';
+  if (!ref) return put(p, '<span>' + HINT + '</span>');
+  var t = kindOf(ref), nm = '<b>' + esc(nameOf(p, ref)) + '</b>';
+  var w = p.k === 'findings' ? ['finding', 'findings'] : ['edge', 'edges'];
+  function n(x, a, b) { return '<span class="n">' + x + '</span> ' + (b ? (x === 1 ? a : b) : a); }
+  if (t === 'node' && R) {
+    h = '<span>Pathways through ' + nm + ': ' + n(R.direct + R.further, w[0], w[1]) + ' (' +
+      (R.further ? n(R.direct, 'direct') + ', ' + n(R.further, 'further') : 'all direct') + ')' +
+      (R.gaps ? ' · ' + n(R.gaps, 'gap', 'gaps') + ' (no evidence)' : '') +
+      (R.hid ? ' · ' + n(R.hid, 'hidden by filters') : '') + '</span>';
+    if (R.further) note = '<p class="pathn">Full lines are one step from ' + nm + '; lighter lines are further steps. ' + PATHN + '</p>';
+  } else if (t === 'paper') {
+    h = '<span>Paper ' + nm + (R ? ': cited by ' + n(R.direct, w[0], w[1]) : '') + '</span>';
+  } else {
+    h = '<span>Selected: ' + nm + (t === 'gap' ? ' (no evidence)' : '') + (R ? '' : ' (not drawn in the graph)') + '</span>';
+  }
+  put(p, h + '<span class="acts"><button type="button" class="tod">Details below</button>' +
+    '<button type="button" class="clr">Clear</button></span>' + note);
+}
+// The status line is a live region: only rewrite it when its text changes.
+function put(p, h) { if (p.stat.getAttribute('data-h') !== h) { p.stat.innerHTML = h; p.stat.setAttribute('data-h', h); } }
+function setupGraph(p) {
+  function choose(n) {
+    var r = refOf(n);
+    if (r === p.pin) { clear(p, false); return; }
+    pin(p, r, focusable(p, r) || n, 'graph');
+  }
+  p.svg.addEventListener('click', function (e) {
+    var n = e.target.closest(HOOK);
+    if (n) choose(n); else if (p.pin) clear(p, false);
+  });
+  p.svg.addEventListener('keydown', function (e) {
+    var n = e.target.closest(HOOK);
+    if (n && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); choose(n); }
+  });
+}
+
+// ---------- drawer ----------
 function sdBar(sd) {
   var h = '', t = [];
   DORD.forEach(function (d) {
@@ -123,88 +242,6 @@ function edgeLine(p, ref, from) {
   if (it.ty === 'gap') return '<span class="muted">No evidence</span>' + AR + esc(other);
   return gl(it.dir) + ' <span class="dots" aria-hidden="true">' + dots(it.cert) + '</span> ' + esc(other);
 }
-function card(p, ref) {
-  var D = p.data, it = D.items[ref];
-  if (!it) return '';
-  var h = '';
-  if (it.ty === 'finding' || it.ty === 'edge') {
-    h = '<h4>' + esc(lab(it)) + '</h4>';
-    if (it.kind === 'moderation') h += '<p>Changes the effect of ' + esc(it.tl) + '.</p><p class="muted">' + esc(it.dm) + '</p>';
-    h += '<p>' + dirH(it.dir) + ' · ' + certH(it.cert) + ' certainty</p><p class="muted">' + esc(it.rat) + '</p>';
-    h += '<p>' + pl(it.studies, 'study', 'studies') + ' · ' + pl(it.claims, 'claim', 'claims') + '</p>' + sdBar(it.sd);
-    h += topPapers(p, it, 3) + '<p class="ft">Click to pin and read the quotes</p>';
-  } else if (it.ty === 'node') {
-    h = '<h4>' + esc(it.label) + '</h4><p class="muted">' + esc(it.kn ? it.kn + ': ' + it.kt : it.kt) + '</p>';
-    if (it.members) h += '<p>Members: ' + it.members.map(function (m) { return esc(D.items['node:' + m].label); }).join(' + ') + '</p>';
-    h += '<p>' + pl(it.ins.length, 'edge in', 'edges in') + ' · ' + pl(it.outs.length, 'edge out', 'edges out') + '</p><ul>';
-    it.ins.forEach(function (r) { h += '<li>in: ' + edgeLine(p, r, it.id) + '</li>'; });
-    it.outs.forEach(function (r) { h += '<li>out: ' + edgeLine(p, r, it.id) + '</li>'; });
-    h += '</ul>';
-    if (it.kind === 'condition') h += '<p class="muted">Glow: clay = edges into this condition, dark = edges out of it. ' + esc(D.pathNote) + '</p>';
-    h += '<p class="ft">Click to pin</p>';
-  } else if (it.ty === 'gap') {
-    h = '<h4>' + esc(it.sl + AR + it.tl) + '</h4><p><b>No evidence.</b> ' + esc(D.gapNote) + '</p><p class="muted">Searched for: ' + esc(it.sf) + '</p>';
-  }
-  return h;
-}
-
-// ---------- graph: highlight, hover, pin ----------
-function related(p, ref) {
-  var keep = {}, inn = {}, out = {}, t = ref.split(':')[0], id = ref.slice(t.length + 1);
-  keep[ref] = 1;
-  if (t === 'node') {
-    Object.keys(p.g).forEach(function (r) {
-      var g = p.g[r];
-      if (g.s === id) { keep[r] = out[r] = 1; if (g.t) keep['node:' + g.t] = 1; if (g.te) keep[g.te] = 1; }
-      if (g.t === id) { keep[r] = inn[r] = 1; keep['node:' + g.s] = 1; }
-    });
-  } else if (p.g[ref]) {
-    var g = p.g[ref];
-    keep['node:' + g.s] = 1;
-    if (g.t) keep['node:' + g.t] = 1;
-    if (g.te) keep[g.te] = 1;
-  }
-  return {keep: keep, inn: inn, out: out, cond: t === 'node' && p.kind[id] === 'condition'};
-}
-function highlight(p, ref) {
-  var R = ref ? related(p, ref) : null;
-  p.svg.classList.toggle('hov', !!R);
-  p.gEls.forEach(function (n) {
-    var r = refOf(n);
-    n.classList.toggle('on', !!R && !!R.keep[r]);
-    n.classList.toggle('hin', !!R && R.cond && !!R.inn[r]);
-    n.classList.toggle('hout', !!R && R.cond && !!R.out[r]);
-  });
-}
-function setupGraph(p) {
-  var svg = p.svg;
-  function enter(n, x, y) {
-    var r = refOf(n);
-    if (p.hoverRef === r) { if (hov) { hov.x = x; hov.y = y; placeCard(x, y); } return; }
-    p.hoverRef = r; highlight(p, r); showCard(p, r, x, y, focusable(p, r) || n);
-  }
-  function leave() { p.hoverRef = null; highlight(p, null); hideCard(); }
-  svg.addEventListener('mousemove', function (e) {
-    var n = e.target.closest(HOOK);
-    if (n) enter(n, e.clientX, e.clientY); else if (p.hoverRef) leave();
-  });
-  svg.addEventListener('mouseleave', leave);
-  svg.addEventListener('focusin', function (e) {
-    var n = e.target.closest(HOOK); if (!n) return;
-    var b = n.getBoundingClientRect(); p.hoverRef = null; enter(n, b.right, b.top);
-  });
-  svg.addEventListener('focusout', leave);
-  svg.addEventListener('click', function (e) {
-    var n = e.target.closest(HOOK); if (!n) return;
-    pin(p, refOf(n), focusable(p, refOf(n)) || n);
-  });
-  svg.addEventListener('keydown', function (e) {
-    var n = e.target.closest(HOOK);
-    if (n && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pin(p, refOf(n), n); }
-  });
-}
-
-// ---------- drawer ----------
 function claimLi(p, c) {
   var C = p.data.claims[c];
   return '<li id="dc-' + p.k + '-' + esc(c.slice(10)) + '"><p class="spo">' + esc(C.s) + ' <span class="pr">→ ' + esc(C.p) + (C.n ? ' (negated)' : '') +
@@ -230,7 +267,7 @@ function edgeList(p, title, refs, from) {
   }).join('') + '</ul>';
 }
 function drawerHtml(p, ref) {
-  var D = p.data, t = ref.split(':')[0], id = ref.slice(t.length + 1), it = D.items[ref], h = '', title;
+  var D = p.data, t = kindOf(ref), id = ref.slice(t.length + 1), it = D.items[ref], h = '', title;
   if (t === 'paper') {
     var P_ = D.papers[id]; if (!P_) return null;
     title = P_[0];
@@ -270,41 +307,52 @@ function drawerHtml(p, ref) {
   }
   return {title: title, html: h};
 }
-function markPin(p, ref) {
-  $$('.pin', p.el).forEach(function (n) { n.classList.remove('pin'); });
-  if (ref) (p.refs[ref] || []).forEach(function (n) { if (n.closest('svg')) n.classList.add('pin'); });
+function apply(p) { status(p, highlight(p, p.pin)); }
+// Move focus to the drawer and scroll so it (or the claim to show) starts at the top.
+// On wide screens the stage comes into view, so the graph highlight and the drawer show together.
+function toDrawer(p, target) {
+  $('h3', p.drawer).focus({preventScroll: true});
+  (target || (wide.matches ? $('.stage', p.el) : p.drawer)).scrollIntoView({block: target ? 'center' : 'start'});
 }
-function pin(p, ref, opener, fromHash) {
+// Select an item: highlight it in the graph, show it in the drawer, record it in the hash.
+// how: 'graph' (click or key in the graph), 'hash' (from the URL), or undefined (tables, drawer, search).
+function pin(p, ref, opener, how) {
   if (opener && !p.drawer.contains(opener)) p.opener = opener;
-  hideCard();
   if (p.sres) p.sres.hidden = true;
-  load(p).then(function (D) {
+  if (kindOf(ref) !== 'claim') { p.pin = ref; apply(p); }
+  load(p).then(function () {
     var focusClaim = null;
-    if (ref.indexOf('claim:') === 0) { focusClaim = ref.slice(6); ref = p.owner[focusClaim] || ref; }
+    if (kindOf(ref) === 'claim') { focusClaim = ref.slice(6); ref = p.owner[focusClaim] || ref; }
     var r = drawerHtml(p, ref);
-    if (!r) return;
+    if (!r) { if (p.pin === ref) clear(p, false, true); return; }
+    p.pin = ref; apply(p);
     $('h3', p.drawer).textContent = r.title;
     $('.dr-body', p.drawer).innerHTML = r.html;
     p.drawer.classList.add('open');
-    p.pin = ref; markPin(p, ref);
-    if (!fromHash) setHash(p.k + '/' + ref.replace(':', '/'));
+    if (how !== 'hash') setHash(p.k + '/' + ref.replace(':', '/'));
     var target = focusClaim && doc.getElementById('dc-' + p.k + '-' + focusClaim.slice(10));
-    if (target) { target.classList.add('flash'); target.scrollIntoView({block: 'center'}); }
-    else $('.dr-body', p.drawer).scrollTop = 0;
-    if (!fromHash) $('h3', p.drawer).focus({preventScroll: !!target});
-    else if (innerWidth >= 900) p.drawer.scrollTop = 0;
+    if (target) target.classList.add('flash');
+    if (wide.matches) p.drawer.scrollTop = 0;
+    if (how === 'hash') return;
+    // Keep the highlighted graph in view when a node is chosen on a narrow screen:
+    // its details are under the graph, one "Details below" click away.
+    if (how === 'graph' && !wide.matches && kindOf(ref) === 'node') return;
+    // Beside the graph (wide), a graph click needs no scroll; otherwise bring the drawer into view.
+    if (how === 'graph' && wide.matches) $('h3', p.drawer).focus({preventScroll: true});
+    else toDrawer(p, target);
   }, function () {
     $('.dr-body', p.drawer).innerHTML = '<p>Could not load the claims file. Open the <a href="' + (p.k === 'findings' ? 'claims-findings.html' : 'claims-network.html') + '">claims page</a> instead.</p>';
     p.drawer.classList.add('open');
   });
 }
-function closeDrawer(p, fromHash) {
+function clear(p, refocus, fromHash) {
   var ref = p.pin;
-  p.pin = null; markPin(p, null);
+  p.pin = null; apply(p);
   p.drawer.classList.remove('open');
   $('h3', p.drawer).textContent = 'Details';
-  $('.dr-body', p.drawer).innerHTML = '<p class="muted">Select an edge, a node or a table row. Its claims and quotes appear here.</p>';
+  $('.dr-body', p.drawer).innerHTML = '<p class="muted">Select a node, an edge or a table row. Its details, claims and quotes appear here.</p>';
   if (!fromHash) setHash(p.k);
+  if (!refocus) return;
   var o = p.opener;
   if (o && o.isConnected && o.getClientRects().length) o.focus();
   else if (ref && focusable(p, ref)) focusable(p, ref).focus();
@@ -328,7 +376,7 @@ function inLens(p, ref) {
 function refresh(p) {
   var shown = 0, total = 0, lensN = {}, hitN = {};
   Object.keys(p.refs).forEach(function (r) {
-    var t = r.split(':')[0];
+    var t = kindOf(r);
     if (t === 'node' || t === 'paper') return;
     var ok = passes(p, r), inl = inLens(p, r), hit = !p.hits || !!p.hits[r], g = p.g[r];
     if (t === 'finding' || t === 'edge') { total++; if (ok && hit) shown++; }
@@ -348,13 +396,14 @@ function refresh(p) {
   });
   if (p.docRefs) $$('tr[data-doc]', p.el).forEach(function (tr) {
     var d = tr.getAttribute('data-doc');
-    var ok = (p.docRefs[d] || []).some(function (r) { return r.indexOf('inter:') === 0 || passes(p, r); });
+    var ok = (p.docRefs[d] || []).some(function (r) { return kindOf(r) === 'inter' || passes(p, r); });
     tr.classList.toggle('fx', !(ok && (!p.hits || p.docHit[d])));
   });
   p.count.textContent = 'Showing ' + shown + ' of ' + total + ' ' + (p.k === 'findings' ? 'findings' : 'edges') +
     (p.f.gaps ? '' : ', gaps hidden') + (p.lens !== 'all' ? ', lens: ' + $('[data-lens="' + p.lens + '"]', p.el).textContent : '');
   pageTables(p);
   if (p.claimsOpen) renderClaims(p);
+  apply(p);
 }
 function search(p, q) {
   q = q.trim().toLowerCase(); p.q = q;
@@ -511,12 +560,13 @@ function sortBy(p, t, b) {
 // ---------- setup ----------
 function setup(el) {
   var k = el.getAttribute('data-panel');
-  var p = P[k] = {k: k, el: el, svg: $('svg.graph', el), drawer: $('.drawer', el), refs: {}, g: {}, kind: {}, attr: {},
+  var p = P[k] = {k: k, el: el, svg: $('svg.graph', el), drawer: $('.drawer', el), stat: $('.selbar', el), refs: {}, g: {}, kind: {}, attr: {},
     f: {dirs: DORD.slice(), min: 0, gaps: true}, lens: 'all', q: '', hits: null, pin: null};
   index(p, $$(HOOK, el));
   p.gEls = $$(HOOK, p.svg);
-  p.gEls.forEach(function (n) { n.classList.add('it'); });
   p.nodes = $$('.nd', p.svg);
+  p.mems = $$('.mem', p.svg).map(function (n) { return {el: n, m: n.getAttribute('data-m'), c: n.getAttribute('data-c')}; });
+  p.gEls.concat(p.mems.map(function (m) { return m.el; })).forEach(function (n) { n.classList.add('it'); });
   $$('.ln', p.svg).forEach(function (n) {
     p.g[refOf(n)] = {s: n.getAttribute('data-s'), t: n.getAttribute('data-t'), te: n.getAttribute('data-te')};
   });
@@ -562,9 +612,11 @@ function setup(el) {
   el.addEventListener('click', function (e) {
     var t = e.target;
     if (t.closest('svg.graph')) return;
+    if (t.closest('.clr')) { clear(p, true); return; }
+    if (t.closest('.tod')) { toDrawer(p); return; }
     var a = t.closest('a[data-ref], [data-go]');
     if (a) { e.preventDefault(); pin(p, refOf(a), a); return; }
-    if (t.closest('.x')) { closeDrawer(p); return; }
+    if (t.closest('.x')) { clear(p, true); return; }
     if (t.closest('.more2')) { var h = $('.cl-host', el); h.setAttribute('data-all', h.getAttribute('data-all') === '1' ? '' : '1'); renderClaims(p); return; }
     var tr = t.closest('tr'), r = tr && (tr.getAttribute('data-doc') ? 'paper:' + tr.getAttribute('data-doc') : refOf(tr));
     if (r && !t.closest('a[href^="https:"], button, summary')) { e.preventDefault(); pin(p, r, $('a', tr) || tr); }
@@ -602,12 +654,10 @@ doc.addEventListener('keydown', function (e) {
   var p = P[cur], tag = (doc.activeElement && doc.activeElement.tagName) || '';
   if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(tag)) { e.preventDefault(); p.qi.focus(); }
   else if (e.key === 'Escape') {
-    if (hov) hideCard();
-    else if (!p.sres.hidden) p.sres.hidden = true;
-    else if (p.pin) closeDrawer(p);
+    if (!p.sres.hidden) p.sres.hidden = true;
+    else if (p.pin) clear(p, true);
   }
 });
-addEventListener('scroll', function () { if (hov && !hov.p.svg.contains(doc.activeElement)) hideCard(); }, {passive: true});
 addEventListener('hashchange', route);
 route();
 })();

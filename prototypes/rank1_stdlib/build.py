@@ -47,6 +47,17 @@ KIND_LANE = {"planting_stock": 0, "site_treatment": 0, "combination": 0, "condit
 LANE0_GROUPS = ["planting_stock", "site_treatment", "combination"]
 
 GAP_NOTE = "No study in this corpus tested this pairing. This is a gap, not a negative result."
+DRAWER_EMPTY = "Select a node, an edge or a table row. Its details, claims and quotes appear here."
+
+# Applied in <head> before the stylesheet, so a stored theme shows with no flash (SPEC 4.2).
+THEME_JS = ('try{var t=localStorage.getItem("q1-theme");'
+            'if(t=="dark"||t=="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}')
+THEME_BTN = (
+    '<button type="button" class="theme" aria-pressed="false" aria-label="Switch to dark theme">'
+    '<svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>'
+    '<svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/>'
+    '<path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>'
+    '</button>')
 MEMBER_NOTE = "member of a combination — not an evidence edge"
 
 
@@ -299,7 +310,7 @@ def svg_graph(M, geo):
     if geo["members"]:
         out.append('<g class="mems" aria-hidden="true">')
         for m in geo["members"]:
-            out.append('<path class="mem" d="%s"/>' % m["d"])
+            out.append('<path class="mem" data-m="%s" data-c="%s" d="%s"/>' % (esc(m["member"]), esc(m["combo"]), m["d"]))
         out.append("</g>")
     # lines
     out.append('<g class="lines">')
@@ -337,7 +348,7 @@ def svg_graph(M, geo):
             attrs = 'data-ref="node:%s"' % esc(n["id"])
         attrs += ' tabindex="0" role="button" aria-label="%s"' % esc(aria)
         w, h = g["w"], g["h"]
-        rx = {"planting_stock": 16, "site_treatment": 3}.get(shape, 8)
+        rx = {"site_treatment": 3}.get(shape, 12)
         out.append('<g class="nd k-%s" %s transform="translate(%s %s)">' % (shape, attrs, fmt(g["x"]), fmt(g["y"])))
         out.append('<rect class="bx" width="%d" height="%s" rx="%d"/>' % (w, fmt(h), rx))
         tx = 16
@@ -456,16 +467,19 @@ def legend(M):
     widths = "".join('<li><svg width="34" height="14" aria-hidden="true"><path class="lw" d="M2 7H32" stroke-width="%s"/></svg>%s</li>' % (
         fmt(stroke_w(n)), plural(n, "study", "studies")) for n in (1, 5, 10))
     rows.append('<div><h4>Line width = number of studies</h4><ul>%s</ul></div>' % widths)
-    other = ['<li><svg width="34" height="14" aria-hidden="true"><path class="lg" d="M2 7H32"/></svg><b>No evidence</b>: %s</li>' % esc(GAP_NOTE)]
+    other = ['<li><svg width="34" height="14" aria-hidden="true"><path class="lg" d="M2 7H32"/></svg><span><b>No evidence</b>: %s</span></li>' % esc(GAP_NOTE)]
     if key == "network":
         other.append('<li><svg width="34" height="14" aria-hidden="true"><path class="lm" d="M2 7H24"/><path class="ld" d="M29 2.5L33.5 7L29 11.5L24.5 7Z"/></svg>'
                      'Dotted line ending in ◆ on a chip: changes the effect of that edge (moderation)</li>')
         other.append('<li><svg width="34" height="14" aria-hidden="true"><path class="lmem" d="M2 7H32"/></svg>Thin dotted line, no arrow: %s</li>' % esc(MEMBER_NOTE))
-        other.append('<li class="shapes"><span class="sh s-ps">Planting stock: round corners</span> <span class="sh s-st">Site treatment: square corners</span> '
+        other.append('<li class="shapes"><span class="sh">Planting stock: round corners</span> <span class="sh s-st">Site treatment: square corners</span> '
                      '<span class="sh s-co">Condition: side bar</span> <span class="sh s-ou">Outcome: double border</span> '
                      '<span class="sh s-cb">Combination: dashed, shows members</span></li>')
     else:
-        other.append('<li class="shapes"><span class="sh s-fa">Factor</span> <span class="sh s-ou">Outcome: double border</span></li>')
+        other.append('<li class="shapes"><span class="sh">Factor</span> <span class="sh s-ou">Outcome: double border</span></li>')
+    other.append('<li class="js-only"><svg width="34" height="14" aria-hidden="true"><path class="lfar" d="M2 7H32"/></svg>'
+                 'After a click on a node: full lines are one step from it, lighter lines are further steps. '
+                 'A path is not one tested effect.</li>')
     rows.append('<div class="wide"><h4>Other marks</h4><ul>%s</ul></div>' % "".join(other))
     return '<div class="legend" aria-label="Legend" role="group">%s</div>' % "".join(rows)
 
@@ -610,10 +624,11 @@ def panel_html(M, geo):
         '<div class="vbar"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
         '<button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div>'
         '<a class="vat" href="#tbl-%(k)s">View as table</a></div>'
+        '<div class="selbar js-only" id="st-%(k)s" role="status" aria-live="polite"></div>'
         '<div class="gbox">%(svg)s</div><div class="mbox js-only"></div>%(limit)s</div>'
-        '<section class="drawer js-only" id="dr-%(k)s" aria-labelledby="drh-%(k)s"><div class="dr-head"><h3 id="drh-%(k)s" tabindex="-1">Details</h3>'
+        '<div class="dcol js-only"><section class="drawer" id="dr-%(k)s" aria-labelledby="drh-%(k)s"><div class="dr-head"><h3 id="drh-%(k)s" tabindex="-1">Details</h3>'
         '<button type="button" class="x" aria-label="Close details">×</button></div>'
-        '<div class="dr-body"><p class="muted">Select an edge, a node or a table row. Its claims and quotes appear here.</p></div></section></div>'
+        '<div class="dr-body"><p class="muted">%(empty)s</p></div></section></div></div>'
         '%(legend)s'
         '<h3 class="th">Tables</h3>'
         '<details class="tb" open><summary>%(Words)s (%(n)d)</summary>%(items)s<button type="button" class="more js-only" hidden></button></details>'
@@ -631,6 +646,7 @@ def panel_html(M, geo):
         "legend": legend(M), "Words": word[1].capitalize(), "n": len(M["items"]), "items": items_table(M),
         "ng": len(M["gaps"]), "gaps": gaps_table(M), "inter_title": inter_title, "inter": inter,
         "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0], "page": page, "lims": lims,
+        "empty": DRAWER_EMPTY,
     }
 
 
@@ -655,18 +671,18 @@ def index_html(MA, MB, ga, gb):
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>Q1 · Tree planting evidence</title>'
         '<meta name="description" content="Evidence on how planting-stock traits and site treatments affect seedling survival and growth in Canadian forest restoration: findings, certainty, gaps and source quotes.">'
+        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":"");%s</script>'
         '<link rel="stylesheet" href="style.css">'
-        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":"")</script>'
         '<script src="app.js" defer></script></head><body>'
         '<a class="skip" href="#main">Skip to content</a>'
-        '<header class="top"><p class="eyebrow">Evidence Jam 2026 · Lane 3 · Question 1</p>'
+        '<header class="top"><div class="bar"><p class="eyebrow">Evidence Jam 2026 · Lane 3 · Question 1</p>%s</div>'
         '<h1>Tree planting in Canadian forest restoration</h1><p class="q">%s</p>'
         '<nav aria-label="Panels"><div class="cards">%s</div></nav></header>'
         '<main id="main">%s%s</main>'
         '<footer><p>Built from <code>answers/q1_tree_planting.json</code> and <code>answers/q1_tree_planting_graph.json</code>. '
         'Certainty rule <code>%s</code>. No text on this page is generated by a language model.</p></footer>'
-        '<div class="hc" id="hc" role="tooltip" hidden></div></body></html>\n'
-    ) % (esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb), esc(A["rule"]))
+        '</body></html>\n'
+    ) % (THEME_JS, THEME_BTN, esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb), esc(A["rule"]))
 
 
 # ---------------------------------------------------------------------------
@@ -752,11 +768,11 @@ def claims_page(M):
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>%s · Q1</title><meta name="description" content="Every claim and source quote behind the Q1 %s, grouped by %s and paper.">'
-        '<link rel="stylesheet" href="style.css"></head><body class="cp"><a class="skip" href="#main">Skip to content</a>'
-        '<header class="top"><p><a href="index.html#%s">← Back to the Q1 site</a></p><h1>%s</h1><p class="q">%s</p>'
+        '<script>%s</script><link rel="stylesheet" href="style.css"></head><body class="cp"><a class="skip" href="#main">Skip to content</a>'
+        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#%s">← Back to the Q1 site</a></p></div><h1>%s</h1><p class="q">%s</p>'
         '<nav aria-label="Contents"><ol class="toc">%s<li><a href="#papers">Papers</a></li></ol></nav></header>'
         '<main id="main">%s</main><footer><p>From <code>answers/%s</code>.</p></footer></body></html>\n'
-    ) % (title, M["name"].lower(), M["item_word"][0], key, title, esc(src["question"]), "".join(toc), "".join(body), esc(M["file"]))
+    ) % (title, M["name"].lower(), M["item_word"][0], THEME_JS, key, title, esc(src["question"]), "".join(toc), "".join(body), esc(M["file"]))
 
 
 def data_json(M):

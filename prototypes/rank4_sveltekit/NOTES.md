@@ -5,6 +5,70 @@ The Q1 site from `../SPEC.md`, built with SvelteKit 3 + Svelte 5 and
 HTML holds both panels, both graph SVGs, the pooled tables and all machine-check
 `data-*` attributes. Client hydration adds the interaction.
 
+## v2 (2026-11-14): Kimi-like themes with a toggle, click-only graph focus
+
+What changed for the new SPEC (sections 0, 2, 3.3 to 3.7, 4):
+
+- **Themes (SPEC 4).** `src/app.css` is rewritten on the SPEC 4.1 tokens, exactly as
+  given, for light and dark: a cool grey page, flat `--surface` cards with a 16 px radius
+  and no shadow, a serif for headings and reading text (question, how built, rationales,
+  quotes, limitations), sans for the UI, mono for numbers, counts, ids and dots, black
+  `--pill` pills for the selected tab, segment and primary button. Colour is only in the
+  data (`--inc`, `--dec`, `--mix`, `--null`, `--unc` on lines, arrowheads, chip outlines
+  and chip glyphs). The SVG uses only CSS variables. Two extra tokens, not text colours:
+  `--halo` (the selection band) and `--sel-fill` (the selected node's fill).
+- **Theme toggle (SPEC 4.2).** A round button at the top right of a new top bar, with a
+  moon and a sun inline SVG (CSS shows the right one, so nothing flashes on hydration),
+  `aria-label` "Switch to dark theme" / "Switch to light theme" and `aria-pressed`. It sets
+  `data-theme` on `<html>` and stores `q1-theme` in `localStorage` (in `try/catch`). The
+  inline script in `src/app.html` applies a stored choice before first paint. With no
+  stored choice the page follows `prefers-color-scheme`, also without JavaScript (then
+  the toggle is hidden).
+- **No hover.** `HoverCard.svelte` is deleted, and so are all hover and focus emphasis
+  handlers in `Graph.svelte`, `Matrix.svelte` and `Panel.svelte`. Hover changes only the
+  cursor and the hovered node, chip or gap label's own outline (CSS `:hover`). Keyboard
+  focus shows only the focus ring. The one pointer listener left on the graph,
+  `pointerenter`, loads d3-zoom so that the first drag already pans; it changes nothing
+  on screen.
+- **Click a node = its active pathways (SPEC 3.6.1).** `emphasis()` in `src/lib/panel.js`
+  walks the effect edges breadth first, downstream from the node and upstream into it,
+  and gives each edge hop 1 (attached to the node) or 2 (further). It adds the gaps that
+  touch the node, a moderation edge from the node (and then its target edge) or onto an
+  active edge, and the membership connector and combination node (or the members when the
+  node is the combination). It only collects ids: nothing is added or multiplied along a
+  path. One-step edges get a `--halo` band under the line; further edges keep a full chip
+  but their line is at 50% opacity; the rest fades to 12%. The selected node gets a 3 px
+  `--focus` outline and a tinted fill. Examples: Site preparation = 12 edges (5 direct, 7
+  further); Competing vegetation = 8 edges (6 direct, 2 further).
+- **Status line** above the graph (`aria-live`): "Pathways through **X**: 12 edges (5
+  direct, 7 further)", the path-honesty sentence when there are further edges, and a
+  Clear button. For an edge: "Selected edge: A → B · direction · certainty · N studies · M
+  claims". With nothing selected it shows how to use the graph.
+- **Clearing.** A second click (or Enter / Space) on the selected item, a click on empty
+  canvas, Esc, Clear or the drawer's × clears it. A pan (mouse drag) is not a canvas
+  click: d3-zoom swallows the click after a drag, and a 4 px pointer-distance check is a
+  second guard (tested: a drag keeps the selection; a plain canvas click clears it).
+- **Hash.** `#network/node/<id>` and `#findings/node/<id>` record a selected node, as
+  edges and gaps already did. Loading such a hash restores the selection.
+- **Drawer never over the graph (SPEC 3.7).** Wide screens: a sticky side column, as
+  before. At 860 px and below it is in the page flow under the graph and legend (the
+  bottom sheet is gone). A "Details below ↓" button in the status line scrolls to it on
+  narrow screens. A mouse click keeps focus and scroll where they are, so the
+  highlighted pathways stay in view; Enter / Space moves focus to the drawer heading (and
+  scrolls it into view on narrow screens); Esc and × return focus to the opener.
+- **Weight.** Selecting a node or a gap no longer fetches `data/<panel>.json` (its drawer
+  needs no quotes). Only edges, papers, claims, search and the claims table load it.
+- **Fixed on the way.** The `.vh` labels in empty matrix cells are absolutely positioned
+  and escaped the matrix scroll box, so the page scrolled sideways at 390 px with the
+  matrix open (747 px wide). The scroll boxes now have `position: relative`. The drawer ×
+  button had the same problem at phone width once the drawer moved into the flow.
+
+Checked with headless Chrome (screenshots of both panels in light and dark, node clicks
+on Site preparation and Competing vegetation, an edge click with quotes, a moderation
+edge, hover on an edge and a node, the toggle, a stored theme against the system theme,
+390 px, and keyboard Enter / Esc). Every text pair I use, including the new `--text` on
+`--sel-fill` (15.3:1 light, 9.1:1 dark), is at least 4.8:1 in both themes.
+
 ## Build and serve
 
 ```bash
@@ -57,7 +121,8 @@ Measured on this Mac (M-series, fast network).
 | `npm ci`, empty npm cache | 1.4 s (59 packages added) |
 | `./build.sh`, no `node_modules/`, empty npm cache | 3.7 s |
 | `./build.sh`, no `node_modules/`, warm npm cache | 4.3 s |
-| `./build.sh`, `node_modules/` present (build only) | 1.3 to 1.5 s |
+| `./build.sh`, `node_modules/` present (build only) | 1.3 to 1.8 s (v2: 1.8 s) |
+| `./build.sh`, no `node_modules/` (v2, this worktree) | 4.0 s |
 
 - `node_modules/`: 42,896 KiB from `du -sk` (about 44 MB), 59 packages installed.
   The lock file lists 90 entries (it also lists the platform builds for other systems).
@@ -91,7 +156,7 @@ Installed on this darwin-arm64 machine:
    and run `npm ci --offline`, or vendor `node_modules/` built on aarch64.
    Both add tens of MB to the repo.
 2. **Node must be on the judging machine** (>= 22.17). README does not promise it.
-3. **Page weight.** About 141 KB of JavaScript in the first view (raw, see below)
+3. **Page weight.** About 145 KB of JavaScript in the first view (raw, see below)
    and the hydration data inline in the HTML. `python -m http.server` sends no
    compression, so raw bytes are what a viewer downloads.
 
@@ -101,26 +166,36 @@ Installed on this darwin-arm64 machine:
 
 | File | Raw | Gzip | First | What |
 | --- | ---: | ---: | :---: | --- |
-| index.html | 181,713 | 26,747 | yes | both panels, SVGs, pooled tables; 53,849 B of it is the inline hydration data |
-| _app/immutable/assets/0.*.css | 19,101 | 4,998 | yes | all styles |
-| _app/immutable/chunks/CkZSJqV-.js | 45,570 | 17,417 | yes | Svelte 5 runtime |
-| _app/immutable/chunks/_mEqLy9Z.js | 42,128 | 15,419 | yes | SvelteKit client |
-| _app/immutable/nodes/2.*.js | 41,553 | 14,040 | yes | page code (panel, graph, edge table, legend) |
-| 10 small first-view chunks | 12,327 | 6,264 | yes | SvelteKit entry, format.js, panel.js, badges |
+v2 numbers (gzip = `gzip -9`, for reference only; `python -m http.server` sends raw bytes).
+
+| File | Raw | Gzip | First | What |
+| --- | ---: | ---: | :---: | --- |
+| index.html | 184,251 | 27,396 | yes | both panels, SVGs, pooled tables; 53,866 B of it is the inline hydration data, 483 B the head script |
+| _app/immutable/assets/0.*.css | 22,608 | 5,467 | yes | all styles, both themes |
+| _app/immutable/chunks/DchPjM34.js | 44,842 | 17,165 | yes | Svelte 5 runtime |
+| _app/immutable/chunks/hAT5IqU3.js | 42,136 | 15,395 | yes | SvelteKit client |
+| _app/immutable/nodes/2.*.js | 44,038 | 15,077 | yes | page code (panel, graph, selection, status line, edge table, legend, toggle) |
+| 9 small first-view chunks | 13,538 | 6,600 | yes | SvelteKit entry, format.js, panel.js, badges |
 | _app/immutable/chunks/BSGT7-wo.js | 39,693 | 13,928 | lazy | d3-zoom + d3-transition + deps |
 | _app/immutable/chunks/Bwfy7SLc.js | 13,271 | 4,251 | lazy | d3-selection |
-| drawer, hover card, matrix, search, papers, claims chunks | 26,695 | 11,376 | lazy | loaded when first used |
+| drawer, matrix, search, papers, claims chunks (5) | 21,717 | 9,270 | lazy | loaded when first used |
 | error page chunks (2) | 1,687 | 903 | no | SvelteKit error page |
 | data/findings.json | 123,183 | 20,301 | lazy | Panel A claims with quotes |
 | data/network.json | 170,987 | 28,435 | lazy | Panel B claims with quotes |
 | _app/version.json | 22 | 42 | no | SvelteKit version check |
-| **Total, 28 files** | **717,930** | 164,121 | | |
+| **Total, 26 files** | **721,973** | 164,230 | | |
 
-- **First view: 342,392 B raw (84,885 B gzip) in 15 files.** Of this, JS is
-  141,578 B raw (53,140 B gzip) in 13 files, HTML 181,713 B, CSS 19,101 B.
-- All JS (first view + lazy): 222,924 B raw (83,598 B gzip) in 23 files.
-- Pinning an edge in the Network panel adds the drawer and claims-table chunks and
-  `data/network.json` (about 185 KB raw).
+- **First view: 351,413 B raw (87,100 B gzip) in 14 files.** Of this, JS is
+  144,554 B raw (54,237 B gzip) in 12 files, HTML 184,251 B, CSS 22,608 B.
+- v1 for comparison: 342,392 B raw (84,885 B gzip) in 15 files; JS 141,578 B raw
+  (53,140 B gzip). v2 adds 9,021 B raw (2,215 B gzip): the second set of theme
+  tokens and the new rules in CSS (+3.5 KB), the selection logic and the status line
+  in the page chunk (+2.5 KB), the toggle, legend row, status hint and head script in
+  the HTML (+2.5 KB). Deleting the hover card took 3.6 KB out of the lazy chunks.
+- All JS (first view + lazy): 220,922 B raw (82,589 B gzip) in 21 files.
+- Selecting an edge in the Network panel adds the drawer and claims chunks and
+  `data/network.json` (about 182 KB raw). Selecting a node adds only the drawer
+  chunk (about 11 KB); it does not fetch the quotes.
 
 ### What I did to keep the weight down
 
@@ -133,10 +208,11 @@ Installed on this darwin-arm64 machine:
   necessarily in the HTML twice: once rendered, once as hydration data (54 KB).
   That is the cost of hydration.
 - Layout runs at build time. d3-shape runs only at build time.
-- The drawer, hover card, matrix, search results, papers table and claims table
-  are separate chunks loaded on first use (Svelte `{#await import()}`).
-- d3-zoom and d3-selection load on the first mouse hover over a graph or the first
-  zoom button press.
+- The drawer, matrix, search results, papers table and claims table are separate
+  chunks loaded on first use (Svelte `{#await import()}`).
+- d3-zoom and d3-selection load when a mouse pointer first enters a graph box, or
+  on the first zoom button press. Nothing on screen changes at that moment.
+- Node and gap selections do not fetch `data/<panel>.json`.
 - The SVG draws the halo and hit-area paths only after hydration, and the
   certainty dots are `<use>` references, which saves about 15 KB of HTML.
 - Mobile table labels come from CSS, not from a `data-label` on every cell.
@@ -168,32 +244,34 @@ Installed on this darwin-arm64 machine:
   only. A collision pass slides each chip along its curve. No chips overlap; the
   closest pair is 4 px apart. Line width is 1.5 + 0.6 × studies, capped at 7.
 - **Moderation (3.4).** A dotted curve ends in a ◆ on the chip of
-  `site_preparation->growth`. Its own chip and hover card show
-  `direction_meaning` verbatim and name the target edge.
+  `site_preparation->growth`. Its own chip shows direction and certainty; its
+  drawer shows `direction_meaning` verbatim and links the target edge.
 - **Combination (3.2).** The node shows its members as two stacked chips, joined
   by dotted member connectors (no arrowheads) on the left of the lane. The legend
   says "Member of a combination — not an evidence edge".
 - **Gaps (3.5).** A dashed, hollow link with no arrowhead and a "No evidence"
-  pill. Its hover card uses the fixed gap text and `searched_for`. In the matrix a
+  pill. A click opens the drawer with the fixed gap text and `searched_for`. In the matrix a
   gap is a hatched cell, and a blank cell has the title "No claims in this corpus
   link these two".
-- **Focus and context (3.6).** Hover or focus emphasis. On a condition node,
-  in-edges get a solid band and out-edges a beaded band, and the hover card shows
-  the path note (first `limitations` string). Lenses (Panel B), direction chips,
+- **Focus and context (3.6).** Click selection only, as described in the v2
+  section: node = active pathways with one-step and further edges drawn
+  differently, a status line with counts and Clear; edge = the edge and its ends
+  (for a moderation edge: its source, its ◆ and its target edge). A condition
+  node's drawer shows the path note (first `limitations` string). Lenses (Panel B), direction chips,
   minimum certainty and "Show gaps" act on the graph, the matrix and the tables
   together, with a "Showing N of M" count. Search is grouped (Nodes, Edges or
   Findings, Gaps, Papers, Claims): `/` focuses it and Esc clears it. Graph |
   Matrix toggle.
-- **Hover card and drawer (3.7).** The hover card opens on mouse hover and on
-  keyboard focus. Click, Enter or Space pins the item. The drawer shows claims
+- **Drawer (3.7).** Click, Enter or Space selects the item and shows it in the
+  drawer, beside the graph on wide screens and under it on narrow ones. The drawer shows claims
   grouped by paper (most claims first), each with subject → predicate → object,
   direction, grade, evidence types, comparator, the quote and the claim id. Esc or
   × closes it and focus returns to the opener. Two clicks reach a quote: click a
   chip, and the drawer shows quotes with DOI links.
 - **URL hash.** `#findings`, `#network`, `#network/edge/<id>`, `#…/node/<id>`,
   `#…/gap/<id>`, `#…/paper/<id>`, `#…/claim/<id>`. A pinned hash opens the panel,
-  pins the item and scrolls to the graph. An inline script in `app.html` hides the
-  other panel before first paint, so there is no flash.
+  selects the item and scrolls to the graph. An inline script in `app.html` hides the
+  other panel and applies a stored theme before first paint, so there is no flash.
 - **Tables (5).** Findings or Edges: sortable `<th><button>` with `aria-sort`,
   rationale under the certainty, an Open button that pins. Gaps. Interactions
   (A: the 5 claims with quotes; B: the combination node, its edge, the moderation
@@ -204,12 +282,14 @@ Installed on this darwin-arm64 machine:
   `lang`, title, meta description and viewport. The graph buttons are focusable
   `<g role="button">` with full `aria-label`s, and a "View as table" link.
   A DOM audit over both panels found no duplicate ids, no unnamed controls, no
-  unlabelled inputs and no heading jumps. Colours are chosen for AA text contrast
-  in both themes.
-- **Style (4).** Warm off-white, hairlines, clay accent, system fonts only. Dark
-  theme via `prefers-color-scheme`. Motion is off with `prefers-reduced-motion`.
-  At phone width the drawer is a bottom sheet, the graph scrolls inside its box
-  (no page scroll at 390 px) and tables become stacked cards.
+  unlabelled inputs and no heading jumps. Graph nodes, chips and gap labels have
+  `aria-pressed` after hydration (true for the selected one); the status line is
+  `aria-live`. All text pairs are at least 4.8:1 in both themes (v2 check).
+- **Style (4).** SPEC 4.1 tokens in both themes, the 4.2 toggle and the 4.3 type,
+  shape and spacing (see the v2 section). System fonts only. Motion is 160 ms and
+  off with `prefers-reduced-motion`. At phone width the drawer is in the page flow
+  under the graph, the graph scrolls inside its box (no page scroll at 390 px, also
+  with the matrix or the drawer open) and tables become stacked cards.
 
 ## Not done or done differently
 
@@ -224,7 +304,32 @@ Installed on this darwin-arm64 machine:
 - The Interactions lens also keeps `site_preparation->growth` bright, so the ◆ has context.
 - The moderation edge appears in the matrix as an extra column ("Effect of Site
   preparation → Seedling growth & size").
-- The hover card is on the graph and the matrix, not on table rows (rows pin the drawer).
+- **Selection wins over lens, filters and search.** While a node, edge or gap is
+  selected, the graph shows its emphasis only; Clear brings the lens and filter view
+  back. The toolbar count still shows the filters.
+- **Edge selection keeps a little context.** Besides the edge and its two ends, a
+  moderation edge whose ◆ sits on the selected edge's chip stays bright, and so do
+  the member connectors when the edge starts at the combination node.
+- **A member node lights its own connector and the combination node**, not the
+  combination's out-edge (SPEC 3.6.1 read literally). Clicking the combination node
+  shows its edge and its members.
+- **The moderation edge counts as "further"** when it lands on an active edge (it
+  is not attached to the selected node), and its target edge counts as "further"
+  when the moderation starts at the selected node.
+- **Node shapes keep their corner radii** (planting stock 14, site treatment 3,
+  condition a pill, outcome 8 with a heavy border) instead of one 12 px radius,
+  because SPEC 3.2 asks lanes to differ by shape and not by colour only.
+- **Direction filter chips** that are on are `--raised` pills with the coloured
+  glyph, not black `--pill` pills: the direction colours on `#111` would fail
+  contrast. Off chips are dashed and struck through. Tabs, segments and the Clear
+  button use the black pill.
+- **Focus after a selection.** A mouse click leaves focus on the clicked item and
+  does not scroll. Enter / Space moves focus to the drawer heading, so keyboard
+  readers reach the quotes in one step. The Clear button, Esc and × return focus
+  to the item.
+- **The theme toggle changes its label and `aria-pressed` together**, as SPEC 4.2
+  asks. Screen readers then read "Switch to light theme, pressed" in dark mode,
+  which is a little redundant.
 - Fixed UI copy that I wrote: the card subtitles, Panel A lane subtitles ("the
   subject of each finding", "the outcome of each finding"), the group titles
   (Planting stock, Site treatments, Combination, Conditions, Outcomes), the legend
@@ -243,7 +348,12 @@ Installed on this darwin-arm64 machine:
 - SvelteKit 3 fetches `_app/version.json` (same origin, 22 B) when the tab regains
   focus. `pollInterval: 0` stops the polling, but not this check. No request goes
   to another origin; DOI links are the only external URLs.
-- The hover card can cover part of the graph next to the hovered item.
+- Opening the drawer on a wide screen narrows the graph column, so the graph
+  rescales and moves under the pointer by a few px. A second click on the same node
+  still works, but the node is no longer exactly under the pointer.
+- With a selection active, faded text (12% opacity) does not meet contrast. This
+  is on purpose (it is the context, not the content), but an axe-core run made
+  while something is selected would flag it. The page loads with nothing faded.
 - Browsers percent-encode `>` in the hash (`%3E`). The page decodes it.
 - SvelteKit 3.2.0 is new. If the deadline build hits a problem, SvelteKit 2.70.4
   (`version-2` tag) with `svelte.config.js` is the fallback.

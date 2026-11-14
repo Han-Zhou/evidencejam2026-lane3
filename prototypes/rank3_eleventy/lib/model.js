@@ -35,7 +35,6 @@ export const certDots = (c) => {
   const n = CERTS[c] ? CERTS[c].n : 0;
   return "●".repeat(n) + "○".repeat(4 - n);
 };
-const PAGE = 25;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const human = (s) => String(s).replace(/_/g, " ");
 
@@ -55,24 +54,63 @@ function edgeAria(srcLabel, tgtLabel, e) {
   return `${srcLabel} to ${tgtLabel}: ${dirWord(e.direction)}, certainty ${certWord(e.certainty)}, ${plural(e.studies, "study", "studies")}, ${plural(e.claims, "claim", "claims")}`;
 }
 
+// One claim, ready for the templates. Display forms only: the predicate
+// and the evidence types with "_" read as a space.
+function claimOf(cid, ev) {
+  return {
+    cid,
+    ...ev,
+    dir: { glyph: dirGlyph(ev.direction), word: dirWord(ev.direction) },
+    grade: { dots: certDots(ev.certainty_grade), word: certWord(ev.certainty_grade), n: certN(ev.certainty_grade) },
+    predicateText: human(ev.predicate),
+    meta: [...(ev.evidence_types || []).map(human), ev.comparator ? human(ev.comparator) : null].filter(Boolean).join(" · "),
+  };
+}
+
 // Papers: one per document_id, ordered by number of claims, then first seen.
 function papersOf(evidence, citers) {
   const by = new Map();
   for (const [cid, ev] of Object.entries(evidence)) {
     if (!by.has(ev.document_id)) by.set(ev.document_id, { doc: ev.document_id, title: ev.title, year: ev.year, doi: ev.doi, claims: [] });
-    by.get(ev.document_id).claims.push({ cid, ...ev, dir: { glyph: dirGlyph(ev.direction), word: dirWord(ev.direction) }, grade: { dots: certDots(ev.certainty_grade), word: certWord(ev.certainty_grade), n: certN(ev.certainty_grade) }, predicateText: human(ev.predicate), meta: [...(ev.evidence_types || []).map(human), ev.comparator ? human(ev.comparator) : null].filter(Boolean).join(" · ") });
+    by.get(ev.document_id).claims.push(cid);
   }
   const list = [...by.values()];
   list.forEach((p, i) => (p.first = i));
   list.sort((a, b) => b.claims.length - a.claims.length || a.first - b.first);
-  let n = 0;
   list.forEach((p, i) => {
     p.idx = i;
     p.citedBy = citers.filter((c) => c.docs.includes(p.doc));
-    p.extra = n >= PAGE; // pagination: rows after the first PAGE claims start hidden (JS only)
-    for (const c of p.claims) c.extra = n++ >= PAGE;
   });
   return list;
+}
+
+// Static claims page (claims-<panel>.html, for readers without JS): one
+// group per finding/edge in JSON order, its claims grouped by paper (most
+// claims first, then first seen), the same order as the drawer.
+function claimGroups(items, evidence) {
+  return items.map((it) => {
+    const by = new Map();
+    it.ids.forEach((cid, i) => {
+      const ev = evidence[cid];
+      if (!by.has(ev.document_id)) by.set(ev.document_id, { doc: ev.document_id, title: ev.title, year: ev.year, doi: ev.doi, first: i, claims: [] });
+      by.get(ev.document_id).claims.push(claimOf(cid, ev));
+    });
+    const papers = [...by.values()].sort((a, b) => b.claims.length - a.claims.length || a.first - b.first);
+    return { ...it, papers, n: it.ids.length };
+  });
+}
+
+// data/<panel>.json: loaded by app.js only when a drawer, the search or the
+// claims table needs quotes. Values are the JSON's own; "p" and "m" are the
+// display forms of claimOf. "pp" indexes "papers" (papers-table order).
+function dataJson(evidence, papers) {
+  const pi = new Map(papers.map((p, i) => [p.doc, i]));
+  const claims = {};
+  for (const [cid, ev] of Object.entries(evidence)) {
+    const c = claimOf(cid, ev);
+    claims[cid] = { s: ev.subject, p: c.predicateText, ...(ev.negated ? { n: 1 } : {}), o: ev.object, d: ev.direction, g: ev.certainty_grade, ...(c.meta ? { m: c.meta } : {}), pp: pi.get(ev.document_id), q: ev.quote };
+  }
+  return JSON.stringify({ papers: papers.map((p) => ({ doc: p.doc, title: p.title, year: p.year, doi: p.doi })), claims });
 }
 
 function glance(items, gaps) {
@@ -121,8 +159,13 @@ function panelA(A) {
   });
   const citers = rows.map((r) => ({ pin: r.pin, href: `#a-e-${r.idx}`, text: `${r.src.label} → ${r.tgt.label}`, docs: r.docs }));
   const papers = papersOf(A.evidence, citers);
-  const interIds = new Set(A.interactions.map((i) => i.edge_id));
-  for (const p of papers) for (const c of p.claims) c.interaction = interIds.has(c.cid);
+  const groups = claimGroups(
+    [
+      ...rows.map((r) => ({ anchor: `f-${r.idx}`, title: `${r.src.label} → ${r.tgt.label}`, row: r, ids: r.ids.split(" ") })),
+      { anchor: "inter", title: "Interaction claims (listed, not pooled)", row: null, ids: A.interactions.map((i) => i.edge_id) },
+    ],
+    A.evidence,
+  );
 
   const graph = layoutGraph({
     panel: "a",
@@ -177,6 +220,8 @@ function panelA(A) {
     gaps,
     interactions,
     papers,
+    groups,
+    dataJson: dataJson(A.evidence, papers),
     graph,
     matrix,
     label,
@@ -310,6 +355,8 @@ function panelB(B) {
     moderations,
     setAside: B.set_aside,
     papers,
+    groups: claimGroups(rows.map((r) => ({ anchor: `e-${r.idx}`, title: r.kind === "moderation" ? `${r.src.label} changes the effect: ${r.tgt.label}` : `${r.src.label} → ${r.tgt.label}`, row: r, ids: r.ids.split(" ") })), B.evidence),
+    dataJson: dataJson(B.evidence, papers),
     graph,
     matrix,
     label,

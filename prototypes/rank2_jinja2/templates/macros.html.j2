@@ -39,12 +39,12 @@
 {# ------------------------------------------------------------ table rows #}
 {% macro item_row(it, p) -%}
 <tr id="{{ it.anchor }}" {{ 'data-edge-id' if p.is_b else 'data-finding-id' }}="{{ it.id }}" data-direction="{{ it.direction }}" data-certainty="{{ it.certainty }}" data-studies="{{ it.studies }}" data-claims="{{ it.claims }}">
-<td data-label="From"><a class="pin" href="#{{ it.group }}" data-k="{{ it.key }}">{{ it.src_label }}</a></td>
+<td data-label="From"><a class="pin" href="{{ p.claims_page }}#{{ it.group }}" data-k="{{ it.key }}">{{ it.src_label }}</a></td>
 <td data-label="To">{% if it.kind == 'moderation' %}<span class="modto"><span aria-hidden="true">◆</span> effect of {{ it.tgt_label }}</span>{% else %}{{ it.tgt_label }}{% endif %}</td>
 <td data-label="Direction">{{ dir_label(it.direction) }}</td>
 <td data-label="Certainty">{{ cert_label(it.certainty) }}<span class="rat">{{ it.certainty_rationale }}</span></td>
 <td data-label="Studies" class="num">{{ it.studies }}</td>
-<td data-label="Claims" class="num"><a href="#{{ it.group }}">{{ it.claims }}</a></td>
+<td data-label="Claims" class="num"><a href="{{ p.claims_page }}#{{ it.group }}" data-k="{{ it.key }}">{{ it.claims }}</a></td>
 <td data-label="Study directions">{{ sd_text(it.sd) }}</td>
 </tr>
 {%- endmacro %}
@@ -54,11 +54,10 @@
 <b>{{ e.subject }}</b> → <i>{{ e.predicate }}</i>{% if e.negated %} <span class="neg">negated</span>{% endif %} → <b>{{ e.object }}</b><small>{{ tail }}</small>
 {%- endmacro %}
 
-{# Compact on purpose: 569 of these rows are the bulk of the page. The drawer
-   reads its claim cards from these cells (by position), so keep the order:
-   claim, direction, grade, quote, paper. data-doc only when it differs from the DOI. #}
+{# One row of the static claims page (claims-<panel>.html). site.js builds the
+   same cells from data/<panel>.json: claim, direction, grade, quote, paper. #}
 {% macro claim_row(pre, cid, e) -%}
-<tr id="{{ pre }}-{{ cid }}" data-d="{{ e.direction }}" data-g="{{ e.certainty_grade }}"{% if not e.doi or e.doi != e.document_id %} data-doc="{{ e.document_id }}"{% endif %}>
+<tr id="{{ pre }}-{{ cid }}">
 <td>{{ claim_text(e, e.evidence_types|join(", ") ~ " · " ~ e.comparator) }}</td>
 <td class="d-{{ e.direction }}"><i aria-hidden="true">{{ DIR_GLYPH[e.direction] }}</i> {{ DIR_WORD[e.direction] }}</td>
 <td>{{ CERT_WORD[e.certainty_grade] }}</td>
@@ -67,7 +66,7 @@
 </tr>
 {%- endmacro %}
 
-{# ------------------------------------------------------------ cards (hover card and drawer header) #}
+{# ------------------------------------------------------------ drawer cards (rendered into data/<panel>.json) #}
 {% macro card_item(it, p) -%}
 <div class="card">
 {% if it.kind == 'moderation' %}
@@ -82,11 +81,6 @@
 <p class="card-r"><span class="lbl">Certainty rationale:</span> {{ it.certainty_rationale }}</p>
 <p class="card-n">{{ plural(it.studies, 'study', 'studies') }} · {{ plural(it.claims, 'claim', 'claims') }}</p>
 {{ sd_bar(it.sd, it.sd_total) }}
-<ul class="card-p">
-{% for pp in it.papers[:3] %}<li>{{ pp.title }} ({{ year(pp.year) }})</li>{% endfor %}
-</ul>
-{% if it.papers|length > 3 %}<p class="card-more">+{{ it.papers|length - 3 }} more</p>{% endif %}
-<p class="card-hint">Click to pin and read the quotes</p>
 </div>
 {%- endmacro %}
 
@@ -151,4 +145,13 @@
 <text class="nl">{% for l in n.lines %}<tspan x="{{ TEXT_X if n.group != 'outcome' else 18 }}" y="{{ (y0 + loop.index0 * LABEL_LH)|n }}">{{ l }}</tspan>{% endfor %}</text>
 {% endif %}
 </g>
+{%- endmacro %}
+
+
+{# ------------------------------------------------------------ theme toggle (SPEC 4.2) #}
+{% macro theme_btn() -%}
+<button type="button" class="theme js-only" aria-pressed="false" aria-label="Switch to dark theme">
+<svg class="i-moon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M16.2 12.4A7 7 0 0 1 7.6 3.8a7 7 0 1 0 8.6 8.6z"/></svg>
+<svg class="i-sun" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="3.6"/><path d="M10 1.8v2.1M10 16.1v2.1M1.8 10h2.1M16.1 10h2.1M4.2 4.2l1.5 1.5M14.3 14.3l1.5 1.5M4.2 15.8l1.5-1.5M14.3 5.7l1.5-1.5"/></svg>
+</button>
 {%- endmacro %}

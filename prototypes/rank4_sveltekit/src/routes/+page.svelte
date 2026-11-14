@@ -27,6 +27,19 @@
 	]);
 	const KEYS = ['findings', 'network'];
 
+	// theme: data-theme on <html> (set before paint by app.html) or the system setting
+	let dark = $state(false);
+	function toggleTheme() {
+		const next = dark ? 'light' : 'dark';
+		document.documentElement.setAttribute('data-theme', next);
+		try {
+			localStorage.setItem('q1-theme', next);
+		} catch {
+			/* storage blocked: the choice lasts for this page view */
+		}
+		dark = !dark;
+	}
+
 	let open = $state('findings');
 	let pins = $state({ findings: null, network: null });
 	let mounted = $state(false);
@@ -46,6 +59,13 @@
 	}
 
 	onMount(() => {
+		const mq = matchMedia('(prefers-color-scheme: dark)');
+		const readTheme = () => {
+			const t = document.documentElement.getAttribute('data-theme');
+			dark = t ? t === 'dark' : mq.matches;
+		};
+		readTheme();
+		mq.addEventListener('change', readTheme);
 		const pinned = parseHash();
 		mounted = true;
 		if (pinned)
@@ -61,6 +81,7 @@
 		addEventListener('hashchange', onHash);
 		addEventListener('keydown', onKey);
 		return () => {
+			mq.removeEventListener('change', readTheme);
 			removeEventListener('hashchange', onHash);
 			removeEventListener('keydown', onKey);
 		};
@@ -97,8 +118,28 @@
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="site-head">
+	<div class="topbar">
+		<div class="wrap topbar-in">
+			<p class="brand">Evidence Jam 2026 · Lane 3 · Decision support</p>
+			<button
+				type="button"
+				class="theme-toggle"
+				aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+				aria-pressed={dark}
+				onclick={toggleTheme}
+			>
+				<svg class="i-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"
+					><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg
+				>
+				<svg class="i-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"
+					><circle cx="12" cy="12" r="4" /><path
+						d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"
+					/></svg
+				>
+			</button>
+		</div>
+	</div>
 	<div class="wrap">
-		<p class="eyebrow">Evidence Jam 2026 · Lane 3 · Decision support</p>
 		<h1>Q1 · Tree planting in Canadian forest restoration</h1>
 		<p class="question">{data.question}</p>
 		<nav aria-label="Panels">

@@ -5,6 +5,7 @@
 <li class="lg-dirs">{% for d in DIR_ORDER %}<span>{{ m.dir_label(d) }}</span>{% endfor %}</li>
 <li class="lg-certs"><span class="lbl">Certainty</span>{% for c in CERT_ORDER %}<span>{{ m.cert_label(c) }}</span>{% endfor %}</li>
 <li><svg class="sw" viewBox="0 0 64 16" width="64" height="16" aria-hidden="true"><path d="M2 4H62" stroke-width="1.5"/><path d="M2 12H62" stroke-width="6"/></svg><span>Line width = number of studies. The arrow points at what changes.</span></li>
+<li class="js-only"><svg class="sw" viewBox="0 0 64 16" width="64" height="16" aria-hidden="true"><path class="near" d="M2 4H62"/><path class="far" d="M2 12H62"/></svg><span>After a click on a node: full lines are one step from it, thin light lines are further steps. Edges beyond the first step are separate bodies of evidence.</span></li>
 <li><svg class="sw" viewBox="0 0 64 16" width="64" height="16" aria-hidden="true"><path class="gp1" d="M2 8H62"/><path class="gp2" d="M2 8H62"/></svg><span><span class="gapword">No evidence</span> = a gap: no study tested this pairing. Not a negative result.</span></li>
 {% if p.is_b %}
 <li><svg class="sw" viewBox="0 0 64 16" width="64" height="16" aria-hidden="true"><path class="modl" d="M2 8H52"/><path class="modd" d="M52 8L57 3L62 8L57 13z"/></svg><span>Moderation (dotted, ends in <span aria-hidden="true">◆</span>): changes the size of the effect on the edge whose chip the diamond touches.</span></li>

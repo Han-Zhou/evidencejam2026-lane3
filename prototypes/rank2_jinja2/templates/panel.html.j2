@@ -37,7 +37,6 @@
 <label for="{{ pre }}-q">Search</label>
 <input id="{{ pre }}-q" class="q" type="search" autocomplete="off" spellcheck="false" placeholder="Labels, claims, quotes, paper titles" aria-describedby="{{ pre }}-qh" aria-controls="{{ pre }}-res">
 <span id="{{ pre }}-qh" class="kbd-hint">Press <kbd>/</kbd> to search, <kbd>Esc</kbd> to clear</span>
-<div class="results" id="{{ pre }}-res" hidden></div>
 </div>
 {% if p.is_b %}
 <div class="seg lens" role="group" aria-label="Lens">
@@ -60,6 +59,7 @@
 <label class="sg"><input type="checkbox" data-gaps checked> Show gaps</label>
 </fieldset>
 <p class="status" id="{{ pre }}-status" aria-live="polite">Showing {{ S.n_items }} of {{ S.n_items }} {{ noun }}</p>
+<div class="results" id="{{ pre }}-res" hidden></div>
 </div>
 
 <div class="workspace">
@@ -71,6 +71,13 @@
 </div>
 <a class="vlink" href="#{{ pre }}-items">View as table</a>
 </div>
+<div class="selbar js-only">
+<div class="sel-text" aria-live="polite">
+<p class="sel-msg">Click a node to show its pathways. Click an edge chip to read its claims.</p>
+<p class="sel-note" hidden>Edges beyond the first step are separate bodies of evidence. A path is not one tested effect.</p>
+</div>
+<div class="sel-acts"><button type="button" class="btn sel-go" hidden>Details below</button><button type="button" class="btn btn-dark sel-clear" hidden>Clear</button></div>
+</div>
 <div class="view is-active" data-view="graph">
 <div class="graph-scroll">
 {% include "graph.svg.j2" %}
@@ -79,20 +86,17 @@
 <div class="view" data-view="matrix">
 {% include "matrix.html.j2" %}
 </div>
-{% if p.is_b %}<p class="note-limit"><span class="lbl">Read paths with care:</span> {{ D.limitations[0] }}</p>{% endif %}
-{% include "legend.html.j2" %}
 </div>
 <aside class="drawer js-only" id="{{ pre }}-drawer" aria-labelledby="{{ pre }}-dh">
 <div class="drawer-bar"><h3 id="{{ pre }}-dh" class="drawer-h" tabindex="-1">Details</h3><button type="button" class="drawer-x" aria-label="Close details" hidden>✕</button></div>
 <div class="drawer-body"><p class="drawer-empty">Select a node, an edge chip or a table row. Its claims, quotes and papers show here.</p></div>
 </aside>
+<div class="stage-foot">
+{% if p.is_b %}<p class="note-limit"><span class="lbl">Read paths with care:</span> {{ D.limitations[0] }}</p>{% endif %}
+{% include "legend.html.j2" %}
+</div>
 </div>
 
-<div class="tpls" hidden>
-{% for it in p.its %}<template id="{{ pre }}-t-{{ it.key }}">{{ m.card_item(it, p) }}</template>{% endfor %}
-{% for g in p.gaps %}<template id="{{ pre }}-t-{{ g.key }}">{{ m.card_gap(g, p) }}</template>{% endfor %}
-{% for n in p.nodes %}<template id="{{ pre }}-t-n:{{ n.id }}">{{ m.card_node(n, p) }}</template>{% endfor %}
-</div>
 <script type="application/json" id="{{ pre }}-data">{{ p.data }}</script>
 
 <div class="tables">
@@ -220,20 +224,9 @@
 
 <details class="tbl js-close" id="{{ pre }}-claims" open>
 <summary><h3>Claims <span class="cnt">{{ S.n_claims }}</span></h3></summary>
-<p class="fine">Every claim in the evidence map, grouped by {{ 'edge' if p.is_b else 'finding' }}, papers with the most claims first. Direction and certainty filters use each claim's own direction and grade.</p>
-<div class="tscroll">
-<table class="t-claims">
-<caption>All {{ S.n_claims }} claims with their source sentences</caption>
-<thead><tr><th scope="col">Claim</th><th scope="col">Direction</th><th scope="col">Grade</th><th scope="col">Quote</th><th scope="col">Paper</th></tr></thead>
-{% for g in p.claim_groups %}
-<tbody id="{{ g.id }}"{% if g.key %} data-g="{{ g.key }}"{% endif %}>
-<tr class="grp"><th colspan="5" scope="rowgroup">{{ g.title }} · {{ plural(g.cids|length, 'claim', 'claims') }}</th></tr>
-{% for cid in g.cids %}{{ m.claim_row(pre, cid, p.ev[cid]) }}{% endfor %}
-</tbody>
-{% endfor %}
-</table>
-</div>
-<p class="js-only"><button type="button" class="more" hidden>Show all</button></p>
+<p class="fine">Every claim in the evidence map with its source sentence, grouped by {{ 'edge' if p.is_b else 'finding' }}, papers with the most claims first. <a href="{{ p.claims_page }}">Open all {{ S.n_claims }} claims on one page</a>.<span class="js-only"> Direction and certainty filters use each claim's own direction and grade.</span></p>
+<div class="claims-host js-only"></div>
+<p class="js-only"><button type="button" class="btn more" hidden>Show all</button></p>
 </details>
 
 <details class="tbl" id="{{ pre }}-limits" open>

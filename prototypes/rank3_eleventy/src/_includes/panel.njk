@@ -36,6 +36,7 @@
 <div class="work">
 <div class="view" data-view="graph">
 <div class="vt jsonly"><div class="seg" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button><button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div><a href="#{{ k }}-edges">View as table</a></div>
+<div class="status jsonly" id="{{ k }}-st" aria-live="polite"><p class="st-main">{{ "Select a factor or an outcome to show its findings." if k == "a" else "Select a node to show its pathways." }} Select a chip to read its claims and their source sentences.</p></div>
 <figure class="fig" data-v="graph">
 <div class="gs">{{ m.graph(P) }}</div>
 <figcaption>
@@ -66,7 +67,7 @@
 </div>
 </div>
 <div class="drawer jsonly" id="{{ k }}-dr" role="region" aria-label="{{ P.name }}: details" tabindex="-1">
-<p class="hint">Select a chip, a node or a table row. Its claims and their source sentences open here.</p>
+<p class="hint">Details open here. Select a chip or a table row to read its claims and their source sentences. Select a node to list its edges.</p>
 </div>
 </div>
 
@@ -89,7 +90,7 @@
 <tbody>
 {% for r in P.rows %}
 <tr id="{{ k }}-e-{{ r.idx }}" {% if k == "a" %}data-finding-id{% else %}data-edge-id{% endif %}="{{ r.id }}" data-direction="{{ r.direction }}" data-certainty="{{ r.certainty }}" data-studies="{{ r.studies }}" data-claims="{{ r.claims }}" data-s="{{ r.src.id }}" data-t="{{ r.tgt.id if r.tgt.id else r.tgt.edge }}" data-lens="{{ r.lens }}" data-ids="{{ r.ids }}">
-<th scope="row"><button type="button" class="rp">{{ r.src.label }}</button></th>
+<th scope="row"><a class="rl" href="claims-{{ P.id }}.html#{{ 'f' if k == 'a' else 'e' }}-{{ r.idx }}">{{ r.src.label }}</a></th>
 <td>{% if r.tgt.isEdge %}<i>changes the effect</i> {% endif %}{{ r.tgt.label }}{% if r.direction_meaning %}<small>{{ r.direction_meaning }}</small>{% endif %}</td>
 <td>{{ m.dir(r.direction, r.dir.word) }}</td>
 <td>{{ m.cert(r.cert.n, r.cert.word) }}<small>{{ r.rationale }}</small></td>
@@ -201,24 +202,10 @@
 </div>
 </details>
 
-<details class="tsec" open id="{{ k }}-claims">
+<details class="tsec" open id="{{ k }}-claims" data-claims>
 <summary><h3>Claims <span class="muted">({{ P.counts.claims }})</span></h3></summary>
-<p class="muted">Every claim in this panel's evidence, grouped by paper, with the sentence it was read from.</p>
-<div class="tw pg">
-<table class="rt ct">
-<caption>Claims and their source sentences.</caption>
-<thead><tr><th scope="col">Claim</th><th scope="col">Direction</th><th scope="col">Grade</th><th scope="col">Quote</th></tr></thead>
-{% for p in P.papers %}
-<tbody id="{{ k }}-cp-{{ p.idx }}" data-doc="{{ p.doc }}"{% if p.extra %} class="x"{% endif %}>
-<tr class="ph"><th colspan="4" scope="rowgroup"><span class="pt">{{ p.title | rich | safe }}</span> ({{ m.yearOf(p.year) }}) · {{ m.doiLink(p.doi, p.doc) }}</th></tr>
-{% for c in p.claims %}
-<tr id="{{ k }}-c-{{ c.cid }}"{% if c.extra %} class="x"{% endif %}><th scope="row">{{ m.so(c) }}<small>{{ c.meta }}</small></th><td class="d-{{ c.direction }}">{{ c.dir.word }}</td><td class="c{{ c.grade.n }}">{{ c.grade.word }}</td><td><blockquote>{{ c.quote | rich | safe }}</blockquote></td></tr>
-{% endfor %}
-</tbody>
-{% endfor %}
-</table>
-<button type="button" class="more jsonly" data-more>Show all {{ P.counts.claims }} claims</button>
-</div>
+<p class="muted">Every claim in this panel's evidence, with the sentence it was read from. <a href="claims-{{ P.id }}.html">Read all {{ P.counts.claims }} claims on one page, grouped by {{ W[0] }}</a>.</p>
+<div class="tw pg cbox jsonly"></div>
 </details>
 
 <section class="tsec lim" aria-labelledby="{{ k }}-lh">

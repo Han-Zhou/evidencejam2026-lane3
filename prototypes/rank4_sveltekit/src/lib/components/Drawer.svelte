@@ -58,10 +58,10 @@
 {/snippet}
 
 {#snippet edgeButton(e)}
-	<button type="button" class="linkish" onclick={open('edge', e.id)}>
+	<button type="button" class="linkish elink" onclick={open('edge', e.id)}>
 		<span class="dir-{e.direction} g" aria-hidden="true">{dirGlyph(e.direction)}</span>
 		<span class="d" aria-hidden="true">{dotsText(e.certainty)}</span>
-		<span class="vh">{ix.aria(e)}</span><span aria-hidden="true">{ix.title(e)}</span>
+		<span class="vh">{ix.aria(e)}</span><span class="t" aria-hidden="true">{ix.title(e)}</span>
 	</button>
 {/snippet}
 

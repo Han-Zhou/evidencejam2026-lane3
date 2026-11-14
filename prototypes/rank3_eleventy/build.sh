@@ -17,6 +17,6 @@ if [ ! -f node_modules/@11ty/eleventy/package.json ]; then
 fi
 
 # Remove only what this build writes, then build.
-rm -rf "${OUT:?}/index.html" "${OUT:?}/assets"
+rm -rf "${OUT:?}/index.html" "${OUT:?}/assets" "${OUT:?}/data" "${OUT:?}"/claims-*.html
 node node_modules/@11ty/eleventy/cmd.cjs --quiet --output="$OUT"
 echo "build.sh: wrote $OUT/index.html"

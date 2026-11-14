@@ -3,7 +3,7 @@
 	// A listed gap is a hatched "No evidence" cell; a blank cell is no claim, never a negative.
 	import { CERT_DOTS, dirGlyph } from '../format.js';
 
-	let { model, ix, cls, showGaps, onhover, onleave, onpin } = $props();
+	let { model, ix, cls, showGaps, onselect } = $props();
 
 	const byPos = (a, b) => a.geom.x - b.geom.x || a.geom.y - b.geom.y;
 	const rows = $derived(
@@ -35,36 +35,15 @@
 		const i = k.indexOf(':');
 		return { el, item: { type: k.slice(0, i), id: k.slice(i + 1) } };
 	}
-	const over = (ev) => {
-		const r = itemOf(ev.target);
-		if (r) onhover(r.item, r.el);
-	};
-	const out = (ev) => {
-		const a = itemOf(ev.target);
-		const b = itemOf(ev.relatedTarget);
-		if (a && (!b || b.el !== a.el)) onleave();
-	};
-	const focusIn = (ev) => {
-		const r = itemOf(ev.target);
-		if (r) onhover(r.item, r.el, true);
-	};
+	// cells are buttons: Enter / Space arrive here as a click with detail 0
 	const click = (ev) => {
 		const r = itemOf(ev.target);
-		if (r) onpin(r.item, r.el);
+		if (r) onselect(r.item, r.el, ev.detail === 0);
 	};
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-	class="matrix-box"
-	bind:this={box}
-	onpointerover={over}
-	onpointerout={out}
-	onfocusin={focusIn}
-	onfocusout={() => onleave(true)}
-	onclick={click}
-	onkeydown={() => {}}
->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="matrix-box" bind:this={box} onclick={click}>
 	<table class="matrix">
 		<caption>{model.name}: sources (rows) by targets (columns). Same glyph and dots as the graph.</caption>
 		<thead>

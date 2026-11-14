@@ -1,6 +1,6 @@
 <script>
 	// One panel (A "Findings" or B "Network"): L1 summary, toolbar, graph/matrix,
-	// hover card, drawer, tables. All its views share one filter/search state.
+	// selection status line, drawer, tables. All its views share one filter/search state.
 	import { tick } from 'svelte';
 	import Graph from './Graph.svelte';
 	import EdgeTable from './EdgeTable.svelte';
@@ -8,7 +8,6 @@
 	import Dir from './Dir.svelte';
 	// Not in the first view: loaded when first needed (separate chunks, not preloaded)
 	const lazyDrawer = () => import('./Drawer.svelte');
-	const lazyHover = () => import('./HoverCard.svelte');
 	const lazyMatrix = () => import('./Matrix.svelte');
 	const lazyResults = () => import('./SearchResults.svelte');
 	const lazyClaims = () => import('./ClaimTable.svelte');
@@ -16,7 +15,7 @@
 	let papersOpen = $state(false);
 	import Cert from './Cert.svelte';
 	import { DIRS, CERTS, dirGlyph, dirWord, certWord, dotsText, certRank, plural, doiUrl } from '../format.js';
-	import { makeIndex } from '../panel.js';
+	import { makeIndex, emphasis } from '../panel.js';
 
 	let { model, active, mounted, pin, onpin } = $props();
 
@@ -32,7 +31,6 @@
 	let minCert = $state('very_low');
 	let showGaps = $state(true);
 	let view = $state('graph');
-	let hover = $state(null);
 	let evidence = $state.raw(null);
 	let evState = $state('idle');
 	let drawerHead = $state();
@@ -50,8 +48,10 @@
 			evState = 'error';
 		}
 	}
+	// node and gap details need no quotes, so only edges, papers and claims fetch the file
+	const needsQuotes = (item) => !!item && item.type !== 'node' && item.type !== 'gap';
 	$effect(() => {
-		if (pin) loadEvidence();
+		if (needsQuotes(pin)) loadEvidence();
 	});
 
 	// ---- filters, lens, search ----
@@ -108,84 +108,19 @@
 	});
 	const gapBright = (g) => (!hits || hits.gapSet.has(g.id)) && (lens === 'all' || lens === 'direct');
 
-	// ---- hover / focus emphasis (SPEC 3.6.1) ----
-	const emph = $derived.by(() => {
-		if (!hover) return null;
-		const { type, id } = hover.item;
-		const nodes = new Set();
-		const edges = new Set();
-		const gaps = new Set();
-		const members = new Set();
-		const inE = new Set();
-		const outE = new Set();
-		const addEdge = (e) => {
-			if (!e) return;
-			edges.add(e.id);
-			nodes.add(e.source);
-			if (e.target) nodes.add(e.target);
-		};
-		let cond = false;
-		if (type === 'node') {
-			nodes.add(id);
-			cond = ix.nodeById.get(id)?.kind === 'condition';
-			for (const e of model.edges) {
-				if (e.source === id) {
-					addEdge(e);
-					outE.add(e.id);
-					if (e.target_edge) addEdge(ix.edgeById.get(e.target_edge));
-				}
-				if (e.target === id) {
-					addEdge(e);
-					inE.add(e.id);
-				}
-			}
-			for (const g of model.gaps)
-				if (g.source === id || g.target === id) {
-					gaps.add(g.id);
-					nodes.add(g.source);
-					nodes.add(g.target);
-				}
-			for (const m of model.members)
-				if (m.from === id || m.to === id) {
-					members.add(`${m.from}|${m.to}`);
-					nodes.add(m.from);
-					nodes.add(m.to);
-				}
-		} else if (type === 'edge') {
-			const e = ix.edgeById.get(id);
-			addEdge(e);
-			if (e?.target_edge) addEdge(ix.edgeById.get(e.target_edge));
-			for (const m of model.edges)
-				if (m.target_edge === id) {
-					edges.add(m.id);
-					nodes.add(m.source);
-				}
-			if (e && ix.nodeById.get(e.source)?.members)
-				for (const m of model.members)
-					if (m.to === e.source) {
-						members.add(`${m.from}|${m.to}`);
-						nodes.add(m.from);
-					}
-		} else if (type === 'gap') {
-			const g = ix.gapById.get(id);
-			if (g) {
-				gaps.add(id);
-				nodes.add(g.source);
-				nodes.add(g.target);
-			}
-		}
-		return { nodes, edges, gaps, members, inE: cond ? inE : null, outE: cond ? outE : null };
-	});
+	// ---- click selection (SPEC 3.6.1): the pinned node, edge or gap is the selection ----
+	// No hover state: only a click (or Enter / Space) changes what is bright.
+	const emph = $derived(pin ? emphasis(model, ix, pin) : null);
 	const pinKey = $derived(pin ? `${pin.type}:${pin.id}` : '');
 	const cls = {
 		edge: (e) => {
 			let c = '';
 			if (emph) {
-				if (!emph.edges.has(e.id)) c += ' faded';
-				else if (emph.inE?.has(e.id)) c += ' hl-in';
-				else if (emph.outE?.has(e.id)) c += ' hl-out';
+				const hop = emph.edges.get(e.id);
+				if (hop == null) c += ' faded';
+				else if (pin.type === 'node') c += hop === 1 ? ' near' : ' far';
 			} else if (!shownSet.has(e.id)) c += ' faded';
-			if (pinKey === `edge:${e.id}`) c += ' pinned';
+			if (pinKey === `edge:${e.id}`) c += ' is-sel';
 			return c;
 		},
 		node: (n) => {
@@ -193,7 +128,7 @@
 			if (emph) {
 				if (!emph.nodes.has(n.id)) c += ' faded';
 			} else if (narrowed && !brightNodes.has(n.id)) c += ' faded';
-			if (pinKey === `node:${n.id}`) c += ' pinned';
+			if (pinKey === `node:${n.id}`) c += ' is-sel';
 			return c;
 		},
 		gap: (g) => {
@@ -201,7 +136,7 @@
 			if (emph) {
 				if (!emph.gaps.has(g.id)) c += ' faded';
 			} else if (!gapBright(g)) c += ' faded';
-			if (pinKey === `gap:${g.id}`) c += ' pinned';
+			if (pinKey === `gap:${g.id}`) c += ' is-sel';
 			return c;
 		},
 		member: (m) => {
@@ -209,25 +144,48 @@
 			return lens === 'all' || lens === 'inter' ? '' : ' faded';
 		}
 	};
+	// status line counts: made by counting the bright edges, nothing else
+	const hops = $derived.by(() => {
+		if (!emph || pin.type !== 'node') return null;
+		let near = 0;
+		let far = 0;
+		for (const h of emph.edges.values()) h === 1 ? near++ : far++;
+		return { near, far, gaps: emph.gaps.size };
+	});
+	const selected = $derived(emph ? ix.resolve(pin) : null);
 
-	// ---- hover card, pin, drawer focus ----
-	let hideT;
-	function onhover(item, el) {
-		clearTimeout(hideT);
-		hover = { item, el, rect: el.getBoundingClientRect() };
-	}
-	function onleave() {
-		clearTimeout(hideT);
-		hideT = setTimeout(() => (hover = null), 70);
-	}
+	// ---- selection, drawer, focus ----
 	// the drawer component loads lazily, so focus moves once its heading exists
 	let wantFocus = $state(false);
+	let wantScroll = false;
+	/** open an item in the drawer from a table, a search result or the drawer itself */
 	function doPin(item, el) {
 		opener = el ?? null;
-		hover = null;
 		onpin(item);
-		loadEvidence();
 		wantFocus = true;
+		wantScroll = true;
+	}
+	/**
+	 * a click (or Enter / Space) on a graph or matrix item. A second click on the
+	 * selected item clears it. A mouse click keeps the page and the focus where they
+	 * are, so the highlighted pathways stay in view; the keyboard goes to the drawer.
+	 */
+	function select(item, el, kbd) {
+		if (pinKey === `${item.type}:${item.id}`) {
+			if (kbd) closeDrawer();
+			else clearSel();
+			return;
+		}
+		opener = el ?? null;
+		onpin(item);
+		if (kbd) wantFocus = true;
+	}
+	/** click on empty canvas: clear a graph selection (a paper or claim stays open) */
+	function clearSel() {
+		if (emph) {
+			opener = null;
+			onpin(null);
+		}
 	}
 	$effect(() => {
 		if (!wantFocus || !drawerHead) return;
@@ -235,8 +193,11 @@
 		drawerHead.focus({ preventScroll: true });
 		const box = drawerHead.closest('.drawer');
 		const r = box?.getBoundingClientRect();
-		if (r && (r.top > innerHeight - 80 || r.bottom < 80)) box.scrollIntoView({ block: 'nearest' });
+		if (r && (wantScroll || matchMedia('(max-width: 860px)').matches) && (r.top > innerHeight - 80 || r.bottom < 80))
+			box.scrollIntoView({ block: 'nearest' });
+		wantScroll = false;
 	});
+	const toDrawer = () => drawerHead?.closest('.drawer')?.scrollIntoView({ block: 'start' });
 	async function closeDrawer() {
 		const o = opener;
 		opener = null;
@@ -246,8 +207,7 @@
 	}
 	function onKey(ev) {
 		if (!active || ev.key !== 'Escape') return;
-		if (hover) hover = null;
-		else if (pin) closeDrawer();
+		if (pin) closeDrawer();
 	}
 
 	// ---- L1 counts (counting JSON entries only) ----
@@ -284,8 +244,7 @@
 	const combos = $derived(model.nodes.filter((n) => n.members));
 </script>
 
-<!-- on scroll the card follows its element (focus can scroll the page) -->
-<svelte:window onkeydown={onKey} onscroll={() => hover && (hover = { ...hover, rect: hover.el.getBoundingClientRect() })} />
+<svelte:window onkeydown={onKey} />
 
 {#snippet paperRef(doc)}
 	{@const p = ix.paperById.get(doc)}
@@ -413,11 +372,53 @@
 			{#if network}
 				<p class="path-note"><span class="k">Paths</span> {model.limitations[0]}</p>
 			{/if}
+			<div class="sel-status" class:on={!!emph}>
+				<div class="st-text" aria-live="polite">
+					{#if hops && selected}
+						{@const n = hops.near + hops.far}
+						<p>
+							Pathways through <strong>{selected.label}</strong>:
+							<span class="st-n">{n}</span>
+							{n === 1 ? unit[0] : unit[1]} (<span class="st-n">{hops.near}</span> direct,
+							<span class="st-n">{hops.far}</span> further){#if hops.gaps}
+								· <span class="st-n">{hops.gaps}</span> {hops.gaps === 1 ? 'gap' : 'gaps'} (no evidence){/if}
+						</p>
+						{#if hops.far}
+							<p class="st-honesty">
+								Edges beyond the first step are separate bodies of evidence. A path is not one tested effect.
+							</p>
+						{/if}
+					{:else if emph && selected && pin.type === 'edge'}
+						<p>
+							Selected {network ? 'edge' : 'finding'}: <strong>{ix.title(selected)}</strong> · {dirWord(selected.direction)} ·
+							certainty {certWord(selected.certainty)} · <span class="st-n">{selected.studies}</span>
+							{selected.studies === 1 ? 'study' : 'studies'} · <span class="st-n">{selected.claims}</span>
+							{selected.claims === 1 ? 'claim' : 'claims'}
+						</p>
+					{:else if emph && selected && pin.type === 'gap'}
+						<p>
+							Selected gap: <strong>{ix.label(selected.source)} → {ix.label(selected.target)}</strong> · No evidence (a gap,
+							not a negative result)
+						</p>
+					{:else}
+						<p class="st-hint">
+							Click a node to show its pathways. Click an edge or its chip to read its claims. A second click, a click on
+							empty space or Esc clears it.
+						</p>
+					{/if}
+				</div>
+				{#if emph}
+					<div class="st-actions">
+						<button type="button" class="pill" onclick={closeDrawer}>Clear</button>
+						<button type="button" class="more to-drawer" onclick={toDrawer}>Details below ↓</button>
+					</div>
+				{/if}
+			</div>
 			{#if view === 'graph'}
-				<Graph {model} {ix} {cls} {showGaps} {mounted} {onhover} {onleave} onpin={doPin} />
+				<Graph {model} {ix} {cls} {showGaps} {mounted} selKey={pinKey} onselect={select} onclear={clearSel} />
 			{:else}
 				{#await lazyMatrix() then { default: Matrix }}
-					<Matrix {model} {ix} {cls} {showGaps} {onhover} {onleave} onpin={doPin} />
+					<Matrix {model} {ix} {cls} {showGaps} onselect={select} />
 				{/await}
 			{/if}
 			<Legend {model} />
@@ -573,9 +574,4 @@
 		</ul>
 	</section>
 
-	{#if active && hover}
-		{#await lazyHover() then { default: HoverCard }}
-			<HoverCard {hover} {model} {ix} id="hovercard-{K}" />
-		{/await}
-	{/if}
 </div>

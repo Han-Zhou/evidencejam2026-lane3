@@ -1,11 +1,12 @@
 <script>
 	// The node-link view. Geometry comes from the build (layout.js); this file only
-	// draws it and reports hover / focus / pin through one set of delegated handlers.
+	// draws it and reports clicks through one set of delegated handlers. There is no
+	// hover behaviour beyond CSS (cursor and the element's own outline).
 	// Pan and zoom use d3-zoom, loaded on first use so it is not in the first view.
 	import EdgeChip from './EdgeChip.svelte';
 	import { DIRS, plural } from '../format.js';
 
-	let { model, ix, cls, showGaps, mounted, onhover, onleave, onpin } = $props();
+	let { model, ix, cls, showGaps, mounted, selKey, onselect, onclear } = $props();
 
 	const network = $derived(model.key === 'network');
 	// thick lines first so thin ones stay visible on top
@@ -14,7 +15,7 @@
 	);
 	const diamonds = $derived(model.edges.filter((e) => e.geom.diamond));
 	const rx = (n) =>
-		({ planting_stock: 14, factor: 14, site_treatment: 3, condition: n.geom.h / 2, outcome: 8, combination: 8 })[
+		({ planting_stock: 14, factor: 12, site_treatment: 3, condition: n.geom.h / 2, outcome: 8, combination: 8 })[
 			n.shape
 		] ?? 8;
 	const nodeAria = (n) =>
@@ -22,7 +23,7 @@
 			ix.inEdges(n.id).length,
 			'edge',
 			'edges'
-		)} in`;
+		)} in. Select to show its pathways`;
 
 	let svgEl = $state();
 	let zt = $state('');
@@ -48,7 +49,8 @@
 			.on('zoom', (ev) => (zt = ev.transform.toString()));
 		zsel = select(svgEl).call(zoom).on('dblclick.zoom', null);
 	}
-	const pointerEnter = (ev) => ev.pointerType === 'mouse' && ensureZoom();
+	// load d3-zoom when a mouse first reaches the graph, so the first drag already pans
+	const warmZoom = (ev) => ev.pointerType === 'mouse' && ensureZoom();
 	async function zoomBy(k) {
 		await ensureZoom();
 		zoom.scaleBy(zsel, k);
@@ -72,30 +74,22 @@
 		for (const el of svgEl.querySelectorAll('[tabindex][data-k]')) if (el.getAttribute('data-k') === k) return el;
 		return r.el;
 	}
-	const over = (ev) => {
-		const r = itemOf(ev.target);
-		if (r) onhover(r.item, focusable(r));
-	};
-	const out = (ev) => {
-		const a = itemOf(ev.target);
-		const b = itemOf(ev.relatedTarget);
-		if (a && (!b || b.el.getAttribute('data-k') !== a.el.getAttribute('data-k'))) onleave();
-	};
-	const focusIn = (ev) => {
-		const r = itemOf(ev.target);
-		if (r) onhover(r.item, r.el, true);
-	};
-	const focusOut = () => onleave(true);
+	// a pan (mouse drag) is not a click: d3-zoom already swallows the click after a
+	// drag; this distance check is a second guard
+	let down = null;
+	const pointerDown = (ev) => (down = ev.isPrimary ? [ev.clientX, ev.clientY] : null);
 	const click = (ev) => {
+		if (down && Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 4) return;
 		const r = itemOf(ev.target);
-		if (r) onpin(r.item, focusable(r));
+		if (r) onselect(r.item, focusable(r), ev.detail === 0);
+		else onclear();
 	};
 	const key = (ev) => {
 		if (ev.key !== 'Enter' && ev.key !== ' ') return;
 		const r = itemOf(ev.target);
 		if (r && r.el === ev.target) {
 			ev.preventDefault();
-			onpin(r.item, r.el);
+			onselect(r.item, r.el, true);
 		}
 	};
 </script>
@@ -106,7 +100,9 @@
 	<button type="button" class="tool" onclick={resetView}>Reset view</button>
 	<a class="tool-link" href="#table-{model.key}">View as table</a>
 </div>
-<div class="graph-box" onpointerenter={pointerEnter} role="presentation">
+<!-- a click on empty canvas clears the selection (Esc and the Clear button do the same) -->
+<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+<div class="graph-box" onpointerenter={warmZoom} onpointerdown={pointerDown} onclick={click}>
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<svg
 		bind:this={svgEl}
@@ -119,12 +115,7 @@
 			'edge',
 			'edges'
 		)}, {plural(model.gaps.length, 'gap', 'gaps')}. Each edge and node is a button; the table below lists the same edges."
-		onclick={click}
 		onkeydown={key}
-		onpointerover={over}
-		onpointerout={out}
-		onfocusin={focusIn}
-		onfocusout={focusOut}
 	>
 		<defs>
 			{#each DIRS as d (d)}
@@ -170,7 +161,7 @@
 			<g class="edges">
 				{#each edgesByWidth as e (e.id)}
 					<g class="edge dir-{e.direction} kind-{e.kind} {cls.edge(e)}" data-k="edge:{e.id}">
-						{#if mounted}<path class="halo" d={e.geom.d} stroke-width={e.width + 9} />{/if}
+						{#if mounted}<path class="halo" d={e.geom.d} stroke-width={e.width + 10} />{/if}
 						<path
 							class="line"
 							d={e.geom.d}
@@ -188,6 +179,7 @@
 						transform="translate({n.geom.x},{n.geom.y})"
 						tabindex="0"
 						role="button"
+						aria-pressed={mounted ? selKey === `node:${n.id}` : undefined}
 						aria-label={nodeAria(n)}
 						data-k="node:{n.id}"
 						data-node-id={network ? n.id : undefined}
@@ -207,7 +199,14 @@
 			</g>
 			<g class="chips">
 				{#each model.edges as e (e.id)}
-					<EdgeChip {e} aria={ix.aria(e)} {network} key={model.key} cls={cls.edge(e)} />
+					<EdgeChip
+						{e}
+						aria={ix.aria(e)}
+						{network}
+						key={model.key}
+						cls={cls.edge(e)}
+						pressed={mounted ? selKey === `edge:${e.id}` : undefined}
+					/>
 				{/each}
 				{#each diamonds as e (e.id)}
 					<path
@@ -223,6 +222,7 @@
 							transform="translate({g.geom.label.x},{g.geom.label.y})"
 							tabindex="0"
 							role="button"
+							aria-pressed={mounted ? selKey === `gap:${g.id}` : undefined}
 							aria-label="{ix.label(g.source)} to {ix.label(g.target)}: no evidence. A gap, not a negative result."
 							data-k="gap:{g.id}"
 							data-gap-id={g.id}

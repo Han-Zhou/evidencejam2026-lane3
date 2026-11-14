@@ -57,16 +57,29 @@
 			<li><svg class="lg-node" viewBox="0 0 34 18" aria-hidden="true"><rect x="1" y="1" width="32" height="16" rx="1.5" /></svg> Site treatment</li>
 			<li><svg class="lg-node" viewBox="0 0 34 18" aria-hidden="true"><rect x="1" y="1" width="32" height="16" rx="8" /></svg> Condition</li>
 			<li><svg class="lg-node out" viewBox="0 0 34 18" aria-hidden="true"><rect x="1.5" y="1.5" width="31" height="15" rx="4" /></svg> Outcome</li>
-			<li>
-				<svg class="lg-sw" viewBox="0 0 30 12" aria-hidden="true"
-					><path class="lg-halo" d="M1,6H29" /><path class="lg-plain" d="M1,6H29" stroke-width="2" /></svg
-				>
-				/
-				<svg class="lg-sw" viewBox="0 0 30 12" aria-hidden="true"
-					><path class="lg-halo beads" d="M1,6H29" /><path class="lg-plain" d="M1,6H29" stroke-width="2" /></svg
-				>
-				On a condition: band = edges in, beaded band = edges out
-			</li>
 		</ul>
 	{/if}
+	<ul class="lg-row">
+		<li class="lg-k">After a click on a node:</li>
+		<li>
+			<svg class="lg-sw" viewBox="0 0 30 12" aria-hidden="true"
+				><path class="lg-halo" d="M1,6H29" /><path class="lg-plain" d="M1,6H29" stroke-width="2" /></svg
+			>
+			band = one step from the node
+		</li>
+		{#if network}
+			<li>
+				<svg class="lg-sw" viewBox="0 0 30 12" aria-hidden="true"
+					><path class="lg-plain lg-far" d="M1,6H29" stroke-width="2" /></svg
+				>
+				pale line = further steps, a separate body of evidence
+			</li>
+		{/if}
+		<li>
+			<svg class="lg-sw" viewBox="0 0 30 12" aria-hidden="true"
+				><path class="lg-plain lg-faded" d="M1,6H29" stroke-width="2" /></svg
+			>
+			faint = not on its pathways
+		</li>
+	</ul>
 </div>

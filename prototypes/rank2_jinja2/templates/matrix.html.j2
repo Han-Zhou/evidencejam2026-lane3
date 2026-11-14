@@ -10,7 +10,7 @@
 {% for c in X.cols %}
 {% set cell = X.cells.get((r.id, c.id)) %}
 {% if not cell %}<td class="mx-empty" title="No claims in this corpus link these two"></td>
-{% elif cell[0] == 'g' %}<td class="mx-gap"><button type="button" data-k="{{ cell[1].key }}" aria-label="{{ cell[1].aria }}">No evidence</button></td>
+{% elif cell[0] == 'g' %}<td class="mx-gap"><button type="button" data-k="{{ cell[1].key }}" aria-label="{{ cell[1].aria }}"><span>No evidence</span></button></td>
 {% else %}{% set it = cell[1] %}<td class="mx-e"><button type="button" class="d-{{ it.direction }}" data-k="{{ it.key }}" aria-label="{{ it.aria }}"><span class="g" aria-hidden="true">{{ DIR_GLYPH[it.direction] }}</span>{{ m.dots(it.certainty) }}</button></td>
 {% endif %}
 {% endfor %}

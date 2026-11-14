@@ -1,0 +1,70 @@
+---
+pagination:
+  data: q1.panels
+  size: 1
+  alias: P
+permalink: "claims-{{ P.id }}.html"
+---
+{% import "macros.njk" as m %}
+{% set W = P.itemWord %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ P.name }}: all {{ P.counts.claims }} claims · Q1 tree planting</title>
+<meta name="description" content="Every claim behind the Q1 {{ P.name }} panel, grouped by {{ W[0] }} and paper, with the sentence it was read from.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+{% include "theme-head.njk" %}
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body class="cpage">
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+<div class="wrap">
+<div class="bar"><p class="eyebrow"><a href="index.html#{{ P.id }}">← Back to Q1 · {{ P.name }}</a></p></div>
+<h1>{{ P.name }}: every claim and its source sentence</h1>
+<p class="q">{{ P.question }}</p>
+<p class="lede">{{ P.counts.claims }} claims from {{ P.counts.papers }} papers, grouped by {{ W[0] }}, then by paper. Values are copied from <code>answers/{{ "q1_tree_planting.json" if P.key == "a" else "q1_tree_planting_graph.json" }}</code>.</p>
+</div>
+</header>
+<main id="main">
+<div class="wrap">
+<nav class="toc" aria-label="{{ W[1] | capitalize }} on this page">
+<ol>{% for g in P.groups %}<li><a href="#{{ g.anchor }}">{{ g.title }}</a> <span class="mono">({{ g.n }})</span></li>{% endfor %}</ol>
+</nav>
+{% for g in P.groups %}
+<section class="cgrp" id="{{ g.anchor }}" aria-labelledby="{{ g.anchor }}-h">
+<h2 id="{{ g.anchor }}-h">{{ g.title }}</h2>
+{% if g.row %}
+<p class="kv">{{ m.dir(g.row.direction, g.row.dir.word) }}{{ m.cert(g.row.cert.n, g.row.cert.word) }}<span class="mono">{{ g.row.studies }} {{ "study" if g.row.studies == 1 else "studies" }} · {{ g.row.claims }} claim{{ "s" if g.row.claims != 1 }}</span></p>
+{% if g.row.direction_meaning %}<p class="read">{{ g.row.direction_meaning }}</p>{% endif %}
+<p class="read"><b>Certainty rationale:</b> {{ g.row.rationale }}</p>
+{% else %}
+<p class="read">Claims about combined treatments, or about one factor changing the effect of another. Each is a single claim with its own direction. They are listed, not pooled.</p>
+{% endif %}
+<div class="tw">
+<table class="rt ct">
+<caption>Claims of {{ g.title }}, grouped by paper.</caption>
+<thead><tr><th scope="col">Claim</th><th scope="col">Direction</th><th scope="col">Grade</th><th scope="col">Quote</th></tr></thead>
+{% for p in g.papers %}
+<tbody>
+<tr class="ph"><th colspan="4" scope="rowgroup"><span class="pt">{{ p.title | rich | safe }}</span> ({{ m.yearOf(p.year) }}) · {{ m.doiLink(p.doi, p.doc) }} · <span class="mono">{{ p.claims.length }}</span> claim{{ "s" if p.claims.length != 1 }}</th></tr>
+{% for c in p.claims %}
+<tr id="c-{{ c.cid }}"><th scope="row">{{ m.so(c) }}<small>{{ c.meta }}{{ " · " if c.meta }}<span class="mono">{{ c.cid }}</span></small></th><td class="d-{{ c.direction }}">{{ c.dir.word }}</td><td class="c{{ c.grade.n }}">{{ c.grade.word }}</td><td><blockquote>{{ c.quote | rich | safe }}</blockquote></td></tr>
+{% endfor %}
+</tbody>
+{% endfor %}
+</table>
+</div>
+<p class="back"><a href="index.html#{{ P.id }}">Back to the {{ P.name }} panel</a></p>
+</section>
+{% endfor %}
+</div>
+</main>
+<footer class="foot">
+<div class="wrap"><p>Every subject, object, direction, grade, quote, title, year and DOI on this page is copied from the answer file. No LLM text. Links leave the site only to doi.org.</p></div>
+</footer>
+</body>
+</html>

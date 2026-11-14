@@ -28,19 +28,34 @@ claim id and quote is present, and that nothing loads from another origin.
 | Stack | Python stdlib | Python + Jinja2 | Eleventy | SvelteKit + D3 |
 | Directory | `rank1_stdlib/` | `rank2_jinja2/` | `rank3_eleventy/` | `rank4_sveltekit/` |
 | `check_site.py` | PASS | PASS | PASS | PASS |
-| Build, deps present | 0.10 s | 0.21 s | 0.33 s | 1.66 s |
+| Build, deps present | 0.10 s | 0.30 s | 0.49 s | 2.26 s |
 | Build from clean checkout | 0.10 s | 0.35 s | 1.3–1.6 s | 3.7 s |
 | Network at build | none | none | `npm ci` | `npm ci` (~15 MB) |
 | Dependencies | none | Jinja2 3.1.6, MarkupSafe 3.0.4, vendored (507 KB) | @11ty/eleventy 3.1.8 (113 packages, 21 MB) | kit 3.2.0, svelte 5.57.3, vite 8.3.8, d3 modules (59 packages, 43 MB) |
 | Native binaries | none | none | none | rolldown, lightningcss (linux-arm64 builds in the lock file, not tested) |
 | Needs Node on judge machine | no | no | yes | yes (22.17+) |
-| First view (bytes, uncompressed) | **163,393** | 704,476 | 500,234 | 342,392 |
-| All shipped files (bytes) | 895,132 | 704,476 | 500,234 | 717,930 |
-| Quotes without JS | on `claims-*.html` pages | inline | inline | mostly missing |
+| First view (bytes, uncompressed) | **168,612** | 267,838 | 227,739 | 351,413 |
+| First view in v1 (before the quote split) | 163,393 | 704,476 | 500,234 | 342,392 |
+| All shipped files (bytes) | 900,727 | 921,999 | 833,885 | 721,973 |
+| Quotes without JS | on `claims-*.html` pages | on `claims-*.html` pages | on `claims-*.html` pages | mostly missing |
 | Pan and zoom | no | no | no | yes |
 
 `python -m http.server` does not compress, so the raw bytes are what a viewer
-downloads.
+downloads. The build times above are for v2 (theme and click changes).
+
+## v2 changes (all four)
+
+- **Theme:** light and dark tokens taken from the Kimi blog's look (cool grey page,
+  flat near-white cards, serif reading text, sans UI, mono numbers, black pills,
+  colour only in the data). The default follows the system; a sun/moon toggle
+  at the top right overrides it and is remembered. See `SPEC.md` section 4.
+- **No hover:** hover cards and hover fading are gone, so nothing covers the
+  pathways. Clicking a node keeps only its active pathways bright (upstream and
+  downstream). Edges one step from the node are full strength; further edges stay
+  visible but lighter, with a note that they are separate bodies of evidence.
+  Clicking an edge shows its claims in the drawer. Esc, Clear, a second click or
+  a click on empty canvas resets. See `SPEC.md` section 3.6.
+- **Page weight:** ranks 2 and 3 now load quotes on demand, like rank 1.
 
 ## What the numbers say
 
@@ -49,9 +64,9 @@ downloads.
   stack: pooled rows go in the HTML, quotes go in one JSON file per panel loaded on
   first use, and a static `claims-*.html` page keeps every quote readable without
   JavaScript.
-- **Ranks 2 and 3 inline every quote.** That costs 500–700 KB on the first view.
-  The stack does not force this. It is the choice each agent made to meet the
-  no-JS rule.
+- **Ranks 2 and 3 now use the same quote split** and dropped to 268 KB and
+  228 KB. Their v1 first view (500–700 KB) came from inlining every quote, not
+  from the stack.
 - **Rank 3 has no native binaries.** But it still needs Node and a network
   `npm ci` at build time, which breaks decision driver 1 unless `node_modules/` is
   committed.
@@ -63,11 +78,12 @@ downloads.
 ## Open issues in all four
 
 - The "All" lens of Panel B is dense: 29 edges and 74–90 crossings. The lenses,
-  hover focus and matrix help. A next version should reduce crossings further, for
-  example by bundling the direct edges into each outcome.
+  click-to-highlight and matrix help. A next version should reduce crossings
+  further, for example by bundling the direct edges into each outcome.
 - Five paper titles contain literal `<i>` tags in the JSON. All four show them as
   text.
-- Nobody ran Lighthouse. Only rank 3 ran axe-core (0 violations in 5 runs).
+- Nobody ran Lighthouse. Only rank 3 ran axe-core (0 violations in 6 states in v2).
+- While something is selected, faded text is below AA contrast by design.
 - SVG label widths are estimated at build time. A wide fallback font can push a
   label past its box.
 

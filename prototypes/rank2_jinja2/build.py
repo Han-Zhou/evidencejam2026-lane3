@@ -7,6 +7,15 @@ Panel A reads answers/q1_tree_planting.json, Panel B reads
 answers/q1_tree_planting_graph.json. Every number, label and quote is copied
 from those files. The graph layout is computed here, at build time, so the
 SVG shows without JavaScript. No network, no LLM, deterministic output.
+
+Output:
+    index.html                 both panels: graph, matrix, tables (no quotes
+                               except the 5 interaction claims)
+    claims-findings.html       every claim of a panel with its quote, as a
+    claims-network.html        static page (the no-JavaScript road to L5)
+    data/findings.json         drawer cards, claims, quotes and papers, fetched
+    data/network.json          by site.js only when the reader first needs them
+    assets/site.css, site.js
 """
 
 from __future__ import annotations
@@ -769,7 +778,8 @@ def finish_panel(pre, key, D, nodes, label, items, gaps, mods, geo, ev):
 
     data = {
         "key": key,
-        "nodes": {n["id"]: {"l": n["label"], "k": n.get("kind") or n["group"]} for n in nodes},
+        "nodes": {n["id"]: dict({"l": n["label"], "k": n.get("kind") or n["group"]}, **({"m": n["members"]} if n.get("members") else {}))
+                  for n in nodes},
         "edges": {it["key"][2:]: {"s": it["src"], "t": it.get("target") if is_b else it["tgt"], "te": it.get("target_edge"),
                                   "k": it["kind"], "d": it["direction"], "c": it["certainty"], "a": it["anchor"]}
                   for it in items},
@@ -799,6 +809,8 @@ def finish_panel(pre, key, D, nodes, label, items, gaps, mods, geo, ev):
         "pre": pre,
         "key": key,
         "is_b": is_b,
+        "claims_page": f"claims-{key}.html",
+        "item_by": item_by,
         "D": D,
         "nodes": nodes,
         "its": items,
@@ -826,6 +838,42 @@ def ev_doc(ev, doc, _cache={}):
 
 
 # ---------------------------------------------------------------- render
+def squeeze_html(s):
+    """Drop indentation and blank lines (never inside a line)."""
+    return "\n".join(line.strip() for line in str(s).splitlines() if line.strip())
+
+
+def panel_json(p, M):
+    """data/<panel>.json: what the drawer, the search and the JS claims table
+    need beyond the page. Loaded on demand, once. Claim arrays are
+    [subject, predicate, object, negated, direction, certainty_grade,
+    evidence_types, comparator, quote, document_id]; papers are
+    [title, year, doi]; groups are [tbody id, item key, title, claim ids]."""
+    ev = p["ev"]
+    cards = {}
+    for it in p["its"]:
+        cards[it["key"]] = squeeze_html(M.card_item(it, p))
+    for g in p["gaps"]:
+        cards[g["key"]] = squeeze_html(M.card_gap(g, p))
+    for n in p["nodes"]:
+        cards["n:" + n["id"]] = squeeze_html(M.card_node(n, p))
+    claims = {}
+    for g in p["claim_groups"]:
+        for cid in g["cids"]:
+            e = ev[cid]
+            claims[cid] = [e["subject"], e["predicate"], e["object"], 1 if e["negated"] else 0, e["direction"],
+                           e["certainty_grade"], ", ".join(e["evidence_types"]), e["comparator"], e["quote"], e["document_id"]]
+    if set(claims) != set(ev):
+        raise SystemExit(f"{p['key']}: claim groups do not cover the evidence map")
+    out = {
+        "cards": cards,
+        "claims": claims,
+        "papers": {pp["doc"]: [pp["title"], pp["year"], pp["doi"]] for pp in p["papers"]},
+        "groups": [[g["id"], g["key"], g["title"], g["cids"]] for g in p["claim_groups"]],
+    }
+    return json.dumps(out, ensure_ascii=False, separators=(",", ":")) + "\n"
+
+
 def squeeze(src, js):
     """Cheap, safe size cut for our own CSS/JS: drop /* */ blocks, whole-line
     // comments, indentation and blank lines. Lines are never joined, so JS
@@ -859,8 +907,13 @@ def main(argv):
         LABEL_LH=LABEL_LH, SUB_LH=SUB_LH, plural=plural, wrap=wrap,
     )
     pa, pb = build_panel_a(A), build_panel_b(B)
-    html = env.get_template("index.html.j2").render(A=A, B=B, panels=[pa, pb], pa=pa, pb=pb)
-    html = "\n".join(line.strip() for line in html.splitlines() if line.strip()) + "\n"
+    pages = {"index.html": squeeze_html(env.get_template("index.html.j2").render(A=A, B=B, panels=[pa, pb], pa=pa, pb=pb)) + "\n"}
+    claims_t = env.get_template("claims.html.j2")
+    M = env.get_template("macros.html.j2").module
+    data = {}
+    for p in (pa, pb):
+        pages[p["claims_page"]] = squeeze_html(claims_t.render(p=p)) + "\n"
+        data[f"data/{p['key']}.json"] = panel_json(p, M)
 
     if out.exists():
         # Replace only an earlier build (or an empty directory), never anything else.
@@ -870,7 +923,9 @@ def main(argv):
             raise SystemExit(f"refusing to overwrite {out}: not empty and not an earlier build")
         shutil.rmtree(out)
     (out / "assets").mkdir(parents=True)
-    (out / "index.html").write_text(html, encoding="utf-8")
+    (out / "data").mkdir()
+    for name, text in list(pages.items()) + list(data.items()):
+        (out / name).write_text(text, encoding="utf-8")
     for name in ("site.css", "site.js"):
         src = (HERE / "static" / name).read_text(encoding="utf-8")
         (out / "assets" / name).write_text(squeeze(src, js=name.endswith(".js")), encoding="utf-8")

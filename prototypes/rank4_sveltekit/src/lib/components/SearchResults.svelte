@@ -49,10 +49,10 @@
 					<ul class="plain">
 						{#each more[g.name] ? g.list : g.list.slice(0, SHOW) as r (r.item.id)}
 							<li>
-								<button type="button" class="linkish" onclick={(ev) => onpin(r.item, ev.currentTarget)}>
+								<button type="button" class="linkish elink" onclick={(ev) => onpin(r.item, ev.currentTarget)}>
 									{#if r.e}<span class="dir-{r.e.direction} g" aria-hidden="true">{dirGlyph(r.e.direction)}</span>
 										<span class="d" aria-hidden="true">{dotsText(r.e.certainty)}</span>{/if}
-									{r.text}
+									<span class="t">{r.text}</span>
 								</button>
 							</li>
 						{/each}
