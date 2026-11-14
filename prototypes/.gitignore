@@ -1,0 +1,8 @@
+# build output and installs of each prototype
+*/site/
+*/node_modules/
+*/.svelte-kit/
+*/_site/
+__pycache__/
+.build_*.log
+.check_*.log

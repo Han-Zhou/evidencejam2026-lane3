@@ -1,0 +1,245 @@
+{% import "macros.html.j2" as m with context %}
+{% set pre = p.pre %}
+{% set D = p.D %}
+{% set S = p.stats %}
+{% set noun = 'edges' if p.is_b else 'findings' %}
+<section class="panel" id="{{ p.key }}" data-pre="{{ pre }}" aria-labelledby="{{ pre }}-h">
+<div class="panel-head">
+<h2 id="{{ pre }}-h">{{ 'Network' if p.is_b else 'Findings' }}</h2>
+{% if p.is_b %}
+<p class="lede">Planting stock and site treatments, the conditions they change, and seedling survival and growth. Every edge is pooled and graded like a finding.</p>
+<p class="src">From <code>answers/q1_tree_planting_graph.json</code> · rule <code>{{ D.rule }}</code></p>
+{% else %}
+<p class="lede">Each factor against seedling survival and growth: one pooled finding per pair, with its certainty.</p>
+<p class="src">From <code>answers/q1_tree_planting.json</code> · rule <code>{{ D.rule }}</code></p>
+{% endif %}
+</div>
+
+<section class="glance" aria-labelledby="{{ pre }}-glance-h">
+<h3 id="{{ pre }}-glance-h">At a glance</h3>
+<dl class="glance-grid">
+<div><dt>Direction ({{ S.n_items }} {{ noun }})</dt><dd><ul class="tally">{% for d, n in S.dirs %}<li>{{ m.dir_label(d) }} <b>{{ n }}</b></li>{% endfor %}</ul></dd></div>
+<div><dt>Certainty</dt><dd><ul class="tally">{% for c, n in S.certs %}<li>{{ m.cert_label(c) }} <b>{{ n }}</b></li>{% endfor %}</ul></dd></div>
+<div><dt>Gaps</dt><dd><ul class="tally">{% for g in p.gaps %}<li><a href="#{{ g.anchor }}" data-k="{{ g.key }}"><span class="gapword">No evidence</span> {{ g.src_label }} → {{ g.tgt_label }}</a></li>{% endfor %}</ul><p class="fine">A gap means no study in this corpus tested the pairing. It is not a negative result.</p></dd></div>
+<div><dt>Evidence</dt><dd><ul class="tally"><li><b>{{ S.n_claims }}</b> claims</li><li><b>{{ S.n_papers }}</b> papers</li>{% if not p.is_b %}<li><b>{{ S.n_interactions }}</b> interaction claims (listed, not pooled)</li>{% endif %}</ul></dd></div>
+{% if p.is_b %}
+<div><dt>Nodes ({{ S.n_nodes }})</dt><dd><ul class="tally">{% for k, n in S.node_kinds %}<li><code>{{ k }}</code> <b>{{ n }}</b></li>{% endfor %}</ul></dd></div>
+<div><dt>Edges by kind</dt><dd><ul class="tally">{% for k, n in S.edge_kinds %}<li><code>{{ k }}</code> <b>{{ n }}</b></li>{% endfor %}</ul></dd></div>
+{% endif %}
+</dl>
+<details class="built"><summary>How this was built</summary><p>{{ D.how_built }}</p>
+{% if p.is_b %}<dl class="kinds">{% for k, v in D.node_kinds.items() %}<div><dt><code>{{ k }}</code></dt><dd>{{ v }}</dd></div>{% endfor %}{% for k, v in D.edge_kinds.items() %}<div><dt><code>{{ k }}</code> edge</dt><dd>{{ v }}</dd></div>{% endfor %}</dl>{% endif %}
+</details>
+</section>
+
+<div class="toolbar js-only">
+<div class="search" role="search" aria-label="Search {{ 'the network' if p.is_b else 'the findings' }}">
+<label for="{{ pre }}-q">Search</label>
+<input id="{{ pre }}-q" class="q" type="search" autocomplete="off" spellcheck="false" placeholder="Labels, claims, quotes, paper titles" aria-describedby="{{ pre }}-qh" aria-controls="{{ pre }}-res">
+<span id="{{ pre }}-qh" class="kbd-hint">Press <kbd>/</kbd> to search, <kbd>Esc</kbd> to clear</span>
+<div class="results" id="{{ pre }}-res" hidden></div>
+</div>
+{% if p.is_b %}
+<div class="seg lens" role="group" aria-label="Lens">
+<span class="seg-l" aria-hidden="true">Lens</span>
+<button type="button" data-lens="all" aria-pressed="true">All</button>
+<button type="button" data-lens="direct" aria-pressed="false">Direct</button>
+<button type="button" data-lens="via" aria-pressed="false">Via conditions</button>
+<button type="button" data-lens="inter" aria-pressed="false">Interactions</button>
+</div>
+{% endif %}
+<fieldset class="filters">
+<legend>Filters</legend>
+<div class="chips" role="group" aria-label="Direction">
+{% for d, n in S.dirs %}<button type="button" class="fchip" data-dir="{{ d }}" aria-pressed="true">{{ m.dir_label(d) }} <span class="n">{{ n }}</span></button>{% endfor %}
+</div>
+<label class="minc">Minimum certainty <select data-minc>
+<option value="0">Any</option>
+{% for c in CERT_ORDER|reverse %}{% if not loop.first %}<option value="{{ CERT_DOTS[c] }}">{{ CERT_WORD[c] }}{{ ' or higher' if c != 'high' }}</option>{% endif %}{% endfor %}
+</select></label>
+<label class="sg"><input type="checkbox" data-gaps checked> Show gaps</label>
+</fieldset>
+<p class="status" id="{{ pre }}-status" aria-live="polite">Showing {{ S.n_items }} of {{ S.n_items }} {{ noun }}</p>
+</div>
+
+<div class="workspace">
+<div class="stage">
+<div class="stage-bar">
+<div class="seg views js-only" role="group" aria-label="View">
+<button type="button" data-view="graph" aria-pressed="true">Graph</button>
+<button type="button" data-view="matrix" aria-pressed="false">Matrix</button>
+</div>
+<a class="vlink" href="#{{ pre }}-items">View as table</a>
+</div>
+<div class="view is-active" data-view="graph">
+<div class="graph-scroll">
+{% include "graph.svg.j2" %}
+</div>
+</div>
+<div class="view" data-view="matrix">
+{% include "matrix.html.j2" %}
+</div>
+{% if p.is_b %}<p class="note-limit"><span class="lbl">Read paths with care:</span> {{ D.limitations[0] }}</p>{% endif %}
+{% include "legend.html.j2" %}
+</div>
+<aside class="drawer js-only" id="{{ pre }}-drawer" aria-labelledby="{{ pre }}-dh">
+<div class="drawer-bar"><h3 id="{{ pre }}-dh" class="drawer-h" tabindex="-1">Details</h3><button type="button" class="drawer-x" aria-label="Close details" hidden>✕</button></div>
+<div class="drawer-body"><p class="drawer-empty">Select a node, an edge chip or a table row. Its claims, quotes and papers show here.</p></div>
+</aside>
+</div>
+
+<div class="tpls" hidden>
+{% for it in p.its %}<template id="{{ pre }}-t-{{ it.key }}">{{ m.card_item(it, p) }}</template>{% endfor %}
+{% for g in p.gaps %}<template id="{{ pre }}-t-{{ g.key }}">{{ m.card_gap(g, p) }}</template>{% endfor %}
+{% for n in p.nodes %}<template id="{{ pre }}-t-n:{{ n.id }}">{{ m.card_node(n, p) }}</template>{% endfor %}
+</div>
+<script type="application/json" id="{{ pre }}-data">{{ p.data }}</script>
+
+<div class="tables">
+<details class="tbl" id="{{ pre }}-items" open>
+<summary><h3>{{ 'Edges' if p.is_b else 'Findings' }} <span class="cnt">{{ p.its|length }}</span></h3></summary>
+<div class="tscroll">
+<table class="t-items sortable stack">
+<caption>{{ 'Every edge of the network' if p.is_b else 'Every finding' }}, with direction, certainty and its rationale. Select a row's first cell to read its claims.</caption>
+<thead><tr>
+<th scope="col"><button type="button" data-sort="0">From</button></th>
+<th scope="col"><button type="button" data-sort="1">To</button></th>
+<th scope="col"><button type="button" data-sort="dir">Direction</button></th>
+<th scope="col"><button type="button" data-sort="cert">Certainty</button></th>
+<th scope="col" class="num"><button type="button" data-sort="studies">Studies</button></th>
+<th scope="col" class="num"><button type="button" data-sort="claims">Claims</button></th>
+<th scope="col">Study directions</th>
+</tr></thead>
+<tbody>
+{% for it in p.its %}{{ m.item_row(it, p) }}{% endfor %}
+</tbody>
+</table>
+</div>
+</details>
+
+<details class="tbl" id="{{ pre }}-gaps" open>
+<summary><h3>Gaps <span class="cnt">{{ p.gaps|length }}</span></h3></summary>
+<div class="tscroll">
+<table class="t-gaps stack">
+<caption>Pairs that were looked for and not found. A gap is not a negative result.</caption>
+<thead><tr><th scope="col">From</th><th scope="col">To</th><th scope="col">Status</th><th scope="col">Searched for</th></tr></thead>
+<tbody>
+{% for g in p.gaps %}
+<tr id="{{ g.anchor }}" data-gap-id="{{ g.id }}">
+<td data-label="From"><a class="pin" href="#{{ g.anchor }}" data-k="{{ g.key }}">{{ g.src_label }}</a></td>
+<td data-label="To">{{ g.tgt_label }}</td>
+<td data-label="Status"><span class="gapword">No evidence</span> <code>{{ g.status }}</code></td>
+<td data-label="Searched for">{{ g.searched_for }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</details>
+
+{% if p.is_b %}
+<details class="tbl" id="{{ pre }}-inter" open>
+<summary><h3>Interactions &amp; set aside</h3></summary>
+<div class="tscroll">
+<table class="t-combo stack">
+<caption>Combination nodes: two treatments applied together</caption>
+<thead><tr><th scope="col">Node</th><th scope="col">Members</th><th scope="col">Edges from it</th></tr></thead>
+<tbody>
+{% for n in p.combos %}
+<tr><td data-label="Node"><a class="pin" href="#{{ pre }}-items" data-k="n:{{ n.id }}">{{ n.label }}</a></td>
+<td data-label="Members">{{ n.member_labels|join(" + ") }}</td>
+<td data-label="Edges from it"><ul class="cites">{% for it in n.out %}<li><a href="#{{ it.anchor }}" data-k="{{ it.key }}">{{ it.src_label }} → {{ it.tgt_label }}</a> {{ m.dir_label(it.direction) }} · {{ m.cert_label(it.certainty) }}</li>{% endfor %}</ul></td></tr>
+{% endfor %}
+</tbody>
+</table>
+<table class="t-mod stack">
+<caption>Moderation edges: the source changes the effect of another edge</caption>
+<thead><tr><th scope="col">From</th><th scope="col">Changes the effect of</th><th scope="col">Direction</th><th scope="col">Certainty</th><th scope="col">Direction means</th></tr></thead>
+<tbody>
+{% for it in p.mods %}
+<tr><td data-label="From"><a class="pin" href="#{{ it.anchor }}" data-k="{{ it.key }}">{{ it.src_label }}</a></td>
+<td data-label="Changes the effect of"><a href="#{{ it.target_anchor }}" data-k="e:{{ it.target_edge }}">{{ it.tgt_label }}</a></td>
+<td data-label="Direction">{{ m.dir_label(it.direction) }}</td>
+<td data-label="Certainty">{{ m.cert_label(it.certainty) }}<span class="rat">{{ it.certainty_rationale }}</span></td>
+<td data-label="Direction means">{{ it.direction_meaning }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+<table class="t-aside stack">
+<caption>Set aside: claims left out of the graph. This claim id is not in this file's evidence map, so no quote is shown here.</caption>
+<thead><tr><th scope="col">Claim id</th><th scope="col">Why</th></tr></thead>
+<tbody>
+{% for s in D.set_aside %}<tr><td data-label="Claim id"><code>{{ s.edge_id }}</code></td><td data-label="Why">{{ s.why }}</td></tr>{% endfor %}
+</tbody>
+</table>
+</div>
+</details>
+{% else %}
+<details class="tbl" id="{{ pre }}-inter" open>
+<summary><h3>Interactions <span class="cnt">{{ p.interactions|length }}</span></h3></summary>
+<p class="fine">Claims about combined treatments, or one factor changing another's effect. Each is a single claim with its own direction. They are listed, not pooled.</p>
+<div class="tscroll">
+<table class="t-int stack">
+<caption>Interaction claims</caption>
+<thead><tr><th scope="col">Claim</th><th scope="col">Direction</th><th scope="col">Quote</th><th scope="col">Paper</th></tr></thead>
+<tbody>
+{% for x in p.interactions %}
+<tr id="{{ pre }}-i{{ loop.index0 }}" data-interaction-id="{{ x.cid }}" data-direction="{{ x.direction }}">
+<td data-label="Claim">{{ m.claim_text(x.ev, x.cid) }}</td>
+<td data-label="Direction">{{ m.dir_label(x.direction) }}</td>
+<td data-label="Quote"><q>{{ x.ev.quote }}</q></td>
+<td data-label="Paper">{{ x.ev.title }} ({{ m.year(x.ev.year) }}) · {{ m.paper_ref(x.ev) }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</details>
+{% endif %}
+
+<details class="tbl js-close" id="{{ pre }}-papers" open>
+<summary><h3>Papers <span class="cnt">{{ p.papers|length }}</span></h3></summary>
+<div class="tscroll">
+<table class="t-papers stack">
+<caption>One row per paper (distinct <code>document_id</code>), most claims first</caption>
+<thead><tr><th scope="col">Title</th><th scope="col">Year</th><th scope="col">DOI or id</th><th scope="col" class="num">Claims</th><th scope="col">Cited by</th></tr></thead>
+<tbody>
+{% for pp in p.papers %}
+<tr id="{{ pre }}-p{{ loop.index0 }}" data-doc="{{ pp.doc }}">
+<td data-label="Title"><a class="pin" href="#{{ pre }}-p{{ loop.index0 }}" data-k="p:{{ pp.doc }}">{{ pp.title }}</a></td>
+<td data-label="Year">{{ m.year(pp.year) }}</td>
+<td data-label="DOI or id">{{ m.paper_ref({'doi': pp.doi, 'document_id': pp.doc}) }}</td>
+<td data-label="Claims" class="num">{{ pp.claims }}</td>
+<td data-label="Cited by"><ul class="cites">{% for c in pp.cites %}<li><a href="#{{ c.anchor }}" data-k="{{ c.key }}">{{ c.label }}</a></li>{% endfor %}{% if not pp.cites %}<li>Interaction claims only</li>{% endif %}</ul></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</details>
+
+<details class="tbl js-close" id="{{ pre }}-claims" open>
+<summary><h3>Claims <span class="cnt">{{ S.n_claims }}</span></h3></summary>
+<p class="fine">Every claim in the evidence map, grouped by {{ 'edge' if p.is_b else 'finding' }}, papers with the most claims first. Direction and certainty filters use each claim's own direction and grade.</p>
+<div class="tscroll">
+<table class="t-claims">
+<caption>All {{ S.n_claims }} claims with their source sentences</caption>
+<thead><tr><th scope="col">Claim</th><th scope="col">Direction</th><th scope="col">Grade</th><th scope="col">Quote</th><th scope="col">Paper</th></tr></thead>
+{% for g in p.claim_groups %}
+<tbody id="{{ g.id }}"{% if g.key %} data-g="{{ g.key }}"{% endif %}>
+<tr class="grp"><th colspan="5" scope="rowgroup">{{ g.title }} · {{ plural(g.cids|length, 'claim', 'claims') }}</th></tr>
+{% for cid in g.cids %}{{ m.claim_row(pre, cid, p.ev[cid]) }}{% endfor %}
+</tbody>
+{% endfor %}
+</table>
+</div>
+<p class="js-only"><button type="button" class="more" hidden>Show all</button></p>
+</details>
+
+<details class="tbl" id="{{ pre }}-limits" open>
+<summary><h3>Limitations and how this was built</h3></summary>
+<ul class="limits">{% for l in D.limitations %}<li>{{ l }}</li>{% endfor %}</ul>
+<p class="built-v"><span class="lbl">How this was built:</span> {{ D.how_built }}</p>
+</details>
+</div>
+</section>

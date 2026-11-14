@@ -1,0 +1,51 @@
+{% import "macros.html.j2" as m with context %}
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Q1 · Tree planting in Canadian forest restoration</title>
+<meta name="description" content="Evidence on how planting-stock traits and site treatments affect seedling survival and growth: pooled findings with certainty grades, gaps, and every source sentence.">
+<link rel="stylesheet" href="assets/site.css">
+<script>document.documentElement.className="js"</script>
+<script src="assets/site.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-head">
+<div class="wrap">
+<p class="eyebrow">Evidence Jam 2026 · Lane 3 · Decision support</p>
+<h1>Q1 · Tree planting in Canadian forest restoration</h1>
+<p class="question">{{ A.question }}</p>
+<nav class="tabs-nav" aria-label="Panels">
+<div class="cards">
+<a class="pcard" href="#findings" data-tab="findings" id="tab-findings">
+<span class="pc-name">Findings</span>
+<span class="pc-line">Each factor against survival and growth</span>
+<span class="pc-n"><b>{{ pa.its|length }}</b> findings · <b>{{ pa.gaps|length }}</b> gap{{ 's' if pa.gaps|length != 1 }}</span>
+<span class="pc-n"><b>{{ pa.stats.n_claims }}</b> claims · <b>{{ pa.stats.n_papers }}</b> papers</span>
+</a>
+<a class="pcard" href="#network" data-tab="network" id="tab-network">
+<span class="pc-name">Network</span>
+<span class="pc-line">Treatments, the conditions they change, and outcomes</span>
+<span class="pc-n"><b>{{ pb.nodes|length }}</b> nodes · <b>{{ pb.its|length }}</b> edges</span>
+<span class="pc-n"><b>{{ pb.stats.n_claims }}</b> claims · <b>{{ pb.stats.n_papers }}</b> papers</span>
+</a>
+</div>
+</nav>
+</div>
+</header>
+<main id="main" class="wrap">
+{% for p in panels %}
+{% include "panel.html.j2" %}
+{% endfor %}
+</main>
+<footer class="site-foot">
+<div class="wrap">
+<p>Built from <code>answers/q1_tree_planting.json</code> and <code>answers/q1_tree_planting_graph.json</code> of the Evidence Jam 2026 Lane 3 pack. Directions, certainty grades, rationales, counts and quotes are shown as the files give them. No text on this page was written by a language model.</p>
+</div>
+</footer>
+<div class="hovercard" id="hovercard" role="tooltip" hidden inert></div>
+</body>
+</html>
