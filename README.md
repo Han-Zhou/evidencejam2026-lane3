@@ -1,11 +1,15 @@
 # Questions
 
-- where does the use of an LLM come from? Transitions between sections in the websites?
-- what type (graph, tabular) etc.
+- LLM summaries for sections?
+- make_answers.py - do we need to make changes on top of this?
+- containerization?
+~~- where does the use of an LLM come from? Transitions between sections in the websites?~~ (A: website generator's build process - for tasks like generating summaries for sections)
+~~- what type (graph, tabular) etc.~~ (A: a panel for each json, with graph view and additional information)
 
 
 # Notes
 
+- look more into the difference between Q1 findings json and Q1 graph json: needs a panel for each
 - rank sources by relevance
 - look at examples from slides
 
