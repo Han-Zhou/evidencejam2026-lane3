@@ -33,7 +33,7 @@ marshes and Q3 Gap map.
 | `build.sh` | The build command. It runs `sitegen/build.py`. |
 | `sitegen/` | The site generator (`build.py`, `layout.py`) and the browser code in `src/`. |
 | `tools/check_site.py` | The accuracy checker for a built site. |
-| `docs/` | Design spec, release notes, tech stack decision and the Q1 Findings guide. |
+| `docs/` | Design spec, release notes, tech stack decision and the guides to the two Q1 panels (Findings, Network). |
 | `answers/`, `graph/`, `groups/`, `make_answers.py`, `manifest.json` | The starter pack files, not changed. |
 
 # Challenge brief (from the starter pack)
