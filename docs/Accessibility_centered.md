@@ -132,7 +132,7 @@ Misreading absence as failure is an accessibility problem of its own, because it
 | **Responsive scaling** | The graph SVG declares a `viewBox` and scales to its container. |
 | **No sideways page scroll** | Wide content such as matrices and heat maps scrolls inside its own frame, so the page itself never scrolls horizontally. |
 | **Safe areas on phones** | Pages are designed to keep content clear of system bars on mobile devices. |
-| **Alternative view of the same data** | Q1 offers a **Graph | Matrix** switch. The matrix is a structured tabular alternative that is easier to scan for dense data. |
+| **Alternative view of the same data** | Q1 offers a **Graph + Matrix** switch. The matrix is a structured tabular alternative that is easier to scan for dense data. |
 | **Linked views** | Filters apply to the graph, matrix and tables together, with a live status line (e.g. "Showing 9 of 29 edges") that reports what is displayed. |
 | **Controls for large data** | Q3 provides row and column filters, sorting by density, alphabetical order or most studies, and removal of empty rows and columns. Q2 provides filtering by attribute and certainty and ordering by certainty. |
 
