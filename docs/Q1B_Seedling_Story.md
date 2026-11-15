@@ -236,24 +236,14 @@ The drawer is the **depth** half of the ladder. It answers three questions in or
 | ⑥ | **Linked endpoints** | The source and target appear as links. Selecting either jumps to that node's own relationships, so users can follow a pathway through conditions without returning to the canvas. |
 | ⑦ | **Claims by paper** | The supporting literature grouped by paper and **ranked by claim grade, highest first**. Each card shows title and year, grade and claim count, a direction tally, and a background tinted by the majority direction. An expand control reveals the individual claims and quotes. |
 
-### 8.3 Lenses
 
-Lenses focus the graph on one class of relationship. In Panel B they matter most, because the network mixes direct, mediated and interacting effects. A lens **fades** edges outside it; it **never deletes** them.
-
-| Lens | Shows | Question it answers |
-|---|---|---|
-| **All** *(default)* | Every relationship. | What does the whole network look like? |
-| **Direct** | Relationships into outcomes from stock and treatments, as in the Q1 findings. | Does this practice affect survival or growth, regardless of mechanism? *(Equivalent to Panel A.)* |
-| **Via conditions** | Relationships into and out of condition nodes. | Through which conditions does a practice act, and what do conditions affect? |
-| **Interactions** | Combination and moderation effects. | Do treatments behave differently together, or depending on another factor? |
-
-### 8.4 Filters
+### 8.3 Filters
 
 Filter chips: **direction** (multi-select), **minimum certainty**, and **show gaps**.
 
 Filters are **linked views**: they apply simultaneously to the graph, the matrix and the tables, and the toolbar counts update accordingly (e.g. *"Showing 9 of 29 edges"*).
 
-### 8.5 Search
+### 8.4 Search
 
 One search box for the panel, case-insensitive, matching:
 
