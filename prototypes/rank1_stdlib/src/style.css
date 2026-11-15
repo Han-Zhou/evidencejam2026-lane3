@@ -6,8 +6,8 @@
   --text: #1A1A1A; --text-2: #555555; --text-3: #636363;
   --pill: #111111; --pill-text: #FFFFFF; --focus: #1A1A1A; --fade: .3;
   --inc: #0B6E4F; --dec: #C21F33; --mix: #8F5100; --null: #5F6368; --unc: #626262;
-  /* Certainty tiers: electric indigo (#6F00FF), lightest = very low, full = high.
-     --tN is the fill, --tN-fg the text on it (AA: 14.5, 10.1, 6.0, 6.7 to 1). */
+  /* Density tiers of the Q3 gap map: electric indigo (#6F00FF), lightest = thin, full = densest.
+     --tN is the fill, --tN-fg a text colour for it (AA: 14.5, 10.1, 6.0, 6.7 to 1). */
   --t1: #F1E6FF; --t2: #D7B8FF; --t3: #B47AFF; --t4: #6F00FF;
   --t1-fg: #1A1A1A; --t2-fg: #1A1A1A; --t3-fg: #1A1A1A; --t4-fg: #FFFFFF;
   --serif: "Iowan Old Style", "Palatino Linotype", Charter, Georgia, ui-serif, serif;
@@ -22,7 +22,7 @@
   --text: #DADCDE; --text-2: #9EA4AA; --text-3: #8A9097;
   --pill: #F2F2F2; --pill-text: #0F151A; --focus: #DADCDE; --fade: .4;
   --inc: #48D5A6; --dec: #FF6B76; --mix: #F5A524; --null: #A3A9AF; --unc: #8E949A;
-  /* Dark: dim indigo = very low, full electric indigo = high (white text: 14.8, 12.0, 9.1, 6.7 to 1). */
+  /* Dark density tiers: dim indigo = thin, full electric indigo = densest (white text: 14.8, 12.0, 9.1, 6.7 to 1). */
   --t1: #311465; --t2: #440E95; --t3: #5A07CA; --t4: #6F00FF;
   --t1-fg: #FFFFFF; --t2-fg: #FFFFFF; --t3-fg: #FFFFFF; --t4-fg: #FFFFFF;
   color-scheme: dark;
@@ -32,13 +32,8 @@
 .d-mixed { --c: var(--mix); }
 .d-no_effect { --c: var(--null); }
 .d-unclear { --c: var(--unc); }
-.t-very_low { --tc: var(--t1); --tf: var(--t1-fg); }
-.t-low { --tc: var(--t2); --tf: var(--t2-fg); }
-.t-moderate { --tc: var(--t3); --tf: var(--t3-fg); }
-.t-high { --tc: var(--t4); --tf: var(--t4-fg); }
-/* Certainty swatch with its dots (the Q3 gap map legend). */
+/* Legend entry: a swatch and its label (the Q3 gap map legend). */
 .ck { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.cs { display: inline-block; padding: 1px 7px; border-radius: 6px; background: var(--tc); color: var(--tf); border: 1px solid var(--line); }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }

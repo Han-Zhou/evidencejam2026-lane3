@@ -69,29 +69,46 @@ no graph view. When the tab is open, the page heading and question switch to Q3.
 - **Rows** are the 16 outcome groups and **columns** are the 24 intervention groups, in the
   order of `groups/lane3_groups.yaml`. `build.py` reads only the group ids from it, line by line
   (standard library, no YAML parser).
-- **Cells:** the fill is the certainty tier (the indigo tokens below), and the dots say the same.
-  No direction glyph is in the cell. The direction shows in the status line, in the details and in
-  each cell's `aria-label`. Gaps are hatched with a dashed border: never a fill, never a faded
-  cell.
+- **Cells:** the fill is the density tier (the indigo tokens below). The four tiers, from lightest
+  to darkest, are:
+  - **thin:** 1 study (72 cells).
+  - **some:** 2 to 3 studies (33 cells).
+  - **dense:** 4 or more studies (8 cells).
+  - **densest:** one of the pack's ten densest cells, `summary.densest` (10 cells).
+
+  Thin, some and dense are the pack's own `density` values. All ten densest cells are dense in the
+  pack. One cell outside the list has 5 studies, the same as the lowest cells in the list. The
+  pack's list stops at ten, and the details of that cell say so.
+- **No dots and no direction glyph are in the cell.** Colour alone shows the tier. Each cell's
+  `aria-label` states the density, the studies, the direction, the certainty and the claims.
+- **Certainty is not the fill, but it stays next to every finding:** in the status line, in the
+  details (tier, dots and `certainty_rationale`), in the `aria-label` and in the exports. The
+  judging rules require this.
+- **Gaps** (`no_evidence`) have a neutral grey fill, a diagonal hatch and a dashed border, so they
+  show as gaps. They never get an indigo fill and they never fade.
 - **Top-left block of the table:** sort rows and sort columns (pack order, A to Z, most filled
-  cells, most studies), a checklist of the rows and the columns to show, a minimum certainty and
-  "Hide empty rows and columns". "Most studies" adds the study counts of the cells, so a study
-  that counts in two cells counts twice. Cells below the minimum certainty fade (they are not gaps)
-  and leave the tab order.
-- **The legend** with the count of findings per tier is above the table. **Export CSV, Export XLSX
-  and Copy image** are at its top right. **Download PNG** is at the bottom right of the map.
-- **Exports cover the map as shown** (rows, columns and certainty filter):
+  cells, most studies), a checklist of the rows and the columns to show, a minimum density (Any,
+  Some or denser, Dense or denser, Densest only) and "Hide empty rows and columns". "Most studies"
+  adds the study counts of the cells, so a study that counts in two cells counts twice. Cells below
+  the minimum density fade (they are not gaps) and leave the tab order.
+- **The legend** is above the table. Its heading is "Density". It shows the four tiers (swatch,
+  name, meaning, then the count of cells in brackets, for example "Thin · 1 study (72)") and the
+  gap entry. The legend entries wrap, so the legend never widens the page on a phone. **Export CSV, Export XLSX and Copy image** are
+  at its top right. **Download PNG** is at the bottom right of the map.
+- **Exports cover the map as shown** (rows, columns and density filter):
   - The CSV has one row per cell, with the pack values unchanged (direction, certainty, rationale,
-    counts, density, `searched_for`, claim ids, document ids).
-  - The XLSX has three sheets. "Matrix" is the grid with indigo fills, "Cells" is the CSV rows and
-    "Claims" has every claim with its quote.
-  - The image is drawn on a canvas in the current theme. It has the legend, and a footer with the
-    source, the gap note and the filters.
+    counts, density, `searched_for`, claim ids, document ids). A `density tier` column follows
+    `density`.
+  - The XLSX has three sheets. "Matrix" is the grid with indigo fills by density tier, and each
+    cell says, for example, "Densest · 9 studies". "Cells" is the CSV rows and "Claims" has every
+    claim with its quote.
+  - The image is drawn on a canvas in the current theme. Its legend and its footer describe the
+    density tiers. The footer also has the source, the gap note and the filters.
   - `export.js` now exports its CSV and ZIP writers. `sheet()` takes `{v, s}` cells and `book()`
     takes optional fills, so Q1's exports do not change.
 - **Selecting a cell** shows a status line with "Details below" and "Clear". The details, under the
-  map, show the certainty, the rationale, the counts, the density, the study directions and the
-  claims by paper with their quotes. A gap shows the gap note and `searched_for`.
+  map, show the density tier first, then the certainty with its dots, the rationale, the counts,
+  the pack density, the study directions and the claims by paper with their quotes. A gap shows the gap note and `searched_for`.
 - **Files:**
   - `gapmap.js` and `gapmap.css` load the first time the tab opens. `data/gapmap.json` (64 KB)
     loads with them.
@@ -102,11 +119,15 @@ no graph view. When the tab is open, the page heading and question switch to Q3.
   `data-q3-finding-id` and `data-q3-gap-id`. `check_site.py` now checks those against the Q3 JSON
   (direction, certainty, studies, claims, density), and every Q3 claim id and quote.
 
-**Certainty colours.** The fills are four tints of electric indigo (`#6F00FF`): the
-lightest tint is very low and full indigo is high. In dark mode, dim indigo is very low and
-bright indigo is high. The tokens are `--t1` to `--t4` in `style.css`, with `--t1-fg` to
-`--t4-fg` for the text on them, and the `.t-*` classes set them on an element. Every text pair
-passes AA in both themes (lowest: 6.0 to 1).
+**Density colours.** The fills are four tints of electric indigo (`#6F00FF`): the lightest tint
+is thin and full indigo is densest. In dark mode, dim indigo is thin and bright indigo is densest.
+The tokens are `--t1` (thin) to `--t4` (densest) in `style.css`, with `--t1-fg` to `--t4-fg` for
+the text on them. Their values did not change. In `gapmap.css`, the `.k-thin`, `.k-some`,
+`.k-dense` and `.k-densest` classes set them on a cell, and `.q3sw` is the legend swatch. The
+`.t-*` certainty classes and `.cs` are removed from `style.css`. Gap cells use `--q3gap` (fill),
+`--q3gap-line` (hatch) and `--q3gap-edge` (dashed border), with light and dark values in
+`gapmap.css`. This grey is a little darker than the old gap grey. The PNG export uses the same
+tokens. Every text pair passes AA in both themes (lowest: 6.0 to 1).
 
 ## Variant B: edges hidden until selected
 

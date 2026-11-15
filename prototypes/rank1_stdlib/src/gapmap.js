@@ -1,24 +1,32 @@
 // Q3 gap map (gapmap.js, with gapmap.css). app.js loads both the first time the "Gap map" tab opens.
 // One matrix: rows are outcome groups, columns are intervention groups, one cell per pairing.
-// A cell's fill is its certainty tier (electric indigo, --t1 to --t4); its dots say the same, so
-// certainty is not shown by colour only. A hatched cell is a gap: no study in this corpus tested
-// that pairing. It is not a negative result. Every direction, certainty, rationale and count is the
-// pack's own (data/gapmap.json, from answers/q3_grassland_gaps.json). The page only sorts, filters,
-// counts and draws them. Claims and quotes (data/gapmap-claims.json) load on the first cell click.
+// A cell's fill is its density of evidence, in four tiers (electric indigo, --t1 to --t4, classes
+// k-thin to k-densest): thin (1 study), some (2 to 3 studies), dense (4 or more studies) and densest
+// (one of the pack's ten densest cells). The tier is the pack's own density, raised to "densest" for
+// the cells in the pack's densest list. Cells have no text: each cell's aria-label, the status line and
+// the details give the tier in words, with the pack's direction, certainty and certainty rationale.
+// A hatched cell is a gap: no study in this corpus tested that pairing. It is not a negative result.
+// Every direction, certainty, rationale and count is the pack's own (data/gapmap.json, from
+// answers/q3_grassland_gaps.json). The page only sorts, filters, counts and draws them.
+// Claims and quotes (data/gapmap-claims.json) load on the first cell click.
 (function () {
 'use strict';
 var Q = window.Q1, doc = document, root = doc.documentElement;
 var esc = Q.esc, pl = Q.pl, CERT = Q.CERT, DIR = Q.DIR;
-var TIERS = ['very_low', 'low', 'moderate', 'high'];
+// Density tiers, lightest first, with [name, description]. Tier i uses the colour --t(i + 1).
+var KT = ['thin', 'some', 'dense', 'densest'];
+var KL = {thin: ['Thin', '1 study'], some: ['Some', '2 to 3 studies'], dense: ['Dense', '4 or more studies'],
+  densest: ['Densest', 'one of the pack\'s ten densest cells']};
 var AR = ' → ';
 var GAPN = 'No study in this corpus tested this pairing. This is a gap, not a negative result.';
 var DEN = {thin: 'thin (1 study)', some: 'some (2 to 3 studies)', dense: 'dense (4 or more studies)'};
 var SORTS = [['pack', 'Pack order'], ['az', 'A to Z'], ['filled', 'Most filled cells'], ['studies', 'Most studies']];
-var MINS = [[0, 'Any'], [2, 'Low or higher'], [3, 'Moderate or higher'], [4, 'High only']];
+// The density filter: the lowest tier rank (KT index + 1) that stays in full colour.
+var MINS = [[0, 'Any'], [2, 'Some or denser'], [3, 'Dense or denser'], [4, 'Densest only']];
 var HINT = 'Select a cell to read its claims. A hatched cell is a gap: no study tested that pairing.';
-var EMPTY = 'Select a cell. Its certainty, rationale, claims and quotes show here.';
+var EMPTY = 'Select a cell. Its density, certainty, rationale, claims and quotes show here.';
 var XT = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-// XLSX fills for the Matrix sheet: the light theme's tier colours (fill, text), very low first.
+// XLSX fills for the Matrix sheet: the light theme's tier colours (fill, text), thin first.
 var XFILL = [['F1E6FF', '1A1A1A'], ['D7B8FF', '1A1A1A'], ['B47AFF', '1A1A1A'], ['6F00FF', 'FFFFFF']];
 var S = {el: doc.getElementById('panel-gapmap'), k: 'gapmap', pin: null, sort: {r: 'pack', c: 'pack'}, show: {r: {}, c: {}},
   min: 0, empty: false};
@@ -28,10 +36,15 @@ function $(s, el) { return (el || doc).querySelector(s); }
 function $$(s, el) { return Array.prototype.slice.call((el || doc).querySelectorAll(s)); }
 function getJSON(u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
 function lab(x) { return S.cl[x.c] + AR + S.rl[x.r]; }
-function ok(x) { return x.ty === 'g' || CERT[x.cert][0] >= S.min; }
+// A finding's density tier: "densest" when the pack lists it in its ten densest cells, else the pack's density.
+function tier(f) { return S.top[f.id] ? 'densest' : f.den; }
+function kl(k) { return KL[k] || [String(k), '']; }
+function ok(x) { return x.ty === 'g' || KT.indexOf(x.k) + 1 >= S.min; }
 function aria(x) {
-  if (x.ty === 'g') return lab(x) + ': no evidence. ' + GAPN;
-  return lab(x) + ': ' + DIR[x.dir][1] + ', certainty ' + CERT[x.cert][1] + ', ' + pl(x.st, 'study', 'studies') + ', ' + pl(x.n, 'claim', 'claims');
+  var to = S.cl[x.c] + ' to ' + S.rl[x.r];
+  if (x.ty === 'g') return to + ': no evidence. ' + GAPN;
+  return to + ': density ' + kl(x.k)[0].toLowerCase() + ', ' + pl(x.st, 'study', 'studies') + ', ' + DIR[x.dir][1] +
+    ', certainty ' + CERT[x.cert][1] + ', ' + pl(x.n, 'claim', 'claims');
 }
 
 // ---------- start: load the map file once, then draw ----------
@@ -46,7 +59,12 @@ function init(D) {
   S.D = D; S.cell = {}; S.F = []; S.rl = {}; S.cl = {};
   S.rows = D.rows.map(function (r, i) { S.rl[r[0]] = r[1]; S.show.r[r[0]] = true; return {id: r[0], label: r[1], i: i}; });
   S.cols = D.cols.map(function (c, i) { S.cl[c[0]] = c[1]; S.show.c[c[0]] = true; return {id: c[0], label: c[1], i: i}; });
-  D.f.forEach(function (f) { f.ty = 'f'; S.cell[f.r + '|' + f.c] = f; S.F.push(f); });
+  S.top = {}; S.topMin = Infinity;
+  D.densest.forEach(function (id) { S.top[id] = true; });
+  D.f.forEach(function (f) {
+    f.ty = 'f'; f.k = tier(f); S.cell[f.r + '|' + f.c] = f; S.F.push(f);
+    if (f.k === 'densest') S.topMin = Math.min(S.topMin, f.st);
+  });
   D.g.forEach(function (g) { S.cell[g[1] + '|' + g[2]] = {ty: 'g', id: g[0], r: g[1], c: g[2], status: g[3]}; });
   S.byId = {};
   Object.keys(S.cell).forEach(function (k) { S.byId[S.cell[k].id] = S.cell[k]; });
@@ -72,7 +90,7 @@ function init(D) {
 }
 
 // ---------- markup ----------
-function swatch(t) { return '<span class="cs t-' + t + '"><span class="dots" aria-hidden="true">' + Q.dots(t) + '</span></span>'; }
+function swatch(k) { return '<span class="q3sw k-' + k + '" aria-hidden="true"></span>'; }
 function opts(list, cur) {
   return list.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
 }
@@ -91,27 +109,32 @@ function corner() {
     '<p class="q3ax">Columns: interventions</p>' +
     '<label>Sort <select data-sort="c">' + opts(SORTS, 'pack') + '</select></label>' + pick('c', S.cols, 'interventions') +
     '<p class="q3ax">Cells</p>' +
-    '<label>Certainty <select data-min>' + opts(MINS, 0) + '</select></label>' +
+    '<label>Density <select data-min>' + opts(MINS, 0) + '</select></label>' +
     '<label class="cb"><input type="checkbox" data-empty> Hide empty rows and columns</label></div></td>';
 }
 function cellHtml(x) {
   if (x.ty === 'g') return '<td class="q3g" data-c="' + esc(x.c) + '" data-q3-gap-id="' + esc(x.id) + '"><span class="vh">No evidence</span></td>';
-  return '<td data-c="' + esc(x.c) + '"><button type="button" class="q3c t-' + x.cert + '" data-q3-finding-id="' + esc(x.id) +
+  return '<td data-c="' + esc(x.c) + '"><button type="button" class="q3c k-' + esc(x.k) + '" data-q3-finding-id="' + esc(x.id) +
     '" data-direction="' + esc(x.dir) + '" data-certainty="' + esc(x.cert) + '" data-studies="' + x.st + '" data-claims="' + x.n +
-    '" data-density="' + esc(x.den) + '" aria-label="' + esc(aria(x)) + '"><span class="dots" aria-hidden="true">' + Q.dots(x.cert) + '</span></button></td>';
+    '" data-density="' + esc(x.den) + '" data-tier="' + esc(x.k) + '" aria-label="' + esc(aria(x)) + '"></button></td>';
 }
 function skeleton(D) {
   var n = {};
-  S.F.forEach(function (f) { n[f.cert] = (n[f.cert] || 0) + 1; });
+  S.F.forEach(function (f) { n[f.k] = (n[f.k] || 0) + 1; });
   var dense = D.densest.map(function (id) {
     var x = S.byId[id];
     return x ? '<li><button type="button" data-go="' + esc(id) + '">' + esc(lab(x)) + '</button> <span class="muted">' + pl(x.st, 'study', 'studies') + '</span></li>' : '';
   }).join('');
-  var legend = '<div class="q3leg" role="group" aria-label="Legend"><span class="q3lt">Certainty</span>' +
-    TIERS.map(function (t) { return '<span class="ck">' + swatch(t) + CERT[t][1] + ' <span class="muted">' + (n[t] || 0) + '</span></span>'; }).join('') +
+  var legend = '<div class="q3leg" role="group" aria-label="Legend"><span class="q3lt">Density</span>' +
+    KT.map(function (k) {
+      // "Thin · 1 study (72)": the tier, what it means, then how many cells have it.
+      return '<span class="ck">' + swatch(k) + '<span><b class="q3tn">' + KL[k][0] + '</b> <span class="q3ld">· ' + esc(KL[k][1]) + '</span> ' +
+        '<span class="muted">(' + (n[k] || 0) + '<span class="vh"> cells</span>)</span></span></span>';
+    }).join('') +
     '<span class="ck"><span class="q3gs" aria-hidden="true"></span>No evidence (gap): no study tested the pairing. Not a negative result.</span></div>';
   var table = '<table class="q3t"><caption class="vh">Gap map. Rows are outcome groups, columns are intervention groups. ' +
-    'A cell with dots has evidence; the dots and the fill give its certainty. A cell marked no evidence is a gap.</caption>' +
+    'A filled cell has evidence; its fill gives the density of evidence (how many studies). Each cell\'s label gives its density, ' +
+    'studies, direction, certainty and claims. A cell marked no evidence is a gap.</caption>' +
     '<thead><tr>' + corner() + S.cols.map(function (c) {
       return '<th scope="col" data-c="' + esc(c.id) + '"><span>' + esc(c.label) + '</span></th>';
     }).join('') + '</tr></thead><tbody>' + S.rows.map(function (r) {
@@ -137,7 +160,7 @@ function skeleton(D) {
 
 // ---------- sort and filter ----------
 // Rows and columns the reader shows, then (if asked) without the ones that have no finding at
-// the chosen certainty. "Most filled cells" and "Most studies" count over the shown cells; ties keep
+// the chosen density. "Most filled cells" and "Most studies" count over the shown cells; ties keep
 // the pack order. Studies are summed over cells, so a study that counts in two cells counts twice.
 function view() {
   var rows = S.rows.filter(function (r) { return S.show.r[r.id]; });
@@ -200,8 +223,8 @@ function status() {
   function u(s) { return '<span class="unit">' + s + '</span>'; }
   if (!x) h = HINT;
   else if (x.ty === 'g') h = '<span class="dsc"><b>' + esc(lab(x)) + '</b> · <span class="nev">No evidence</span> · ' + GAPN + '</span>';
-  else h = '<span class="dsc"><b>' + esc(lab(x)) + '</b> · ' + u(Q.dirH(x.dir)) + ' · ' + u(Q.certH(x.cert) + ' certainty') + ' · ' +
-    u(pl(x.st, 'study', 'studies')) + ' · ' + u(pl(x.n, 'claim', 'claims')) + '</span>';
+  else h = '<span class="dsc"><b>' + esc(lab(x)) + '</b> · ' + u('Density: ' + esc(kl(x.k)[0])) + ' · ' + u(Q.dirH(x.dir)) + ' · ' +
+    u(Q.certH(x.cert) + ' certainty') + ' · ' + u(pl(x.st, 'study', 'studies')) + ' · ' + u(pl(x.n, 'claim', 'claims')) + '</span>';
   $('.acts', S.st).hidden = !x;
   if (sd.getAttribute('data-h') !== h) { sd.innerHTML = h; sd.setAttribute('data-h', h); }
 }
@@ -226,8 +249,16 @@ function detail(x) {
     return '<p class="big"><b>No evidence</b></p><p>' + esc(C.gapNote) + '</p><p class="rat">Searched for: ' + esc(C.sf[x.id]) + '</p>' +
       '<p>Intervention: <b>' + esc(S.cl[x.c]) + '</b><br>Outcome: <b>' + esc(S.rl[x.r]) + '</b></p>';
   }
-  h = '<p class="big">' + Q.certH(x.cert) + ' certainty · ' + Q.dirH(x.dir) + '</p><p class="rat">' + esc(x.rat) + '</p>';
-  h += '<p>' + pl(x.st, 'study', 'studies') + ' · ' + pl(x.n, 'claim', 'claims') + ' · density ' + esc(DEN[x.den] || x.den) + '</p>' + Q.sdBar(x.sd);
+  // Density first (the cell's fill), then the pack's certainty, direction and rationale.
+  var k = kl(x.k), st = pl(x.st, 'study', 'studies');
+  h = '<p class="q3kd">' + swatch(x.k) + ' Density: <b>' + esc(k[0]) + '</b> (' + esc(k[1]) + ')' + (k[1] === st ? '' : ' · ' + st) + '</p>';
+  // The pack's densest list stops at ten, so a cell can tie with the last one and still be "dense".
+  if (x.k === 'dense' && x.st >= S.topMin) {
+    h += '<p>It has ' + (x.st > S.topMin ? 'more studies than' : 'as many studies as') +
+      ' a cell in the ten densest list, but the pack\'s list stops at ten.</p>';
+  }
+  h += '<p class="big">' + Q.certH(x.cert) + ' certainty · ' + Q.dirH(x.dir) + '</p><p class="rat">' + esc(x.rat) + '</p>';
+  h += '<p>' + st + ' · ' + pl(x.n, 'claim', 'claims') + ' · pack density: ' + esc(DEN[x.den] || x.den) + '</p>' + Q.sdBar(x.sd);
   h += '<p>Intervention: <b>' + esc(S.cl[x.c]) + '</b><br>Outcome: <b>' + esc(S.rl[x.r]) + '</b></p>';
   return h + Q.byPaper(S.cp, C.ids[x.id], 'Claims by paper');
 }
@@ -269,8 +300,9 @@ function rr(x, a, b, w, h, r) {
 }
 function canvas() {
   var V = S.V, cs = getComputedStyle(root);
-  function v(n) { return cs.getPropertyValue(n).trim(); }
-  var sans = v('--sans') || 'sans-serif', mono = v('--mono') || 'monospace';
+  // A token, or the fallback token when the first is not set.
+  function v(n, d) { return cs.getPropertyValue(n).trim() || (d ? cs.getPropertyValue(d).trim() : ''); }
+  var sans = v('--sans') || 'sans-serif';
   var pad = 28, rowW = 250, colW = 44, cellH = 32, sp = 3, lh = 14, s = 2;
   var cv = doc.createElement('canvas'), x = cv.getContext('2d');
   x.font = '12px ' + sans;
@@ -279,11 +311,15 @@ function canvas() {
     return Math.max.apply(null, ls.map(function (l) { return x.measureText(l).width; }));
   })));
   var rows = V.rows.map(function (r) { return wrap(x, r.label, rowW - 16).slice(0, 2); });
-  var foot = ['Source: answers/q3_grassland_gaps.json · certainty rule ' + S.D.rule + '. Fill and dots: certainty of the pooled finding.',
+  var W = Math.max(820, pad * 2 + rowW + V.cols.length * colW), foot = [];
+  var notes = ['Source: answers/q3_grassland_gaps.json · certainty rule ' + S.D.rule + '.',
+    'Fill: density of evidence, in studies per cell: thin 1 study, some 2 to 3, dense 4 or more; densest = one of the pack\'s ten densest cells.',
     'A hatched cell is a gap: no study in this corpus tested the pairing. It is not a negative result.'];
-  if (filtered()) foot.push($('.q3n', S.host).textContent + (S.min ? ' (certainty ' + MINS.filter(function (m) { return m[0] === S.min; })[0][1].toLowerCase() + ')' : '') + '.');
+  if (filtered()) notes.push($('.q3n', S.host).textContent + (S.min ? ' (density filter: ' + MINS.filter(function (m) { return m[0] === S.min; })[0][1].toLowerCase() + ')' : '') + '.');
+  x.font = '11px ' + sans;
+  notes.forEach(function (l) { foot = foot.concat(wrap(x, l, W - pad * 2)); });
   var top = pad + 26 + 20 + 38;
-  var W = Math.max(820, pad * 2 + rowW + V.cols.length * colW), H = top + headH + V.rows.length * cellH + 18 + foot.length * 16 + pad;
+  var H = top + headH + V.rows.length * cellH + 18 + foot.length * 16 + pad;
   cv.width = W * s; cv.height = H * s;
   x.scale(s, s);
   x.fillStyle = v('--surface'); x.fillRect(0, 0, W, H);
@@ -294,16 +330,15 @@ function canvas() {
   x.fillText('Rows: outcome groups · Columns: intervention groups · ' + V.rows.length + ' × ' + V.cols.length + ' cells shown', pad, pad + 34);
   // legend
   var lx = pad, ly = pad + 64;
-  x.font = '600 12px ' + sans; x.fillStyle = v('--text'); x.fillText('Certainty', lx, ly); lx += x.measureText('Certainty').width + 12;
-  TIERS.forEach(function (t, i) {
+  x.font = '600 12px ' + sans; x.fillStyle = v('--text'); x.fillText('Density', lx, ly); lx += x.measureText('Density').width + 12;
+  KT.forEach(function (k, i) {
     rr(x, lx, ly - 10, 40, 20, 5); x.fillStyle = v('--t' + (i + 1)); x.fill();
     x.strokeStyle = v('--line'); x.lineWidth = 1; x.stroke();
-    x.fillStyle = v('--t' + (i + 1) + '-fg'); x.font = '9px ' + mono; x.textAlign = 'center'; x.fillText(Q.dots(t), lx + 20, ly + 1);
-    x.textAlign = 'left'; x.fillStyle = v('--text-2'); x.font = '12px ' + sans; x.fillText(CERT[t][1], lx + 48, ly);
-    lx += 56 + x.measureText(CERT[t][1]).width;
+    x.fillStyle = v('--text-2'); x.font = '12px ' + sans; x.fillText(KL[k][0], lx + 48, ly);
+    lx += 56 + x.measureText(KL[k][0]).width;
   });
   hatch(x, v, lx, ly - 10, 40, 20);
-  x.fillStyle = v('--text-2'); x.fillText('No evidence (gap)', lx + 48, ly);
+  x.fillStyle = v('--text-2'); x.font = '12px ' + sans; x.fillText('No evidence (gap)', lx + 48, ly);
   // column labels, read from the bottom up
   var gx = pad + rowW, gy = top + headH;
   x.font = '12px ' + sans; x.fillStyle = v('--text-2');
@@ -322,27 +357,28 @@ function canvas() {
     V.cols.forEach(function (c, i) {
       var cx = gx + i * colW, z = S.cell[r.id + '|' + c.id], w = colW - sp, h = cellH - sp;
       if (z.ty === 'g') { hatch(x, v, cx, y, w, h); return; }
-      var t = TIERS.indexOf(z.cert) + 1;
+      var t = KT.indexOf(z.k) + 1;
       x.globalAlpha = ok(z) ? 1 : 0.15;
       rr(x, cx, y, w, h, 6); x.fillStyle = v('--t' + t); x.fill();
       x.strokeStyle = v('--line'); x.lineWidth = 1; x.stroke();
-      x.fillStyle = v('--t' + t + '-fg'); x.font = '600 9px ' + mono; x.textAlign = 'center';
-      x.fillText(Q.dots(z.cert), cx + w / 2, y + h / 2 + 1);
-      x.textAlign = 'left'; x.globalAlpha = 1;
+      x.globalAlpha = 1;
     });
   });
   x.font = '11px ' + sans; x.fillStyle = v('--text-3');
   foot.forEach(function (l, i) { x.fillText(l, pad, gy + V.rows.length * cellH + 18 + i * 16); });
   return cv;
 }
+// A gap cell: the gap fill, then the hatch lines, then the dashed border.
 function hatch(x, v, a, b, w, h) {
+  var f = v('--q3gap');
+  if (f) { rr(x, a, b, w, h, 6); x.fillStyle = f; x.fill(); }
   x.save();
   rr(x, a, b, w, h, 6); x.clip();
-  x.strokeStyle = v('--line-strong'); x.lineWidth = 1;
+  x.strokeStyle = v('--q3gap-line', '--line-strong'); x.lineWidth = 1;
   for (var k = -h; k < w; k += 6) { x.beginPath(); x.moveTo(a + k, b + h); x.lineTo(a + k + h, b); x.stroke(); }
   x.restore();
   rr(x, a + .5, b + .5, w - 1, h - 1, 6);
-  x.setLineDash([3, 3]); x.strokeStyle = v('--text-3'); x.lineWidth = 1; x.stroke(); x.setLineDash([]);
+  x.setLineDash([3, 3]); x.strokeStyle = v('--q3gap-edge', '--text-3'); x.lineWidth = 1; x.stroke(); x.setLineDash([]);
 }
 function png() {
   var cv = canvas();
@@ -381,10 +417,11 @@ function copy(btn) {
   job.then(function (m) { say(btn, m[0], m[1]); }, function () { say(btn, 'Failed', 'Could not make the map image.'); });
 }
 
-// ---------- CSV and XLSX: the map as shown (rows, columns and certainty filter) ----------
+// ---------- CSV and XLSX: the map as shown (rows, columns and density filter) ----------
+// "density" is the pack's value; "density tier" is the map's fill (the pack's density, or "densest").
 var HEAD = ['cell id', 'kind', 'outcome', 'intervention', 'outcome id', 'intervention id', 'status', 'direction', 'direction label',
-  'certainty', 'certainty label', 'certainty_rationale', 'studies', 'claims', 'density', 'study directions', 'claim directions',
-  'searched_for', 'claim ids', 'document ids'];
+  'certainty', 'certainty label', 'certainty_rationale', 'studies', 'claims', 'density', 'density tier', 'study directions',
+  'claim directions', 'searched_for', 'claim ids', 'document ids'];
 var CHEAD = ['cell id', 'claim id', 'subject', 'predicate', 'object', 'negated', 'claim direction', 'claim grade',
   'evidence types', 'comparator', 'quote', 'paper title', 'year', 'DOI or document id'];
 // {increase: 1, mixed: 2} -> "increase 1; mixed 2", in the app's direction order.
@@ -400,9 +437,9 @@ function shownCells() {
 }
 function row(x) {
   var C = S.C;
-  if (x.ty === 'g') return [x.id, 'gap', S.rl[x.r], S.cl[x.c], x.r, x.c, x.status, '', 'No evidence: ' + GAPN, '', '', '', 0, 0, '', '', '',
+  if (x.ty === 'g') return [x.id, 'gap', S.rl[x.r], S.cl[x.c], x.r, x.c, x.status, '', 'No evidence: ' + GAPN, '', '', '', 0, 0, '', '', '', '',
     C.sf[x.id], '', ''];
-  return [x.id, 'finding', S.rl[x.r], S.cl[x.c], x.r, x.c, '', x.dir, DIR[x.dir][1], x.cert, CERT[x.cert][1], x.rat, x.st, x.n, x.den,
+  return [x.id, 'finding', S.rl[x.r], S.cl[x.c], x.r, x.c, '', x.dir, DIR[x.dir][1], x.cert, CERT[x.cert][1], x.rat, x.st, x.n, x.den, x.k,
     counts(x.sd), counts(x.cd), '', C.ids[x.id].join(';'), C.docs[x.id].join(';')];
 }
 function matrix() {
@@ -411,12 +448,14 @@ function matrix() {
     out.push([r.label].concat(S.V.cols.map(function (c) {
       var x = S.cell[r.id + '|' + c.id];
       if (x.ty === 'g') return 'No evidence';
-      if (!ok(x)) return 'Below the certainty filter';
-      return {v: CERT[x.cert][1] + ' · ' + pl(x.st, 'study', 'studies'), s: 2 + TIERS.indexOf(x.cert)};
+      if (!ok(x)) return 'Below the density filter';
+      return {v: kl(x.k)[0] + ' · ' + pl(x.st, 'study', 'studies'), s: 2 + KT.indexOf(x.k)};
     })));
   });
   out.push([]);
-  out.push(['Fill: certainty of the pooled finding, from very low (lightest) to high (darkest).']);
+  out.push(['Fill: density of evidence, in studies per cell, from thin (lightest) to densest (darkest).']);
+  KT.forEach(function (k, i) { out.push([{v: KL[k][0], s: 2 + i}, KL[k][1]]); });
+  out.push(['Direction, certainty and certainty rationale for each cell are on the Cells sheet.']);
   out.push(['No evidence: a gap. No study in this corpus tested the pairing. It is not a negative result.']);
   out.push(['Source: answers/q3_grassland_gaps.json, certainty rule ' + S.D.rule + '.']);
   return out;

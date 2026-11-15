@@ -1,5 +1,16 @@
 /* Q3 gap map (gapmap.js). Loaded with it, the first time the Gap map tab opens.
-   The tier tokens (--t1 to --t4, --tN-fg) and .t-* classes are in style.css. */
+   A cell's fill is its density tier (.k-thin to .k-densest), colour only, no text.
+   The tier tokens (--t1 to --t4, --tN-fg) are in style.css. */
+/* Gap (no evidence) colours: a neutral grey a little darker than --surface, with a hatch
+   and a dashed edge, so a gap never relies on colour alone. gapmap.js reads the same
+   three tokens to draw the PNG export, so they stay on :root. */
+:root { --q3gap: #E3E3E3; --q3gap-line: #CBCBCB; --q3gap-edge: #9A9A9A; }
+:root[data-theme="dark"] { --q3gap: #232B32; --q3gap-line: #344049; --q3gap-edge: #5E6A74; }
+/* Density tiers: thin, some, dense, densest (lightest to full indigo). */
+.k-thin { --tc: var(--t1); --tf: var(--t1-fg); }
+.k-some { --tc: var(--t2); --tf: var(--t2-fg); }
+.k-dense { --tc: var(--t3); --tf: var(--t3-fg); }
+.k-densest { --tc: var(--t4); --tf: var(--t4-fg); }
 .q3host { margin-top: 6px; }
 .q3sum { margin: 0 0 4px; max-width: 90ch; color: var(--text-2); font-size: .98rem; }
 .q3dense { margin: 0 0 14px; font-size: .9rem; color: var(--text-2); }
@@ -15,12 +26,13 @@
 .q3leg { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: .85rem; color: var(--text-2); }
 .q3top .seg { flex: none; align-self: flex-start; }
 .q3lt { font-weight: 600; color: var(--text); }
-/* The gap entry is a sentence: it wraps (the tier entries do not). */
-.q3leg .ck:last-child { white-space: normal; min-width: 0; }
-.q3leg .ck:last-child .q3gs { flex: none; }
+/* Legend entries can wrap, so the legend never widens the page on a phone. */
+.q3leg .ck { white-space: normal; min-width: 0; }
+.q3leg .q3tn { font-weight: 600; color: var(--text); }
 .q3leg .muted { font-family: var(--mono); font-size: .8rem; }
-.q3gs { display: inline-block; width: 34px; height: 20px; border-radius: 6px; border: 1px dashed var(--text-3);
-  background: repeating-linear-gradient(135deg, transparent 0 4px, var(--line-strong) 4px 5px); }
+/* legend swatches: a density tier (.q3sw) and the gap (.q3gs, drawn with the gap cell rule below) */
+.q3sw, .q3gs { display: inline-block; flex: none; width: 34px; height: 20px; border-radius: 6px; vertical-align: middle; }
+.q3sw { background: var(--tc); border: 1px solid var(--line); }
 .q3top .seg { display: flex; flex-wrap: wrap; gap: 6px; }
 
 /* status line: the details are under the map at every width, so "Details below" always shows */
@@ -62,13 +74,15 @@
 /* row labels stay in view while the map scrolls sideways */
 .q3t tbody th { position: sticky; left: 0; z-index: 1; padding: 0 12px 0 0; text-align: left; background: var(--surface); box-shadow: -24px 0 0 var(--surface); }
 .q3t tbody td { height: 34px; padding: 0; border-radius: 7px; }
-/* a cell with evidence: fill and dots = certainty tier */
-.q3c { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 32px; padding: 0;
-  border: 1px solid var(--line); border-radius: 7px; background: var(--tc); color: var(--tf); font: 600 .6rem/1 var(--mono); letter-spacing: .5px; cursor: pointer; }
+/* a cell with evidence: the fill = density tier (colour only, the cell has no text) */
+.q3c { display: block; width: 100%; height: 100%; min-height: 32px; padding: 0;
+  border: 1px solid var(--line); border-radius: 7px; background: var(--tc); cursor: pointer; }
 .q3c:hover { border-color: var(--text-2); }
 .q3c.off { opacity: .15; pointer-events: none; }
-/* a gap: hatched, dashed border, no fill. It is never drawn like weak evidence. */
-.q3t td.q3g { border: 1px dashed var(--line-strong); background: repeating-linear-gradient(135deg, transparent 0 5px, var(--line) 5px 6px); cursor: pointer; }
+/* a gap: grey fill, hatch and dashed edge (the cell and its legend swatch). It is never drawn like weak evidence. */
+.q3t td.q3g, .q3gs { border: 1px dashed var(--q3gap-edge);
+  background: repeating-linear-gradient(135deg, var(--q3gap) 0 5px, var(--q3gap-line) 5px 6px); }
+.q3t td.q3g { cursor: pointer; }
 .q3t td.q3g:hover { border-color: var(--text-3); }
 .q3c.pin, .q3t td.q3g.pin { outline: 3px solid var(--focus); outline-offset: 1px; }
 .gact .q3n { margin: 0 auto 0 0; font-size: .8rem; color: var(--text-2); }

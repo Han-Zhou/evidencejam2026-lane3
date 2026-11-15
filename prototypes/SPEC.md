@@ -302,10 +302,10 @@ logo, name or brand asset.
 | `--mix` | `#8F5100` | `#F5A524` | Mixed |
 | `--null` | `#5F6368` | `#A3A9AF` | No effect |
 | `--unc` | `#626262` | `#8E949A` | Unclear |
-| `--t1` / `--t1-fg` | `#F1E6FF` / `#1A1A1A` | `#311465` / `#FFFFFF` | Certainty very low (Q3 gap map cell fill / text) |
-| `--t2` / `--t2-fg` | `#D7B8FF` / `#1A1A1A` | `#440E95` / `#FFFFFF` | Certainty low |
-| `--t3` / `--t3-fg` | `#B47AFF` / `#1A1A1A` | `#5A07CA` / `#FFFFFF` | Certainty moderate |
-| `--t4` / `--t4-fg` | `#6F00FF` / `#FFFFFF` | `#6F00FF` / `#FFFFFF` | Certainty high (electric indigo) |
+| `--t1` / `--t1-fg` | `#F1E6FF` / `#1A1A1A` | `#311465` / `#FFFFFF` | Density thin (Q3 gap map cell fill / text) |
+| `--t2` / `--t2-fg` | `#D7B8FF` / `#1A1A1A` | `#440E95` / `#FFFFFF` | Density some |
+| `--t3` / `--t3-fg` | `#B47AFF` / `#1A1A1A` | `#5A07CA` / `#FFFFFF` | Density dense |
+| `--t4` / `--t4-fg` | `#6F00FF` / `#FFFFFF` | `#6F00FF` / `#FFFFFF` | Density densest (electric indigo) |
 
 Links are `--text` with a 1 px underline in `--line-strong` (thicker on hover), not a
 coloured link. Gaps use `--text-3` dashes.
