@@ -1,9 +1,6 @@
 /* Q1 prototype, rank 1: styles for the expanded graph view (explore.js).
    app.js loads this file with explore.js on the first click on "Expand". */
 .xv { --xv-bg: #FFFFFF; --xv-bar: #F5F5F5; --xv-bd: #E2E2E2; --xv-node: #8C8C8C; --xv-txt: #222222; --xv-mut: #5E5E5E; --xv-acc: #6A4BE0; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .xv { --xv-bg: #1E1E1E; --xv-bar: #262626; --xv-bd: #383838; --xv-node: #9E9E9E; --xv-txt: #DCDDDE; --xv-mut: #A3A3A3; --xv-acc: #A88BFA; }
-}
 :root[data-theme="dark"] .xv { --xv-bg: #1E1E1E; --xv-bar: #262626; --xv-bd: #383838; --xv-node: #9E9E9E; --xv-txt: #DCDDDE; --xv-mut: #A3A3A3; --xv-acc: #A88BFA; }
 .xv { --raised: var(--xv-bar); --surface: var(--xv-bg); position: fixed; inset: 0; z-index: 60; display: grid; grid-template: auto minmax(0, 1fr) auto / minmax(0, 1fr) auto; background: var(--xv-bg); color: var(--xv-txt); }
 .xv[hidden] { display: none; }
@@ -33,7 +30,7 @@
 .xg.panning { cursor: grabbing; }
 .xg:focus, .xg [tabindex]:focus { outline: none; }
 .xg:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
-.xg .xe .p { fill: none; stroke: var(--c); stroke-opacity: var(--fade); stroke-linecap: round; }
+.xg .xe .p { fill: none; stroke: var(--c); stroke-width: 2.1; stroke-opacity: var(--fade); stroke-linecap: round; }
 .xg .xe .hit { stroke: transparent; stroke-width: 12; cursor: pointer; }
 .xg .xe .ah, .xg .dia { fill: var(--c); fill-opacity: var(--fade); }
 .xg .xe.gap .p { stroke: var(--xv-mut); stroke-width: 1.5; stroke-dasharray: 6 5; }

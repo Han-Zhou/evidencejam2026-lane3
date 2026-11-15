@@ -42,9 +42,10 @@ BOLD = 1.08     # semibold text is a little wider
 LG_FIT = 1.18
 
 
-def stroke_w(studies):
-    """Line width grows with the number of studies (capped)."""
-    return round(min(1.5 + 0.6 * studies, 7.5), 2)
+# Drawn line width by edge kind (style.css draws these widths; explore.css uses 2.1 too).
+# Every evidence line has the same width: width does not show the number of studies.
+LINE_W = {"effect": 2.1, "moderation": 3.0, "gap": 1.6}
+ARROW_HW = 4.0  # half the height of an arrowhead
 
 
 _NARROW = set("iljtfr.,;:!|'()[] I")
@@ -239,7 +240,7 @@ def layout(spec):
     groups: list of {'key', 'title', 'subtitle'} for lane 0, in order
     nodes: list of {'id', 'label', 'lane', 'group', 'shape', 'members'(opt)}
     edges: list of {'ref', 'kind' (effect|moderation|gap), 'source', 'target',
-                    'target_edge', 'studies'}
+                    'target_edge'}
     cg: distance from a lane edge to the next chip column centre
     chip_title (opt): {'title', 'parts'} drawn above each chip column; the parts
                       share one subtitle line when they fit, else one line each
@@ -299,7 +300,7 @@ def layout(spec):
         if e["kind"] == "moderation":
             continue
         a, b = nitem[e["source"]], nitem[e["target"]]
-        e["sw"] = 1.5 if e["kind"] == "gap" else stroke_w(e["studies"])
+        e["sw"] = LINE_W[e["kind"]]
         if b.layer == a.layer:  # inside one lane: arc on the right side, chip in its own slot
             c = new_item("chip:" + e["ref"], a.layer + 1, "arc", CHIP_H, edge=e, w=CHIP_W)
             route = [a, c, b]
@@ -330,7 +331,7 @@ def layout(spec):
     for e in edges:
         if e["kind"] != "moderation":
             continue
-        e["sw"] = stroke_w(e["studies"])
+        e["sw"] = LINE_W["moderation"]
         a = nitem[e["source"]]
         tgt = chip_of[e["target_edge"]]
         tgt.xt = tgt.xb = 26  # room for the line to reach the diamond
@@ -353,11 +354,12 @@ def layout(spec):
         routes[e["ref"]] = route
 
     # --- node sizes ----------------------------------------------------------
+    # Space that one line takes on a node side. An arrowhead is wider than its line.
     def thick(s, it):
         e = s.edge
         t = e["sw"]
         if s.b is it and e["kind"] == "effect":
-            t = max(t, 2 * max(4.0, e["sw"] / 2 + 2.5))
+            t = max(t, 2 * ARROW_HW)
         return t + 3
 
     for it in nitem.values():
@@ -558,7 +560,7 @@ def layout(spec):
             d = "M%s %s C%s %s %s %s %s %s C%s %s %s %s %s %s" % (
                 f(start[0]), f(start[1]), f(start[0] + kx), f(start[1]), f(c.x), f(c.y - sgn * ky1),
                 f(c.x), f(c.y), f(c.x), f(c.y + sgn * ky2), f(end[0] + kx * 0.8), f(py), f(end[0]), f(py))
-            ah = max(4.0, e["sw"] / 2 + 2.5)
+            ah = ARROW_HW
             geo["arrow"] = "M%s %sL%s %sL%s %sZ" % (f(tip[0]), f(py), f(end[0]), f(py - ah), f(end[0]), f(py + ah))
             geo["chip"] = (c.x, c.y)
             geo["d"] = d
@@ -585,7 +587,7 @@ def layout(spec):
                 end = (b.x, py)
             else:
                 end = (b.x - ARROW, py)
-                ah = max(4.0, e["sw"] / 2 + 2.5)
+                ah = ARROW_HW
                 geo["arrow"] = "M%s %sL%s %sL%s %sZ" % (f(b.x), f(py), f(end[0]), f(py - ah), f(end[0]), f(py + ah))
         # tangents: flat at ends and chips, slope at pass-throughs
         full = [p for p, _ in pts] + [end]

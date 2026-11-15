@@ -18,7 +18,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from layout import CHIP_H, CHIP_W, GAP_H, GAP_W, LG_LINE, LG_SG, LG_SW, layout, stroke_w
+from layout import CHIP_H, CHIP_W, GAP_H, GAP_W, LG_LINE, LG_SG, LG_SW, layout
 
 HERE = Path(__file__).resolve().parent
 ANSWERS = HERE.parent.parent / "answers"
@@ -263,10 +263,10 @@ def layout_spec(M):
     edges = []
     for it in M["items"]:
         edges.append({"ref": it["ref"], "kind": it["kind"], "source": it["src"], "target": it["tgt"],
-                      "target_edge": ("edge:" + it["te"]) if it["te"] else None, "studies": it["studies"]})
+                      "target_edge": ("edge:" + it["te"]) if it["te"] else None})
     for g in M["gaps"]:
         edges.append({"ref": g["ref"], "kind": "gap", "source": g["src"], "target": g["tgt"],
-                      "target_edge": None, "studies": 0})
+                      "target_edge": None})
     if M["key"] == "findings":
         return {"lanes": [{"title": "Factor", "subtitle": ""},
                           {"title": "Outcome", "subtitle": ""}],
@@ -299,8 +299,6 @@ def legend_spec(M):
             {"sw": "dir", "dir": d, "lead": DIR[d][0], "bold": False, "text": DIR[d][1]} for d in DIR_ORDER]},
         {"head": "Certainty", "tw": 80, "rows": [
             {"sw": "cert", "n": CERT[c][0], "text": CERT[c][1]} for c in CERT_ORDER]},
-        {"head": "Line width", "tw": 80, "rows": [
-            {"sw": "width", "n": n, "text": plural(n, "study", "studies")} for n in (1, 5, 10)]},
     ]
     gap = {"sw": "gap", "lead": "No evidence:", "text": GAP_NOTE}
     fade = {"sw": "fade", "lead": "Faded line:", "js": True,
@@ -371,7 +369,8 @@ def svg_graph(M, geo):
         extra = ' data-te="%s"' % esc("edge:" + it["te"]) if it["te"] else ""
         tgt = it["tgt"] or ""
         out.append('<g class="%s" data-ref="%s" data-s="%s" data-t="%s"%s>' % (cls, esc(it["ref"]), esc(it["src"]), esc(tgt), extra))
-        out.append('<path class="hit" d="%s"/><path class="p" d="%s" stroke-width="%s"/>' % (g["d"], g["d"], fmt(stroke_w(it["studies"]))))
+        # One line width for every edge (style.css). Width does not encode the number of studies.
+        out.append('<path class="hit" d="%s"/><path class="p" d="%s"/>' % (g["d"], g["d"]))
         if g["arrow"]:
             out.append('<path class="ah" d="%s"/>' % g["arrow"])
         out.append("</g>")
@@ -458,8 +457,6 @@ def legend_swatch(key, r, y):
             r["dir"], Y, r["dir"], Y, fmt(y - 4.5), fmt(y + 4.5)))
     if sw == "cert":
         return '<use class="ldt" href="#%s-c%d" x="4" y="%s"/>' % (key[0], r["n"], Y)
-    if sw == "width":
-        return '<path class="lw" d="M0 %sH30" stroke-width="%s"/>' % (Y, fmt(stroke_w(r["n"])))
     if sw in ("gap", "mem", "fade"):
         return '<path class="%s" d="M0 %sH30"/>' % ({"gap": "lg", "mem": "lmem", "fade": "lfnt"}[sw], Y)
     if sw == "mod":
@@ -582,9 +579,6 @@ def legend(M):
         for d in DIR_ORDER)
     rows.append('<div><h4>Direction <span class="muted">(arrowhead at the target)</span></h4><ul>%s</ul></div>' % sw)
     rows.append('<div><h4>Certainty</h4><ul>%s</ul></div>' % "".join("<li>%s</li>" % cert_html(c) for c in CERT_ORDER))
-    widths = "".join('<li><svg width="34" height="14" aria-hidden="true"><path class="lw" d="M2 7H32" stroke-width="%s"/></svg>%s</li>' % (
-        fmt(stroke_w(n)), plural(n, "study", "studies")) for n in (1, 5, 10))
-    rows.append('<div><h4>Line width = number of studies</h4><ul>%s</ul></div>' % widths)
     other = ['<li><svg width="34" height="14" aria-hidden="true"><path class="lg" d="M2 7H32"/></svg><span><b>No evidence</b>: %s</span></li>' % esc(GAP_NOTE)]
     if key == "network":
         other.append('<li><svg width="34" height="14" aria-hidden="true"><path class="lm" d="M2 7H24"/><path class="ld" d="M29 2.5L33.5 7L29 11.5L24.5 7Z"/></svg>'
@@ -751,17 +745,21 @@ def panel_html(M, geo):
         # '%(glance)s'
         '%(toolbar)s'
         '<div class="stage"><div class="viz"><h3 id="gh-%(k)s" class="vh-h">Graph of the %(name_l)s</h3>'
-        '<div class="vbar"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
+        # The view bar is one row: Graph | Matrix, Expand and the status line. It sticks under the toolbar.
+        '<div class="vbar"><div class="vtools"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
         '<button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div>'
-        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button>'
-        # Copy image (snap.js) and export of the highlighted data (export.js). app.js loads each module on first click.
-        '<button type="button" class="tbtn js-only" data-act="copy">Copy image</button>'
-        '<div class="seg xp js-only" role="group" aria-label="Download the highlighted data">'
-        '<button type="button" class="tbtn" data-act="csv">CSV</button>'
-        '<button type="button" class="tbtn" data-act="xlsx">XLSX</button></div>'
-        '<div class="selbar js-only" id="st-%(k)s" role="status" aria-live="polite"></div></div>'
+        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button></div>'
+        # Status line: the buttons float at the right; only the text after them is the live region.
+        '<div class="selbar js-only" id="st-%(k)s"><div class="acts" hidden><button type="button" class="tod">Details below</button>'
+        '<button type="button" class="clr">Clear</button></div><div class="sd" role="status" aria-live="polite"></div></div></div>'
         # '<a class="vat" href="#tbl-%(k)s">View as table</a></div>'
-        '<div class="gbox">%(svg)s</div><div class="mbox js-only"></div>%(limit)s</div>'
+        # The graph card holds the graph, the matrix and, at its bottom right, the actions row.
+        '<div class="gcard"><div class="gbox">%(svg)s</div><div class="mbox js-only"></div>'
+        # Copy image (snap.js) and export of the highlighted data (export.js). app.js loads each module on first use.
+        '<div class="gact js-only"><button type="button" class="tbtn" data-act="copy">Copy image</button>'
+        '<div class="seg xp" role="group" aria-label="Download the highlighted data">'
+        '<button type="button" class="tbtn" data-act="csv">Export CSV</button>'
+        '<button type="button" class="tbtn" data-act="xlsx">Export XLSX</button></div></div></div>%(limit)s</div>'
         '<div class="dcol js-only"><section class="drawer" id="dr-%(k)s" aria-labelledby="drh-%(k)s"><div class="dr-head"><h3 id="drh-%(k)s" tabindex="-1">Details</h3>'
         '<button type="button" class="x" aria-label="Close details">×</button></div>'
         '<div class="dr-body"><p class="muted">%(empty)s</p></div></section></div></div>'
