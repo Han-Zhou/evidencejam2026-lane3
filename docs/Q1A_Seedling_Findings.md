@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Question** | Q1: Tree planting |
+| **Question** | Q1: For tree planting in Canadian forest restoration, how do planting-stock traits (seedling size, nursery fertilization, mycorrhizal inoculation) affect survival and growth, and how do competing vegetation and site preparation change that? |
 | **Panel** | A, "Findings" |
 | **Data source** | `answers/q1_tree_planting.json` |
 | **Audience** | Forestry industry practitioners and researchers |
