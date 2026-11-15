@@ -101,6 +101,9 @@ function select(k) {
   if (k === 'gapmap') need('gapmap', true).then(function () { window.Q3.show(); }, function () {
     var h = $('.q3host'); if (h) h.innerHTML = '<p>Could not load the gap map. Every finding, gap and quote is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p>';
   });
+  // Q2 (created marshes): its own section, not a [data-panel]. q2.js loads on first use.
+  root.classList.toggle('mr', k === 'marshes');
+  if (k === 'marshes') need('q2').then(function () { window.Q2.init(); }, function () {});
   tabs.forEach(function (t) {
     var on = t.getAttribute('data-tab') === k;
     t.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -112,6 +115,12 @@ function setHash(h) {
 }
 function route() {
   var h = decodeURIComponent(location.hash.slice(1));
+  var q = /^marshes(?:\/(.+))?$/.exec(h);
+  if (q) {
+    select('marshes');
+    need('q2').then(function () { window.Q2.init(); window.Q2.go(q[1] || null); }, function () {});
+    return;
+  }
   var m = /^(findings|network|gapmap)(?:\/([a-z]+)\/(.+))?$/.exec(h);
   if (!m) { if (!h) select(cur); return; }
   select(m[1]);
@@ -806,7 +815,7 @@ tabs.forEach(function (t, i) {
 });
 doc.addEventListener('keydown', function (e) {
   var p = P[cur], tag = (doc.activeElement && doc.activeElement.tagName) || '';
-  // The gap map handles its own keys (gapmap.js).
+  // The Q2 and Q3 tabs have no P entry: q2.js and gapmap.js handle their own keys.
   if (!p) return;
   if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(tag)) { e.preventDefault(); p.qi.focus(); }
   else if (e.key === 'Escape') {

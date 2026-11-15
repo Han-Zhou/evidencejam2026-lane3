@@ -77,7 +77,8 @@ footer { padding-top: 28px; padding-bottom: 48px; color: var(--text-3); font-siz
 html:not(.js) .theme { display: none; }
 
 /* panel cards (tabs with JS) */
-.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+/* Four tabs: Findings and Network (Q1), Created marshes (Q2), Gap map (Q3). Phones show them 2 x 2 (media rule below). */
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .card { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 8px 18px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s; }
 .card:hover { border-color: var(--line-strong); text-decoration: none; }
 .card[aria-selected="true"] { border-color: var(--text); }
@@ -90,6 +91,9 @@ html:not(.js) .theme { display: none; }
 html:not(.js) .panel + .panel { margin-top: 56px; border-top: 1px solid var(--line-strong); }
 html.js:not(.nw) #panel-network, html.js.nw #panel-findings { display: none; }
 html.js.q3 #panel-findings, html.js:not(.q3) #panel-gapmap, .js .q3nojs { display: none; }
+/* Q2 tab (class mr on <html>): only the created-marshes section shows, and the Q1 question hides. */
+html.js.mr #panel-findings, html.js.mr #panel-network, html.js:not(.mr) #panel-marshes { display: none; }
+html.js.mr .top .q { display: none; }
 html:not(.js) .js-only { display: none !important; }
 .phead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 /* With JS the tab names the panel, so its h2 is for screen readers only. */
@@ -415,7 +419,7 @@ html.xvopen { overflow: hidden; }
   .panel { padding-top: 12px; }
 }
 @media (max-width: 700px) {
-  .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cards { grid-template-columns: 1fr 1fr; gap: 8px; }
   .card { padding: 6px 12px; }
   /* A smaller status line on a phone, so the pinned part stays short. */
   .selbar { order: 3; flex-basis: 100%; font-size: .8rem; padding-left: 12px; }
