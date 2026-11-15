@@ -57,6 +57,74 @@ v3 adds 1,590 bytes more (the faint-line rules, the compact strips and one legen
 v4 adds 2,254 bytes more (the two Expand buttons, `data-label` on each node, the loader).
 The expanded view itself (27,636 bytes) loads only when a reader opens it.
 
+## Variant B: edges hidden until selected
+
+This is one design variant of the graph, for comparison. It is on its own branch.
+
+**Default state.** With JS, both panel graphs (Findings and Network) show the nodes only. Effect
+lines, arrowheads, chips, gap lines and "No evidence" labels, moderation lines and diamonds and
+membership lines are hidden. The layout does not change, so nothing moves when edges show. The
+lane titles and the "Effect · certainty" chip column titles stay. The status line says "Click a
+node to show its edges. Or use “Show all edges”."
+
+**Selected state.** A node selection (click, Enter or Space, search, the hash, the drawer) shows
+its pathway: the items that `related()` marks `.on`, in their direction colour, with their chips.
+Further-step lines keep the 42% opacity. An edge selection (a chip, the drawer, search, the matrix,
+the hash) shows that edge and its end nodes. A paper shows the edges that cite it. Esc, Clear,
+the drawer's ×, a second click and a click on empty canvas hide the edges again.
+
+**"Show all edges".** A toggle button (`.eab`, `aria-pressed`) sits in the view bar after Expand.
+When it is on, `<html>` has the class `ea` and the graph looks and acts as in v6. One setting
+applies to both panels. It is not stored.
+
+**How it works.**
+- `src/style.css`, section "variant B": under `html.js:not(.ea)`, every `.ln`, `.chip`, `.gapl`,
+  `.dia` and `.mem` that is not `.on` has `visibility: hidden`. Thus a hidden chip is not in the
+  tab order or the accessibility tree, and it cannot take a click. The `.hit` path of a line used
+  `pointer-events: stroke`, which ignores visibility. With JS it is now `visibleStroke`.
+- `src/app.js`, block "variant B": the toggle, the hint text and `keepFocus()`. When a focused chip
+  hides (a second Enter on it), the focus goes to the source node of its edge. `clear()` does the
+  same when the item that opened the selection is now hidden. A `MutationObserver` on the class of
+  `<html>` writes the hint again when `ea` or `xvopen` changes.
+- `build.py`: the `.eab` button in `panel_html()`, and one JS-only legend row in both panels:
+  "Edges: hidden until you select a node or an edge, or use “Show all edges”." The legend
+  overlap and bounds check still passes.
+- Without JS, every edge shows, as before, and the toggle and the legend row are not shown.
+- The expanded view (`.xg`) is not changed. It shows all its edges, and its status line keeps the
+  v6 hint.
+- Below 701 px the view buttons wrap, so the row is not wider than the screen.
+
+**Size.** First view 124,014 bytes (v6: 121,862): `index.html` +520, `style.css` +572,
+`app.js` +1,060.
+
+**Conflict with the README.** The README asks the graph to "show every node and edge, with
+direction and certainty readable without hovering". In its default state this variant does not do
+that: the edges are hidden until a selection. This is on purpose. Every edge is one click away
+("Show all edges"), and every edge is also in the matrix and in the drawer of its end nodes. A
+judge who opens the page sees nodes only. If the variant is kept, "Show all edges" could be on by
+default.
+
+**Other effects.**
+- "Copy image" copies what is on the screen, so in the default state the PNG has nodes only.
+- "Export CSV / XLSX" with no selection still exports every edge that the filters leave, not the
+  (empty) set of edges on the screen.
+- The view bar has one more button, so the status line is about 130 px narrower at 1440 px. A
+  long selection description wraps to two lines a little more often.
+- No node cue was added (for example a count of edges on each node). The node `aria-label`
+  already gives the edges in and out.
+
+**Checks.** Two builds are byte-identical. `check_site.py` PASS. Headless Chrome at 1440 × 900,
+light and dark theme, both panels: in the default state 0 of 30 lines and 0 of 29 chips show in
+Network (0 of 14 and 0 of 13 in Findings), and all nodes show. Site preparation shows 12 lines and
+12 chips (with the moderation diamond and one membership line). Seedling survival (Findings) shows
+6 findings and the gap. "Show all edges" shows all items. A click on empty canvas, Esc and a
+second Enter hide them again. Edge selection from the hash, search, the drawer and a matrix cell
+shows one line and one chip. A paper from search shows 3 edges. Tab in the default state reaches
+nodes only; with a node selected it reaches the 12 shown chips and never a hidden one. After a
+second Enter on a chip, the focus is on the source node. A click on the place of a hidden chip
+selects nothing. Expand shows 30 of 30 edges. Without JS all 44 lines show. No horizontal scroll
+at 390 px. No page errors (only a `favicon.ico` 404). Lighthouse and axe-core were not run.
+
 ## Changes in v6
 
 Six requests drove this version. Four agents did the work in parallel, each in its own git

@@ -303,8 +303,11 @@ def legend_spec(M):
     gap = {"sw": "gap", "lead": "No evidence:", "text": GAP_NOTE}
     fade = {"sw": "fade", "lead": "Faded line:", "js": True,
             "text": "not selected. Click a node or an edge to show it at full strength."}
+    # Variant B: with JS the edges are hidden until a selection (style.css "variant B").
+    hid = {"sw": None, "lead": "Edges:", "js": True,
+           "text": "hidden until you select a node or an edge, or use “Show all edges”."}
     if M["key"] == "findings":
-        cols.append({"head": "Other marks", "fill": True, "min": 200, "rows": [gap, fade]})
+        cols.append({"head": "Other marks", "fill": True, "min": 200, "rows": [gap, fade, hid]})
         return {"cols": cols}
     cols.append({"head": "Other lines", "tw": 190, "rows": [
         {"sw": "mod", "lead": "Moderation:", "text": "changes the effect of the edge at the ◆"},
@@ -314,7 +317,7 @@ def legend_spec(M):
         {"sw": "shape", "shape": k, "lead": lead, "text": text} for k, lead, text in SHAPE_KEY]})
     # Notes: always a full-width row under the columns.
     cols.append({"head": "", "fill": True, "min": 600, "rows": [
-        gap,
+        gap, hid,
         {"sw": "chip", "lead": "Chips in the Conditions lane:",
          "text": "edges that go from a stock or treatment straight to an outcome. They do not pass through a condition."},
         {"sw": None, "lead": "Paths through a condition:", "text": M["src"]["limitations"][0]},
@@ -748,7 +751,9 @@ def panel_html(M, geo):
         # The view bar is one row: Graph | Matrix, Expand and the status line. It sticks under the toolbar.
         '<div class="vbar"><div class="vtools"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
         '<button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div>'
-        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button></div>'
+        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button>'
+        # Variant B: the graph shows nodes only until a selection; this toggle shows every edge (app.js).
+        '<button type="button" class="tbtn eab js-only" aria-pressed="false">Show all edges</button></div>'
         # Status line: the buttons float at the right; only the text after them is the live region.
         '<div class="selbar js-only" id="st-%(k)s"><div class="acts" hidden><button type="button" class="tod">Details below</button>'
         '<button type="button" class="clr">Clear</button></div><div class="sd" role="status" aria-live="polite"></div></div></div>'

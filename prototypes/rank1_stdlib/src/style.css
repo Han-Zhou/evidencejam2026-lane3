@@ -492,6 +492,28 @@ html[data-dock="bottom"] .toolbar { order: 1; top: auto; bottom: 8px; margin: 16
 }
 /* ---------- end of toolbar dock ---------- */
 
+/* ---------- variant B: edges hidden until selected ----------
+   With JS, the panel graphs show the nodes only. Lines, arrowheads, chips, gap lines and
+   labels, moderation lines and diamonds and membership lines are hidden until they are .on:
+   on the pathway of the selected node, or the selected edge (highlight() in app.js).
+   visibility: hidden takes them out of view, out of the tab order and out of the
+   accessibility tree. Nothing moves, so the edges show in place.
+   "Show all edges" (html.ea, block "variant B" in app.js) gives the v6 look back.
+   Without JS (no .js) every edge shows. The expanded view (.xg) is not changed.
+   To remove the variant: delete this section, that block in app.js, the .eab button and the
+   "Edges:" legend row in build.py. */
+html.js:not(.ea) .graph .ln:not(.on), html.js:not(.ea) .graph .chip:not(.on), html.js:not(.ea) .graph .gapl:not(.on),
+html.js:not(.ea) .graph .dia:not(.on), html.js:not(.ea) .graph .mem:not(.on) { visibility: hidden; }
+/* .hit has pointer-events: stroke, which ignores visibility. This keeps a hidden line from taking a click. */
+html.js .graph .ln .hit { pointer-events: visibleStroke; }
+.eab[aria-pressed="true"] { background: var(--pill); color: var(--pill-text); border-color: var(--pill); }
+.eab[aria-pressed="true"]:hover { color: var(--pill-text); border-color: var(--pill); }
+/* On a phone the three view buttons wrap, so the row is never wider than the screen. */
+@media (max-width: 700px) {
+  .vtools { flex: 0 1 auto; min-width: 0; flex-wrap: wrap; gap: 8px; }
+}
+/* ---------- end of variant B ---------- */
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; scroll-behavior: auto !important; }
 }
