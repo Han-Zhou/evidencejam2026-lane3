@@ -751,17 +751,21 @@ def panel_html(M, geo):
         # '%(glance)s'
         '%(toolbar)s'
         '<div class="stage"><div class="viz"><h3 id="gh-%(k)s" class="vh-h">Graph of the %(name_l)s</h3>'
-        '<div class="vbar"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
+        # The view bar is one row: Graph | Matrix, Expand and the status line. It sticks under the toolbar.
+        '<div class="vbar"><div class="vtools"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
         '<button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div>'
-        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button>'
-        # Copy image (snap.js) and export of the highlighted data (export.js). app.js loads each module on first click.
-        '<button type="button" class="tbtn js-only" data-act="copy">Copy image</button>'
-        '<div class="seg xp js-only" role="group" aria-label="Download the highlighted data">'
-        '<button type="button" class="tbtn" data-act="csv">CSV</button>'
-        '<button type="button" class="tbtn" data-act="xlsx">XLSX</button></div>'
-        '<div class="selbar js-only" id="st-%(k)s" role="status" aria-live="polite"></div></div>'
+        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button></div>'
+        # Status line: the buttons float at the right; only the text after them is the live region.
+        '<div class="selbar js-only" id="st-%(k)s"><div class="acts" hidden><button type="button" class="tod">Details below</button>'
+        '<button type="button" class="clr">Clear</button></div><div class="sd" role="status" aria-live="polite"></div></div></div>'
         # '<a class="vat" href="#tbl-%(k)s">View as table</a></div>'
-        '<div class="gbox">%(svg)s</div><div class="mbox js-only"></div>%(limit)s</div>'
+        # The graph card holds the graph, the matrix and, at its bottom right, the actions row.
+        '<div class="gcard"><div class="gbox">%(svg)s</div><div class="mbox js-only"></div>'
+        # Copy image (snap.js) and export of the highlighted data (export.js). app.js loads each module on first use.
+        '<div class="gact js-only"><button type="button" class="tbtn" data-act="copy">Copy image</button>'
+        '<div class="seg xp" role="group" aria-label="Download the highlighted data">'
+        '<button type="button" class="tbtn" data-act="csv">Export CSV</button>'
+        '<button type="button" class="tbtn" data-act="xlsx">Export XLSX</button></div></div></div>%(limit)s</div>'
         '<div class="dcol js-only"><section class="drawer" id="dr-%(k)s" aria-labelledby="drh-%(k)s"><div class="dr-head"><h3 id="drh-%(k)s" tabindex="-1">Details</h3>'
         '<button type="button" class="x" aria-label="Close details">×</button></div>'
         '<div class="dr-body"><p class="muted">%(empty)s</p></div></section></div></div>'

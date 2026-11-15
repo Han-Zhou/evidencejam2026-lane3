@@ -145,29 +145,45 @@ html:not(.js) .js-only { display: none !important; }
 .dcol { position: relative; min-width: 0; }
 html:not(.js) .stage { display: block; }
 .viz { min-width: 0; }
-/* view bar: Graph | Matrix, Expand, Copy image, CSV | XLSX, then the status line.
-   It wraps; the status line takes a row of its own when less than 320 px is left. */
+/* view bar: Graph | Matrix, Expand, then the status line, in one row.
+   It sticks under the toolbar while the graph scrolls (see "toolbar dock").
+   The status line takes a row of its own when less than 440 px is left. */
 .vbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 10px; min-height: 30px; }
 html:not(.js) .vbar { display: none; }
+.vtools { display: flex; align-items: center; gap: 10px; flex: none; }
 .xbtn { display: inline-flex; align-items: center; gap: 6px; flex: none; }
 .xbtn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tbtn { flex: none; white-space: nowrap; }
 .seg.xp { flex: none; flex-wrap: nowrap; }
 .tbtn:disabled, .tbtn[aria-busy="true"] { opacity: .6; cursor: progress; }
 /* .vat { font-size: .85rem; margin-left: auto; white-space: nowrap; } */
-.selbar { flex: 1 1 320px; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 40px; margin: 0; padding: 6px 8px 6px 16px; border-radius: 16px; background: var(--raised); border: 1px solid var(--line); font-size: .88rem; color: var(--text-2); }
+/* status line: one line that describes the selection, and a smaller line for the path note.
+   The buttons float at the top right, so a long text wraps under them at full width. */
+.selbar { flex: 1 1 440px; min-width: 0; display: flow-root; min-height: 36px; margin: 0; padding: 3px 3px 3px 14px; border-radius: 18px; background: var(--raised); border: 1px solid var(--line); font-size: .86rem; line-height: 1.4; color: var(--text-2); }
+/* The float's margin box ends where the first text line ends, so the second line gets the full width. */
+.selbar .acts { float: right; display: flex; gap: 6px; margin: 0 0 -3px 12px; }
+.selbar .acts[hidden] { display: none; }
+.selbar .acts button { min-height: 28px; padding: 2px 12px; }
+.selbar .sd { padding: 6px 0 4px; }
 .selbar b { color: var(--text); font-weight: 600; }
 .selbar .n { color: var(--text); font-size: .85rem; }
-.selbar .acts { margin-left: auto; display: flex; gap: 6px; }
+.selbar .dots { color: var(--text); }
+.selbar .unit { white-space: nowrap; }
+.nev { padding: 0 7px; border: 1.25px dashed var(--text-3); border-radius: 999px; color: var(--text-2); white-space: nowrap; }
 .clr { background: var(--pill); color: var(--pill-text); border-color: var(--pill); }
 .clr:hover { color: var(--pill-text); border-color: var(--pill); text-decoration: underline; }
 .tod { display: none; }
-.pathn { flex-basis: 100%; margin: 2px 0 2px; font-size: .92rem; line-height: 1.45; color: var(--text-2); }
-.gbox { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px 16px; }
+.pathn { margin: 1px 0 0; font-size: .8rem; line-height: 1.35; color: var(--text-2); }
+/* graph card: the graph (or the matrix) and, at its bottom right, the actions row */
+.gcard { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px 16px; }
+.gbox { overflow-x: auto; }
+.gact { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 10px; }
 .mbox { overflow-x: auto; margin-top: 14px; }
 .js .mbox { display: none; margin-top: 0; }
 .js .viz.mxon .mbox { display: block; }
 .js .viz.mxon .gbox { display: none; }
+/* Copy image copies the graph. In Matrix view the graph is not on screen, so the button hides there. */
+.js .viz.mxon [data-act="copy"] { display: none; }
 /* Path note under the Network graph (switched off in v5: it is in the in-graph legend now).
 .limit { font-size: .98rem; line-height: 1.55; color: var(--text-2); max-width: 90ch; margin: 14px 4px 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--text); }
 .limit b { font-family: var(--sans); font-size: .85rem; color: var(--text); font-weight: 600; }
@@ -358,7 +374,12 @@ html.xvopen { overflow: hidden; }
 @media (max-width: 700px) {
   .cards { grid-template-columns: 1fr 1fr; gap: 8px; }
   .card { padding: 6px 12px; }
-  .selbar { order: 3; flex-basis: 100%; }
+  /* A smaller status line on a phone, so the pinned part stays short. */
+  .selbar { order: 3; flex-basis: 100%; font-size: .8rem; padding-left: 12px; }
+  .selbar .acts { margin-bottom: -4px; }
+  .selbar .acts button { min-height: 26px; padding: 2px 10px; font-size: .8rem; }
+  .selbar .sd { padding-top: 5px; }
+  .pathn { font-size: .74rem; }
   .toolbar { padding-left: 16px; padding-right: 16px; }
   /* .stats > div { display: block; } */
   /* .glance, .legend { padding-left: 16px; padding-right: 16px; } */
@@ -388,7 +409,8 @@ html.xvopen { overflow: hidden; }
 }
 
 /* ---------- toolbar dock (experiment) ----------
-   The toolbar stays in view while the panel scrolls. <html data-dock> holds its place:
+   The toolbar stays in view while the panel scrolls, and the view bar (status line) under it.
+   <html data-dock> holds the toolbar's place:
    top, bottom, left or right. DOCK_JS in build.py sets it before the first paint; the
    "toolbar dock" block in app.js adds the switch and stores the choice ("q1-dock").
    Below 1100 px, left and right fall back to top (the graph needs the width).
@@ -398,6 +420,20 @@ html.xvopen { overflow: hidden; }
    To remove the experiment: delete this section, that block in app.js and DOCK_JS. */
 html[data-dock] .toolbar { position: sticky; top: 8px; z-index: 20; box-shadow: 0 0 0 8px var(--bg); }
 html[data-dock] .sres { position: fixed; top: auto; left: auto; }
+/* The view bar (Graph | Matrix, Expand, status line) sticks too, while its graph column is in view:
+   directly under a top toolbar, else at the top of the window. It stays in the graph column, so it
+   never covers the drawer. The page-colour band hides the graph that scrolls under it.
+   It sits under the toolbar (z-index 19), so the search results stay on top. */
+html[data-dock] .vbar { position: sticky; top: calc(var(--dockh, 0px) + 16px); z-index: 19; background: var(--bg); box-shadow: 0 0 0 8px var(--bg); }
+html[data-dock="bottom"] .vbar { top: 8px; }
+/* Below 1100 px the status line takes a row of its own, and only it sticks. The Graph | Matrix
+   and Expand row scrolls away, so the pinned part stays short. (.vbar > .selbar: not in Expand.) */
+@media (max-width: 1099px) {
+  html[data-dock] .vbar { display: contents; }
+  html[data-dock] .vtools { margin-bottom: 8px; }
+  html[data-dock] .vbar > .selbar { position: sticky; top: calc(var(--dockh, 0px) + 16px); z-index: 19; margin-bottom: 10px; box-shadow: 0 0 0 8px var(--bg); }
+  html[data-dock="bottom"] .vbar > .selbar { top: 8px; }
+}
 /* scrollIntoView() stops clear of the bar. --dockh is the bar height (app.js; 0 for a side column).
    Not scroll-padding on <html>: that made a focus inside the stuck bar scroll the page back up. */
 html[data-dock] .stage, html[data-dock] .drawer, html[data-dock] ol.claims li { scroll-margin-top: calc(var(--dockh, 0px) + 24px); }
@@ -423,6 +459,7 @@ html[data-dock="bottom"] .toolbar { order: 1; top: auto; bottom: 8px; margin: 16
   html[data-dock="left"] .fchip, html[data-dock="right"] .fchip { display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 4px 12px; font-size: .82rem; text-align: left; border-radius: 14px; }
   html[data-dock="left"] .fchip .n, html[data-dock="right"] .fchip .n { margin-left: auto; }
   html[data-dock="left"] .dock, html[data-dock="right"] .dock, html[data-dock="left"] .count, html[data-dock="right"] .count { margin-left: 0; }
+  html[data-dock="left"] .vbar, html[data-dock="right"] .vbar { top: 8px; }
 }
 @media (max-width: 1099px) {
   .seg.dock [data-dock="left"], .seg.dock [data-dock="right"] { display: none; }

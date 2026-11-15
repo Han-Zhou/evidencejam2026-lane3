@@ -16,6 +16,9 @@ var P = {}, cur = 'findings';
 var GAPN = 'No study in this corpus tested this pairing. This is a gap, not a negative result.';
 var PATHN = 'Edges beyond the first step are separate bodies of evidence. A path is not one tested effect.';
 var HINT = 'Click a node to highlight its pathways. Click an edge or its chip to read its claims.';
+// Node kinds in the status line (one node, so singular). Findings nodes are factors or outcomes.
+var KIND = {planting_stock: 'Planting stock', site_treatment: 'Site treatment', combination: 'Combination', condition: 'Condition',
+  outcome: 'Outcome', factor: 'Factor'};
 // Same text as DRAWER_EMPTY in build.py.
 var EMPTY = 'Select a node or an edge. Its details, claims and quotes show here.';
 var wide = matchMedia('(min-width: 900px)');
@@ -195,28 +198,52 @@ function nameOf(p, ref) {
   var n = focusable(p, ref);
   return n ? n.getAttribute('aria-label').split(/ \(|: /)[0] : '';
 }
+// The status line describes the selection in one line. Edges, gaps and nodes are read
+// from the graph's own attributes (the pack values), so the text is the same before and
+// after the data file loads, and the live region speaks once per selection.
 function status(p, R) {
-  var ref = p.pin, h, note = '';
-  if (!ref) return put(p, '<span>' + HINT + '</span>');
-  var t = kindOf(ref), nm = '<b>' + esc(nameOf(p, ref)) + '</b>';
+  var ref = p.pin, h, note = '', D = p.data;
+  if (!ref) return put(p, HINT);
+  var t = kindOf(ref), g = p.g[ref], a = p.attr[ref], it = D && D.items[ref];
   var w = p.k === 'findings' ? ['finding', 'findings'] : ['edge', 'edges'];
-  function n(x, a, b) { return '<span class="n">' + x + '</span> ' + (b ? (x === 1 ? a : b) : a); }
+  // A unit (a count and its word, a direction, a grade) never breaks across two lines.
+  function u(s) { return '<span class="unit">' + s + '</span>'; }
+  function n(x, a1, b1) { return u('<span class="n">' + x + '</span> ' + (b1 ? (x === 1 ? a1 : b1) : a1)); }
+  function b(s) { return '<b>' + esc(s) + '</b>'; }
+  // Separator: a no-break space keeps the dot at the end of a line, not at the start of the next.
+  var S = ' · ';
   if (t === 'node' && R) {
-    h = '<span>Pathways through ' + nm + ': ' + n(R.direct + R.further, w[0], w[1]) + ' (' +
+    var id = ref.slice(5);
+    h = b(p.lbl[id]) + S + KIND[p.kn[id]] + S + 'Pathways: ' + n(R.direct + R.further, w[0], w[1]) + ' (' +
       (R.further ? n(R.direct, 'direct') + ', ' + n(R.further, 'further') : 'all direct') + ')' +
-      (R.gaps ? ' · ' + n(R.gaps, 'gap', 'gaps') + ' (no evidence)' : '') +
-      (R.hid ? ' · ' + n(R.hid, 'hidden by filters') : '') + '</span>';
-    if (R.further) note = '<p class="pathn">Full lines are one step from ' + nm + '; lighter lines are further steps. ' + PATHN + '</p>';
+      (R.gaps ? S + n(R.gaps, 'gap', 'gaps') + ' (no evidence)' : '') +
+      (R.hid ? S + n(R.hid, 'hidden by filters') : '');
+    if (R.further) note = '<p class="pathn">Lighter lines are further steps. ' + PATHN + '</p>';
+  } else if (g && t === 'gap') {
+    h = b(p.lbl[g.s] + AR + p.lbl[g.t]) + S + '<span class="nev">No evidence</span>' + S + GAPN;
+  } else if (g && a) {
+    h = (g.te ? b(p.lbl[g.s]) + ' changes the effect of ' + b(p.lbl[p.g[g.te].s] + AR + p.lbl[p.g[g.te].t]) : b(p.lbl[g.s] + AR + p.lbl[g.t])) +
+      S + u(dirH(a.dir)) + S + u(certH(a.cert) + ' certainty') + S + n(a.st, 'study', 'studies') + S + n(a.cl, 'claim', 'claims');
+  } else if (!D) {
+    // A paper or a claim from the URL: write the line when the data file is in.
+    return;
   } else if (t === 'paper') {
-    h = '<span>Paper ' + nm + (R ? ': cited by ' + n(R.direct, w[0], w[1]) : '') + '</span>';
+    var Q = D.papers[ref.slice(6)];
+    h = 'Paper: ' + b(Q[0]) + (Q[1] != null ? ' (' + Q[1] + ')' : '') + (R ? S + 'cited by ' + n(R.direct, w[0], w[1]) : '');
+  } else if (it && it.ty === 'inter') {
+    h = b('Interaction claim') + S + 'one claim, not a pooled finding' + S + 'listed direction ' + u(dirH(it.dir)) + S + 'not drawn in the graph';
   } else {
-    h = '<span>Selected: ' + nm + (t === 'gap' ? ' (no evidence)' : '') + (R ? '' : ' (not drawn in the graph)') + '</span>';
+    h = b(nameOf(p, ref)) + ' (not drawn in the graph)';
   }
-  put(p, h + '<span class="acts"><button type="button" class="tod">Details below</button>' +
-    '<button type="button" class="clr">Clear</button></span>' + note);
+  put(p, '<span class="dsc">' + h + '</span>' + note, true);
 }
-// The status line is a live region: only rewrite it when its text changes.
-function put(p, h) { if (p.stat.getAttribute('data-h') !== h) { p.stat.innerHTML = h; p.stat.setAttribute('data-h', h); } }
+// The text part of the status line is a live region: only rewrite it when it changes.
+// The Details and Clear buttons sit outside it and show only with a selection.
+function put(p, h, on) {
+  var sd = $('.sd', p.stat);
+  $('.acts', p.stat).hidden = !on;
+  if (sd.getAttribute('data-h') !== h) { sd.innerHTML = h; sd.setAttribute('data-h', h); }
+}
 function setupGraph(p) {
   function choose(n) {
     var r = refOf(n);
@@ -577,7 +604,7 @@ function sortBy(p, t, b) {
 // ---------- setup ----------
 function setup(el) {
   var k = el.getAttribute('data-panel');
-  var p = P[k] = {k: k, el: el, svg: $('svg.graph', el), drawer: $('.drawer', el), stat: $('.selbar', el), refs: {}, g: {}, kind: {}, attr: {},
+  var p = P[k] = {k: k, el: el, svg: $('svg.graph', el), drawer: $('.drawer', el), stat: $('.selbar', el), refs: {}, g: {}, kind: {}, attr: {}, lbl: {}, kn: {},
     f: {dirs: DORD.slice(), min: 0, gaps: true}, lens: 'all', q: '', hits: null, pin: null};
   index(p, $$(HOOK, el));
   p.gEls = $$(HOOK, p.svg);
@@ -587,8 +614,17 @@ function setup(el) {
   $$('.ln', p.svg).forEach(function (n) {
     p.g[refOf(n)] = {s: n.getAttribute('data-s'), t: n.getAttribute('data-t'), te: n.getAttribute('data-te')};
   });
-  p.nodes.forEach(function (n) { p.kind[refOf(n).slice(5)] = n.getAttribute('data-kind'); });
-  $$('.chip', p.svg).forEach(function (n) { p.attr[refOf(n)] = {dir: n.getAttribute('data-direction'), cert: n.getAttribute('data-certainty')}; });
+  // Label and kind of each node, and the pack values of each chip, for the status line.
+  p.nodes.forEach(function (n) {
+    var id = refOf(n).slice(5), kd = n.getAttribute('data-kind');
+    p.kind[id] = kd;
+    p.lbl[id] = n.getAttribute('data-label');
+    p.kn[id] = kd || (n.classList.contains('k-outcome') ? 'outcome' : 'factor');
+  });
+  $$('.chip', p.svg).forEach(function (n) {
+    p.attr[refOf(n)] = {dir: n.getAttribute('data-direction'), cert: n.getAttribute('data-certainty'),
+      st: +n.getAttribute('data-studies'), cl: +n.getAttribute('data-claims')};
+  });
   $$('.gapl', p.svg).forEach(function (n) { p.attr[refOf(n)] = {gap: 1}; });
   setupGraph(p);
 
@@ -718,6 +754,7 @@ doc.addEventListener('keydown', function (e) {
 
 // ---------- toolbar dock (experiment) ----------
 // The toolbar stays in view while the panel scrolls (CSS section "toolbar dock").
+// The view bar with the status line sticks under it while the graph is in view.
 // This block adds a switch to each toolbar: top, bottom, left or right. The choice is
 // <html data-dock> (DOCK_JS in build.py sets it before the first paint) and
 // localStorage "q1-dock". Left and right need 1100 px; below that the CSS shows the
@@ -766,15 +803,24 @@ doc.addEventListener('keydown', function (e) {
     if (e === 'top' || e === 'bottom') bars.forEach(function (tb) { h = Math.max(h, tb.offsetHeight); });
     root.style.setProperty('--dockh', h + 'px');
   }
-  // Keyboard focus is never hidden under a top or bottom bar: scroll by the overlap.
+  // Keyboard focus is never hidden under a top or bottom bar, or under the pinned view bar:
+  // scroll by the overlap.
   doc.addEventListener('focusin', function (ev) {
-    var n = ev.target, e = eff(), tb = $('.toolbar', P[cur].el), fv = true;
+    var n = ev.target, e = eff(), el = P[cur].el, tb = $('.toolbar', el), vb = $('.vbar', el), fv = true;
     try { fv = n.matches(':focus-visible'); } catch (x) {}
-    if ((e !== 'top' && e !== 'bottom') || !tb || tb.contains(n) || !fv || root.classList.contains('xvopen')) return;
+    if (!tb || tb.contains(n) || (vb && vb.contains(n)) || !fv || root.classList.contains('xvopen')) return;
     setTimeout(function () {
-      var r = n.getBoundingClientRect(), t = tb.getBoundingClientRect();
-      if (r.bottom <= t.top || r.top >= t.bottom) return;
-      scrollBy(0, e === 'top' ? r.top - t.bottom - 16 : r.bottom - t.top + 16);
+      var r = n.getBoundingClientRect(), t = tb.getBoundingClientRect(), up = 0, hid = false;
+      var over = r.bottom > t.top && r.top < t.bottom;
+      if (e === 'bottom' && over) { scrollBy(0, r.bottom - t.top + 16); return; }
+      if (e === 'top') { up = t.bottom; hid = over; }
+      // The view bar can cover only what comes after it in its own column (graph, matrix, actions).
+      // Below 1100 px only its status line sticks (the bar itself has no box then).
+      if (vb && vb.parentNode.contains(n)) {
+        var sb = $('.selbar', vb), v = Math.max(vb.getBoundingClientRect().bottom, sb ? sb.getBoundingClientRect().bottom : 0);
+        up = Math.max(up, v); hid = hid || r.top < v;
+      }
+      if (hid) scrollBy(0, r.top - up - 16);
     }, 0);
   });
   // Put the open results list under or over the search box, or beside a side column, inside the viewport.
