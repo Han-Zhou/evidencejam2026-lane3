@@ -4,7 +4,7 @@
 
 | | |
 |---|---|
-| **Question** | Q2: Created marshes |
+| **Question** | Q2: How long do created marshes take to reach biodiversity and function comparable to natural reference wetlands, and which attributes lag? |
 | **Data source** | `answers/q2_created_marshes.json` |
 | **Primary view** | Intervention-outcome rows, each with a slider against the wetland baseline |
 | **Colour scheme** | Burgundy plum |
