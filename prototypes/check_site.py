@@ -13,6 +13,11 @@ and checks the machine-check contract in prototypes/SPEC.md:
 - every claim id in both evidence maps appears in the site with its quote;
 - no script, stylesheet, image or font loads from another origin.
 
+When the site has a Q3 gap map (data-q3-* attributes or data/gapmap.json), it also checks
+answers/q3_grassland_gaps.json the same way: every finding (data-q3-finding-id, with
+direction, certainty, studies, claims and density), every gap (data-q3-gap-id), and every
+claim id and quote.
+
 It also prints the size of every shipped file. Exit code 1 on any error.
 """
 
@@ -27,6 +32,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 A_PATH = REPO / "answers" / "q1_tree_planting.json"
 B_PATH = REPO / "answers" / "q1_tree_planting_graph.json"
+C_PATH = REPO / "answers" / "q3_grassland_gaps.json"
 
 EXTERNAL = re.compile(r"^\s*(https?:)?//", re.I)
 LOADING_ATTRS = {
@@ -101,7 +107,8 @@ def main():
             p = Collector()
             p.feed(raw)
             for tag, attrs in p.elements:
-                for name in ("data-finding-id", "data-gap-id", "data-interaction-id", "data-node-id", "data-edge-id"):
+                for name in ("data-finding-id", "data-gap-id", "data-interaction-id", "data-node-id", "data-edge-id",
+                             "data-q3-finding-id", "data-q3-gap-id"):
                     if name in attrs:
                         by_attr[name].append(attrs)
                 for name in LOADING_ATTRS.get(tag, []):
@@ -161,7 +168,14 @@ def main():
     gap_items = [(g["id"], g) for g in A["gaps"]] + [(g["id"], g) for g in B["gaps"]]
     check_items("data-gap-id", gap_items, [], "Gap")
 
-    for label, data in (("Panel A", A), ("Panel B", B)):
+    evidence_sets = [("Panel A", A), ("Panel B", B)]
+    if by_attr["data-q3-finding-id"] or by_attr["data-q3-gap-id"] or (site / "data" / "gapmap.json").is_file():
+        C = json.loads(C_PATH.read_text(encoding="utf-8"))
+        check_items("data-q3-finding-id", [(f["id"], f) for f in C["findings"]], pooled + ["density"], "Q3 finding")
+        check_items("data-q3-gap-id", [(g["id"], g) for g in C["gaps"]], [], "Q3 gap")
+        evidence_sets.append(("Q3", C))
+
+    for label, data in evidence_sets:
         missing_id, missing_quote = [], []
         for cid, ev in data["evidence"].items():
             if cid not in corpus:

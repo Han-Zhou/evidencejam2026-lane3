@@ -3,9 +3,11 @@
 
     python3 build.py [out_dir]          (default: site/ next to this file)
 
-Reads ../../answers/q1_tree_planting.json (Panel A, "Findings") and
-../../answers/q1_tree_planting_graph.json (Panel B, "Network"). Writes static
-HTML, CSS, one small JS file and one JSON file per panel. No network, no LLM.
+Reads ../../answers/q1_tree_planting.json (Panel A, "Findings"),
+../../answers/q1_tree_planting_graph.json (Panel B, "Network") and
+../../answers/q3_grassland_gaps.json (Panel C, "Gap map", Q3). The group order of
+the gap map (rows and columns) comes from ../../groups/lane3_groups.yaml. Writes
+static HTML, CSS, small JS files and JSON files per panel. No network, no LLM.
 Every direction, certainty, rationale, count, label, quote, title, year and DOI
 is copied from the JSON. The page only counts, sorts, filters and groups them.
 """
@@ -198,6 +200,52 @@ def model_b(B):
         "papers": papers_of(B["evidence"]), "item_word": ("edge", "edges"),
         "claims_page": "claims-network.html", "labels": labels,
     }
+
+
+def group_order():
+    """Ids of the intervention groups and the outcome groups, in the order of lane3_groups.yaml.
+    Standard library only: the ids are read line by line ("  - id: seeding")."""
+    text = (ANSWERS.parent / "groups" / "lane3_groups.yaml").read_text(encoding="utf-8")
+    out, cur = {}, None
+    for line in text.splitlines():
+        m = re.match(r"^([a-z_]+):\s*$", line)
+        if m:
+            cur = out.setdefault(m.group(1), [])
+            continue
+        m = re.match(r"^\s+-\s+id:\s*([A-Za-z0-9_]+)\s*$", line)
+        if m and cur is not None:
+            cur.append(m.group(1))
+    return out.get("intervention_groups", []), out.get("outcome_groups", [])
+
+
+def model_q3(C):
+    """Q3 gap map: rows are outcome groups, columns are intervention groups (pack order)."""
+    iv_order, oc_order = group_order()
+    cells = C["findings"] + C["gaps"]
+    rl, cl = {}, {}
+    for x in cells:
+        cl.setdefault(x["subject"]["id"], x["subject"]["label"])
+        rl.setdefault(x["outcome"]["id"], x["outcome"]["label"])
+
+    def ordered(labels, order):
+        known = [i for i in order if i in labels]
+        return [(i, labels[i]) for i in known + [i for i in labels if i not in known]]
+
+    rows, cols = ordered(rl, oc_order), ordered(cl, iv_order)
+    pairs = {(x["outcome"]["id"], x["subject"]["id"]) for x in cells}
+    assert len(pairs) == len(cells) == len(rows) * len(cols), "Q3 cells do not fill the grid"
+    for f in C["findings"]:
+        assert f["direction"] in DIR and f["certainty"] in CERT, f["id"]
+        assert all(e in C["evidence"] for e in f["edge_ids"]), f["id"]
+    return {"src": C, "rows": rows, "cols": cols, "findings": C["findings"], "gaps": C["gaps"],
+            "evidence": C["evidence"], "papers": papers_of(C["evidence"])}
+
+
+def q3_summary(M):
+    s = M["src"]["summary"]
+    return ("%d cells: %d with evidence (%d of them from a single study) and %d with no evidence. "
+            "%d of the %d grassland claims are in the map.") % (
+        s["cells"], s["filled"], s["thin"], s["empty"], s["claims_pooled"], s["grassland_claims"])
 
 
 def item_label(it):
@@ -785,7 +833,24 @@ def panel_html(M, geo):
     }
 
 
-def index_html(MA, MB, ga, gb):
+def q3_panel_html(M):
+    """Panel C, the Q3 gap map. gapmap.js draws the map into .q3host when the tab first opens.
+    Without JS the panel is a short summary and a link to the claims page (every finding,
+    gap and quote)."""
+    C = M["src"]
+    lims = "".join("<li>%s</li>" % esc(l) for l in C["limitations"])
+    return (
+        '<section class="panel" id="panel-gapmap" data-q3panel aria-labelledby="h-gapmap">'
+        '<div class="phead"><h2 id="h-gapmap">Gap map</h2><p class="nojs"><a href="claims-gapmap.html">Every finding, gap and quote</a></p></div>'
+        '<div class="q3nojs"><p class="q">%s</p><p>%s</p>'
+        '<p>The gap map needs JavaScript. Every finding, with its direction, certainty, rationale and quotes, and every gap '
+        'is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p><h3>Limitations</h3><ul class="lims">%s</ul></div>'
+        '<div class="q3host js-only" aria-busy="true"><p class="muted">Loading the gap map…</p></div>'
+        '</section>'
+    ) % (esc(C["question"]), esc(q3_summary(M)), lims)
+
+
+def index_html(MA, MB, ga, gb, M3):
     A, B = MA["src"], MB["src"]
     a_docs = len(MA["papers"])
     b_docs = len(MB["papers"])
@@ -797,28 +862,36 @@ def index_html(MA, MB, ga, gb):
         '<a class="card" id="tab-network" href="#panel-network" data-tab="network"><span class="cn">Network</span>'
         # '<span class="cd">The same question as a graph, with the conditions in between.</span>'
         '<span class="cc">%s · %s · %s</span></a>'
+        '<a class="card" id="tab-gapmap" href="#panel-gapmap" data-tab="gapmap"><span class="cn">Gap map</span>'
+        '<span class="cc">Q3 · %s · %s · %s</span></a>'
     ) % (plural(len(MA["items"]), "finding", "findings"),
          plural(len(A["evidence"]), "claim", "claims"), plural(a_docs, "paper", "papers"),
          plural(len(MB["items"]), "edge", "edges"),
-         plural(len(B["evidence"]), "claim", "claims"), plural(b_docs, "paper", "papers"))
+         plural(len(B["evidence"]), "claim", "claims"), plural(b_docs, "paper", "papers"),
+         plural(len(M3["findings"]), "finding", "findings"), plural(len(M3["gaps"]), "gap", "gaps"),
+         plural(len(M3["evidence"]), "claim", "claims"))
+    # The heading and the question follow the open tab: Q1 for Findings and Network, Q3 for the gap map.
+    head = ('<h1><span class="hq1">Tree planting in Canadian forest restoration</span>'
+            '<span class="hq3">Grassland restoration in Canada</span></h1>%s</div>'
+            '<p class="q hq1">%s</p><p class="q hq3">%s</p>') % (THEME_BTN, esc(A["question"]), esc(M3["src"]["question"]))
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>Q1 · Tree planting evidence</title>'
         '<meta name="description" content="Evidence on how planting-stock traits and site treatments affect seedling survival and growth in Canadian forest restoration: findings, certainty, gaps and source quotes.">'
-        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":"");%s%s</script>'
+        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":/^#(panel-)?gapmap/.test(location.hash)?" q3":"");%s%s</script>'
         '<link rel="stylesheet" href="style.css">'
         '<script src="app.js" defer></script></head><body>'
         '<a class="skip" href="#main">Skip to content</a>'
         # '<header class="top"><div class="bar"><p class="eyebrow">Evidence Jam 2026 · Lane 3 · Question 1</p>%s</div>'
         # '<h1>Tree planting in Canadian forest restoration</h1><p class="q">%s</p>'
-        '<header class="top"><div class="hrow"><h1>Tree planting in Canadian forest restoration</h1>%s</div><p class="q">%s</p>'
+        '<header class="top"><div class="hrow">%s'
         '<nav aria-label="Panels"><div class="cards">%s</div></nav></header>'
-        '<main id="main">%s%s</main>'
+        '<main id="main">%s%s%s</main>'
         # '<footer><p>Built from <code>answers/q1_tree_planting.json</code> and <code>answers/q1_tree_planting_graph.json</code>. '
         # 'Certainty rule <code>%s</code>. No text on this page is generated by a language model.</p></footer>'
         '</body></html>\n'
-    ) % (THEME_JS, DOCK_JS, THEME_BTN, esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb))
+    ) % (THEME_JS, DOCK_JS, head, cards, panel_html(MA, ga), panel_html(MB, gb), q3_panel_html(M3))
     # ) % (THEME_JS, THEME_BTN, esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb), esc(A["rule"]))
 
 
@@ -953,6 +1026,92 @@ def data_json(M):
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
 
+DENSITY = {"thin": "thin (1 study)", "some": "some (2 to 3 studies)", "dense": "dense (4 or more studies)"}
+
+
+def q3_label(x):
+    return "%s %s %s" % (x["subject"]["label"], ARROW_TXT, x["outcome"]["label"])
+
+
+def q3_claims_page(M):
+    """Every Q3 finding (by intervention, then outcome) with its claims and quotes, then every gap.
+    A claim can count in two intervention groups, so it can show under two findings; claim items
+    have no id here, so the page has no duplicate ids."""
+    C, ev = M["src"], M["evidence"]
+    col_ix = {c: i for i, (c, _) in enumerate(M["cols"])}
+    row_ix = {r: i for i, (r, _) in enumerate(M["rows"])}
+    key = lambda x: (col_ix[x["subject"]["id"]], row_ix[x["outcome"]["id"]])
+    toc, body = [], []
+    for cid, clabel in M["cols"]:
+        fs = sorted((f for f in M["findings"] if f["subject"]["id"] == cid), key=key)
+        gs = sorted((g for g in M["gaps"] if g["subject"]["id"] == cid), key=key)
+        sid = slug("i-" + cid)
+        toc.append('<li><a href="#%s">%s</a> <span class="muted">(%s, %s)</span></li>' % (
+            sid, esc(clabel), plural(len(fs), "finding", "findings"), plural(len(gs), "gap", "gaps")))
+        parts = ['<section class="cg" id="%s"><h2>%s</h2>' % (sid, esc(clabel))]
+        for f in fs:
+            parts.append(
+                '<section class="paper" id="%s" data-q3-finding-id="%s" data-direction="%s" data-certainty="%s" '
+                'data-studies="%d" data-claims="%d" data-density="%s"><h3>%s</h3>'
+                '<p class="meta">%s · certainty %s · %s · %s · density %s</p><p class="rat">%s</p>' % (
+                    slug("f-" + f["id"]), esc(f["id"]), esc(f["direction"]), esc(f["certainty"]), f["studies"], f["claims"],
+                    esc(f["density"]), esc(q3_label(f)), dir_html(f["direction"]), cert_html(f["certainty"]),
+                    plural(f["studies"], "study", "studies"), plural(f["claims"], "claim", "claims"),
+                    esc(DENSITY.get(f["density"], f["density"])), esc(f["certainty_rationale"])))
+            for d, cids in by_paper(f["edge_ids"], ev):
+                title, year, doi = M["papers"][d]
+                parts.append('<h4>%s</h4><p class="pm">%s · %s</p><ol class="claims">%s</ol>' % (
+                    paper_line(title, year), doi_html(d, doi), plural(len(cids), "claim", "claims"),
+                    "".join(re.sub(r'^<li id="[^"]*">', "<li>", claim_li(c, ev[c])) for c in cids)))
+            parts.append("</section>")
+        if gs:
+            parts.append('<h3>No evidence</h3><p>%s</p><ul>%s</ul>' % (esc(GAP_NOTE), "".join(
+                '<li id="%s" data-q3-gap-id="%s"><b>%s</b>: no evidence <span class="mono">(%s)</span>. '
+                '<span class="muted">Searched for: %s</span></li>' % (
+                    slug("g-" + g["id"]), esc(g["id"]), esc(g["outcome"]["label"]), esc(g["status"]), esc(g["searched_for"]))
+                for g in gs)))
+        parts.append("</section>")
+        body.append("".join(parts))
+    title = "Claims behind the gap map"
+    return (
+        '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+        '<title>%s · Q3</title><meta name="description" content="Every finding, gap, claim and source quote behind the Q3 grassland gap map.">'
+        '<script>%s</script><link rel="stylesheet" href="style.css"></head><body class="cp"><a class="skip" href="#main">Skip to content</a>'
+        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#gapmap">← Back to the gap map</a></p></div><h1>%s</h1><p class="q">%s</p>'
+        '<p>%s</p><nav aria-label="Interventions"><ol class="toc">%s</ol></nav></header>'
+        '<main id="main">%s</main><footer><p>From <code>answers/q3_grassland_gaps.json</code>. Certainty rule <code>%s</code>.</p></footer></body></html>\n'
+    ) % (title, THEME_JS, title, esc(C["question"]), esc(q3_summary(M)), "".join(toc), "".join(body), esc(C["rule"]))
+
+
+def q3_data_json(M):
+    """data/gapmap.json: what the map needs (loaded when the tab opens)."""
+    C = M["src"]
+    return json.dumps({
+        "q": C["question"], "rule": C["rule"], "how": C["how_built"], "lims": C["limitations"],
+        "summary": q3_summary(M), "densest": C["summary"]["densest"],
+        "rows": [list(r) for r in M["rows"]], "cols": [list(c) for c in M["cols"]],
+        "f": [{"id": f["id"], "r": f["outcome"]["id"], "c": f["subject"]["id"], "dir": f["direction"],
+               "cert": f["certainty"], "rat": f["certainty_rationale"], "st": f["studies"], "n": f["claims"],
+               "den": f["density"], "sd": f["study_directions"], "cd": f["claim_directions"]} for f in M["findings"]],
+        "g": [[g["id"], g["outcome"]["id"], g["subject"]["id"], g["status"]] for g in M["gaps"]],
+    }, ensure_ascii=False, separators=(",", ":"))
+
+
+def q3_claims_json(M):
+    """data/gapmap-claims.json: claims, quotes and papers (loaded on the first cell click or export)."""
+    claims = {}
+    for cid, ev in M["evidence"].items():
+        claims[cid] = {"s": ev["subject"], "p": ev["predicate"], "n": ev["negated"], "o": ev["object"],
+                       "d": ev["direction"], "g": ev["certainty_grade"], "et": ev["evidence_types"],
+                       "c": ev["comparator"], "q": ev["quote"], "doc": ev["document_id"]}
+    return json.dumps({
+        "ids": {f["id"]: f["edge_ids"] for f in M["findings"]},
+        "docs": {f["id"]: f["document_ids"] for f in M["findings"]},
+        "sf": {g["id"]: g["searched_for"] for g in M["gaps"]},
+        "claims": claims, "papers": {d: list(v) for d, v in M["papers"].items()}, "gapNote": GAP_NOTE,
+    }, ensure_ascii=False, separators=(",", ":"))
+
+
 def src_text(*names):
     """Read one or more files from src/ and join them in order."""
     return "\n".join((HERE / "src" / n).read_text(encoding="utf-8") for n in names)
@@ -962,7 +1121,8 @@ def main():
     out = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else HERE / "site"
     A = json.loads((ANSWERS / "q1_tree_planting.json").read_text(encoding="utf-8"))
     B = json.loads((ANSWERS / "q1_tree_planting_graph.json").read_text(encoding="utf-8"))
-    MA, MB = model_a(A), model_b(B)
+    C3 = json.loads((ANSWERS / "q3_grassland_gaps.json").read_text(encoding="utf-8"))
+    MA, MB, M3 = model_a(A), model_b(B), model_q3(C3)
     ga, gb = layout(layout_spec(MA)), layout(layout_spec(MB))
     for name, g in (("findings", ga), ("network", gb)):
         if g["overlaps"]:
@@ -972,11 +1132,14 @@ def main():
         shutil.rmtree(out)
     (out / "data").mkdir(parents=True)
     files = {
-        "index.html": index_html(MA, MB, ga, gb),
+        "index.html": index_html(MA, MB, ga, gb, M3),
         "claims-findings.html": claims_page(MA),
         "claims-network.html": claims_page(MB),
+        "claims-gapmap.html": q3_claims_page(M3),
         "data/findings.json": data_json(MA),
         "data/network.json": data_json(MB),
+        "data/gapmap.json": q3_data_json(M3),
+        "data/gapmap-claims.json": q3_claims_json(M3),
         # graph.css (in-graph legend, chip column title) is part of the first-view stylesheet.
         "style.css": mini(src_text("style.css", "graph.css")),
         "app.js": mini(src_text("app.js")),
@@ -985,6 +1148,9 @@ def main():
         "explore.css": mini(src_text("explore.css")),
         "snap.js": mini(src_text("snap.js")),
         "export.js": mini(src_text("export.js")),
+        # Q3 gap map: loaded the first time its tab opens.
+        "gapmap.js": mini(src_text("gapmap.js")),
+        "gapmap.css": mini(src_text("gapmap.css")),
     }
     for rel, text in files.items():
         (out / rel).write_text(text, encoding="utf-8")

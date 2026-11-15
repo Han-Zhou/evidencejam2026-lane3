@@ -57,6 +57,53 @@ v3 adds 1,590 bytes more (the faint-line rules, the compact strips and one legen
 v4 adds 2,254 bytes more (the two Expand buttons, `data-label` on each node, the loader).
 The expanded view itself (27,636 bytes) loads only when a reader opens it.
 
+## Q3 gap map panel (after v6)
+
+A third tab, **Gap map**, shows Q3 (`answers/q3_grassland_gaps.json`) as one matrix. It has
+no graph view. When the tab is open, the page heading and question switch to Q3.
+
+- **Rows** are the 16 outcome groups and **columns** are the 24 intervention groups, in the
+  order of `groups/lane3_groups.yaml`. `build.py` reads only the group ids from it, line by line
+  (standard library, no YAML parser).
+- **Cells:** the fill is the certainty tier (the indigo tokens below), and the dots say the same.
+  No direction glyph is in the cell. The direction shows in the status line, in the details and in
+  each cell's `aria-label`. Gaps are hatched with a dashed border: never a fill, never a faded
+  cell.
+- **Top-left block of the table:** sort rows and sort columns (pack order, A to Z, most filled
+  cells, most studies), a checklist of the rows and the columns to show, a minimum certainty and
+  "Hide empty rows and columns". "Most studies" adds the study counts of the cells, so a study
+  that counts in two cells counts twice. Cells below the minimum certainty fade (they are not gaps)
+  and leave the tab order.
+- **The legend** with the count of findings per tier is above the table. **Export CSV, Export XLSX
+  and Copy image** are at its top right. **Download PNG** is at the bottom right of the map.
+- **Exports cover the map as shown** (rows, columns and certainty filter):
+  - The CSV has one row per cell, with the pack values unchanged (direction, certainty, rationale,
+    counts, density, `searched_for`, claim ids, document ids).
+  - The XLSX has three sheets. "Matrix" is the grid with indigo fills, "Cells" is the CSV rows and
+    "Claims" has every claim with its quote.
+  - The image is drawn on a canvas in the current theme. It has the legend, and a footer with the
+    source, the gap note and the filters.
+  - `export.js` now exports its CSV and ZIP writers. `sheet()` takes `{v, s}` cells and `book()`
+    takes optional fills, so Q1's exports do not change.
+- **Selecting a cell** shows a status line with "Details below" and "Clear". The details, under the
+  map, show the certainty, the rationale, the counts, the density, the study directions and the
+  claims by paper with their quotes. A gap shows the gap note and `searched_for`.
+- **Files:**
+  - `gapmap.js` and `gapmap.css` load the first time the tab opens. `data/gapmap.json` (64 KB)
+    loads with them.
+  - `data/gapmap-claims.json` (353 KB) loads on the first cell click or export.
+  - The first view grew by 2.5 KB: the third tab, the heading swap and the no-JS text.
+- **Without JS**, the panel shows the question, the summary, the limitations and a link to
+  `claims-gapmap.html`. That page lists every finding with its quotes and every gap, with
+  `data-q3-finding-id` and `data-q3-gap-id`. `check_site.py` now checks those against the Q3 JSON
+  (direction, certainty, studies, claims, density), and every Q3 claim id and quote.
+
+**Certainty colours.** The fills are four tints of electric indigo (`#6F00FF`): the
+lightest tint is very low and full indigo is high. In dark mode, dim indigo is very low and
+bright indigo is high. The tokens are `--t1` to `--t4` in `style.css`, with `--t1-fg` to
+`--t4-fg` for the text on them, and the `.t-*` classes set them on an element. Every text pair
+passes AA in both themes (lowest: 6.0 to 1).
+
 ## Changes in v6
 
 Six requests drove this version. Four agents did the work in parallel, each in its own git

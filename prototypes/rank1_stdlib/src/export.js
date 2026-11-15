@@ -88,13 +88,16 @@ function xe(s) {
 }
 function col(i) { var s = ''; for (i++; i; i = (i - 1) / 26 | 0) s = String.fromCharCode(65 + (i - 1) % 26) + s; return s; }
 // One worksheet: bold frozen header row, inline strings, numeric and boolean cells, widths from the content.
+// A cell can also be {v: value, s: style index}: the index of a fill style from book(sheets, fills).
 function sheet(rows) {
   var w = rows[0].map(function () { return 8; }), x = '';
   rows.forEach(function (r, j) {
     x += '<row r="' + (j + 1) + '">';
     r.forEach(function (v, i) {
+      var s = j ? '' : ' s="1"';
+      if (v && typeof v === 'object') { if (v.s) s = ' s="' + v.s + '"'; v = v.v; }
       if (v == null || v === '') return;
-      var a = '<c r="' + col(i) + (j + 1) + '"' + (j ? '' : ' s="1"');
+      var a = '<c r="' + col(i) + (j + 1) + '"' + s;
       if (typeof v === 'number' && isFinite(v)) x += a + '><v>' + v + '</v></c>';
       else if (typeof v === 'boolean') x += a + ' t="b"><v>' + (v ? 1 : 0) + '</v></c>';
       else x += a + ' t="inlineStr"><is><t xml:space="preserve">' + xe(String(v).slice(0, 32767)) + '</t></is></c>';
@@ -107,8 +110,15 @@ function sheet(rows) {
     w.map(function (n, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + n + '" customWidth="1"/>'; }).join('') +
     '</cols><sheetData>' + x + '</sheetData></worksheet>';
 }
-function book(sheets) {
+// fills (optional): [[fill RGB, font RGB], ...] as 6-digit hex. Fill i is cell style 2 + i.
+function book(sheets, fills) {
   var ws = '', wr = '', ct = '', f = [];
+  fills = fills || [];
+  var fo = fills.map(function (c) { return '<font><color rgb="FF' + c[1] + '"/><sz val="11"/><name val="Calibri"/></font>'; }).join('');
+  var fi = fills.map(function (c) { return '<fill><patternFill patternType="solid"><fgColor rgb="FF' + c[0] + '"/><bgColor indexed="64"/></patternFill></fill>'; }).join('');
+  var xf = fills.map(function (c, i) {
+    return '<xf numFmtId="0" fontId="' + (2 + i) + '" fillId="' + (2 + i) + '" borderId="0" xfId="0" applyFont="1" applyFill="1"/>';
+  }).join('');
   sheets.forEach(function (s, i) {
     var n = i + 1;
     ws += '<sheet name="' + xe(s[0]) + '" sheetId="' + n + '" r:id="rId' + n + '"/>';
@@ -125,11 +135,11 @@ function book(sheets) {
     ['_rels/.rels', HDR + R + '<Relationship Id="rId1" Type="' + REL + '/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
     ['xl/workbook.xml', HDR + '<workbook xmlns="' + MAIN + '" xmlns:r="' + REL + '"><bookViews><workbookView/></bookViews><sheets>' + ws + '</sheets></workbook>'],
     ['xl/_rels/workbook.xml.rels', HDR + R + wr + '<Relationship Id="rId' + k + '" Type="' + REL + '/styles" Target="styles.xml"/></Relationships>'],
-    ['xl/styles.xml', HDR + '<styleSheet xmlns="' + MAIN + '"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/>' +
-      '<name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/>' +
-      '</fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" ' +
-      'fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" ' +
-      'fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/>' +
+    ['xl/styles.xml', HDR + '<styleSheet xmlns="' + MAIN + '"><fonts count="' + (2 + fills.length) + '"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/>' +
+      '<name val="Calibri"/></font>' + fo + '</fonts><fills count="' + (2 + fills.length) + '"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/>' +
+      '</fill>' + fi + '</fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" ' +
+      'fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="' + (2 + fills.length) + '"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" ' +
+      'fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' + xf + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/>' +
       '</cellStyles></styleSheet>']
   ].concat(f);
 }
@@ -187,5 +197,6 @@ function run(p, fmt, btn) {
     say(p, btn, 'Saved ' + pl(rows.length, 'row'), 'Downloaded ' + name + ': ' + pl(rows.length, 'row') + (C ? ' and ' + pl(C.length - 1, 'claim') : '') + '.');
   }, function () { say(p, btn, 'Failed', 'Could not load the data file. Nothing was downloaded.'); });
 }
-window.Q1Export = {run: run};
+// The writers are shared with the Q3 gap map (gapmap.js).
+window.Q1Export = {run: run, csv: csv, book: book, zip: zip, save: save, say: say};
 })();

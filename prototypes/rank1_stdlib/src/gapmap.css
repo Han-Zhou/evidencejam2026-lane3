@@ -1,0 +1,89 @@
+/* Q3 gap map (gapmap.js). Loaded with it, the first time the Gap map tab opens.
+   The tier tokens (--t1 to --t4, --tN-fg) and .t-* classes are in style.css. */
+.q3host { margin-top: 6px; }
+.q3sum { margin: 0 0 4px; max-width: 90ch; color: var(--text-2); font-size: .98rem; }
+.q3dense { margin: 0 0 14px; font-size: .9rem; color: var(--text-2); }
+.q3dense summary { cursor: pointer; color: var(--text); font-weight: 500; width: max-content; max-width: 100%; }
+.q3dense ol { margin: 8px 0 0; padding-left: 1.8em; columns: 2 380px; column-gap: 32px; }
+.q3dense li { margin: 2px 0; break-inside: avoid; }
+.q3dense button { font: inherit; color: var(--text); background: none; border: 0; padding: 1px 0; text-align: left; cursor: pointer;
+  text-decoration: underline 1px var(--line-strong); text-underline-offset: 3px; }
+
+/* top row: the legend at the left, the exports at the right */
+.q3top { display: flex; align-items: center; justify-content: space-between; gap: 10px 20px; padding: 10px 16px;
+  border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.q3leg { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: .85rem; color: var(--text-2); }
+.q3top .seg { flex: none; align-self: flex-start; }
+.q3lt { font-weight: 600; color: var(--text); }
+/* The gap entry is a sentence: it wraps (the tier entries do not). */
+.q3leg .ck:last-child { white-space: normal; min-width: 0; }
+.q3leg .ck:last-child .q3gs { flex: none; }
+.q3leg .muted { font-family: var(--mono); font-size: .8rem; }
+.q3gs { display: inline-block; width: 34px; height: 20px; border-radius: 6px; border: 1px dashed var(--text-3);
+  background: repeating-linear-gradient(135deg, transparent 0 4px, var(--line-strong) 4px 5px); }
+.q3top .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* status line: the details are under the map at every width, so "Details below" always shows */
+.q3st { margin: 10px 0; }
+.q3st .tod { display: inline-flex; align-items: center; }
+
+/* the map */
+.q3card { padding: 12px 12px 10px; }
+/* position: relative keeps the hidden "No evidence" labels (.vh, absolute) inside the scroll box,
+   so they cannot widen the page on a phone. */
+.q3box { position: relative; overflow-x: auto; }
+.q3t { --rh: 14rem; --cw: 43px; --sp: 3px; table-layout: fixed; border-collapse: separate; border-spacing: var(--sp);
+  width: calc(var(--rh) + var(--nc, 24) * (var(--cw) + var(--sp)) + var(--sp)); font-size: .8rem; line-height: 1.25; }
+.q3t th { font-weight: 500; color: var(--text-2); }
+.q3t .on { color: var(--text); font-weight: 700; }
+/* top-left block: sort and filter. It stays in view while the map scrolls sideways. */
+.q3t td.q3k { width: var(--rh); position: sticky; left: 0; z-index: 3; vertical-align: bottom; padding: 0 12px 8px 0;
+  background: var(--surface); box-shadow: -24px 0 0 var(--surface); }
+.q3ctl { display: grid; gap: 4px; font-size: .78rem; color: var(--text-2); }
+.q3ax { margin: 6px 0 0; font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.q3ax:first-child { margin-top: 0; }
+.q3ctl > label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.q3ctl select { font: inherit; width: 9.5rem; min-height: 26px; padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 999px;
+  background: var(--raised); color: var(--text); }
+.q3ctl .cb { justify-content: flex-start; margin-top: 2px; }
+.q3pick { position: relative; }
+.q3pick summary { display: flex; align-items: center; justify-content: space-between; min-height: 26px; padding: 2px 10px;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--raised); color: var(--text); cursor: pointer; list-style: none; }
+.q3pick summary::-webkit-details-marker { display: none; }
+.q3pick summary::after { content: "▾"; color: var(--text-3); }
+.q3pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 5; width: 320px; max-height: 340px; overflow: auto; padding: 8px 12px;
+  border: 1px solid var(--line-strong); border-radius: 12px; background: var(--raised); box-shadow: 0 10px 28px rgba(0,0,0,.14); }
+.q3pa { display: flex; gap: 6px; margin-bottom: 6px; }
+.q3pop label { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; font-size: .85rem; color: var(--text); }
+.q3pop input { margin-top: 3px; accent-color: var(--pill); }
+/* column labels read from the bottom up and wrap onto a second line */
+.q3t thead th { width: var(--cw); padding: 0 0 8px; vertical-align: bottom; text-align: center; }
+.q3t thead th span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); max-inline-size: 11.5rem; text-align: start; line-height: 1.15; }
+/* row labels stay in view while the map scrolls sideways */
+.q3t tbody th { position: sticky; left: 0; z-index: 1; padding: 0 12px 0 0; text-align: left; background: var(--surface); box-shadow: -24px 0 0 var(--surface); }
+.q3t tbody td { height: 34px; padding: 0; border-radius: 7px; }
+/* a cell with evidence: fill and dots = certainty tier */
+.q3c { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: 32px; padding: 0;
+  border: 1px solid var(--line); border-radius: 7px; background: var(--tc); color: var(--tf); font: 600 .6rem/1 var(--mono); letter-spacing: .5px; cursor: pointer; }
+.q3c:hover { border-color: var(--text-2); }
+.q3c.off { opacity: .15; pointer-events: none; }
+/* a gap: hatched, dashed border, no fill. It is never drawn like weak evidence. */
+.q3t td.q3g { border: 1px dashed var(--line-strong); background: repeating-linear-gradient(135deg, transparent 0 5px, var(--line) 5px 6px); cursor: pointer; }
+.q3t td.q3g:hover { border-color: var(--text-3); }
+.q3c.pin, .q3t td.q3g.pin { outline: 3px solid var(--focus); outline-offset: 1px; }
+.gact .q3n { margin: 0 auto 0 0; font-size: .8rem; color: var(--text-2); }
+
+/* details: under the map */
+.q3dr { position: static; max-height: none; overflow: visible; margin-top: 18px; }
+.q3lim { margin-top: 18px; font-size: .9rem; color: var(--text-2); }
+.q3lim summary { cursor: pointer; color: var(--text); font-weight: 500; width: max-content; max-width: 100%; }
+.q3lim p, .q3lim ul { max-width: 90ch; }
+
+@media (max-width: 900px) {
+  .q3top { flex-wrap: wrap; }
+}
+@media (max-width: 700px) {
+  .q3t { --rh: 10rem; --cw: 40px; }
+  .q3ctl select { width: 6.5rem; }
+  .q3pop { width: min(300px, 80vw); }
+}

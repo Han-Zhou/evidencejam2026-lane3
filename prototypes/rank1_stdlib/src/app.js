@@ -96,6 +96,11 @@ var tabs = $$('[data-tab]');
 function select(k) {
   cur = k;
   root.classList.toggle('nw', k === 'network');
+  // Q3 gap map: its own module (gapmap.js and gapmap.css), loaded the first time the tab opens.
+  root.classList.toggle('q3', k === 'gapmap');
+  if (k === 'gapmap') need('gapmap', true).then(function () { window.Q3.show(); }, function () {
+    var h = $('.q3host'); if (h) h.innerHTML = '<p>Could not load the gap map. Every finding, gap and quote is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p>';
+  });
   tabs.forEach(function (t) {
     var on = t.getAttribute('data-tab') === k;
     t.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -107,9 +112,10 @@ function setHash(h) {
 }
 function route() {
   var h = decodeURIComponent(location.hash.slice(1));
-  var m = /^(findings|network)(?:\/([a-z]+)\/(.+))?$/.exec(h);
+  var m = /^(findings|network|gapmap)(?:\/([a-z]+)\/(.+))?$/.exec(h);
   if (!m) { if (!h) select(cur); return; }
   select(m[1]);
+  if (!P[m[1]]) return;
   if (m[2]) pin(P[m[1]], m[2] + ':' + m[3], null, 'hash');
   else if (P[m[1]].pin) clear(P[m[1]], false, true);
 }
@@ -740,14 +746,16 @@ function need(name, css) {
 function explore(p, btn) { need('explore', true).then(function () { window.Q1X.open(p, btn); }, function () {}); }
 // Shared with the modules that load later (explore.js, snap.js, export.js).
 window.Q1 = {pin: pin, clear: clear, refresh: refresh, index: index, refOf: refOf, DIR: DIR, CERT: CERT, DORD: DORD, wide: wide,
-  P: P, load: load, related: related, passes: passes, inLens: inLens, kindOf: kindOf, lab: lab, nameOf: nameOf};
+  P: P, load: load, related: related, passes: passes, inLens: inLens, kindOf: kindOf, lab: lab, nameOf: nameOf,
+  // For the Q3 gap map (gapmap.js): module loader and the drawer pieces.
+  need: need, esc: esc, pl: pl, dots: dots, dirH: dirH, certH: certH, sdBar: sdBar, byPaper: byPaper};
 
 $$('[data-panel]').forEach(setup);
 var tl = $('.cards');
 tl.setAttribute('role', 'tablist');
 tl.setAttribute('aria-label', 'Panels');
 tabs.forEach(function (t, i) {
-  var k = t.getAttribute('data-tab'), panel = P[k].el;
+  var k = t.getAttribute('data-tab'), panel = P[k] ? P[k].el : doc.getElementById('panel-' + k);
   t.setAttribute('role', 'tab');
   t.setAttribute('aria-controls', panel.id);
   panel.setAttribute('role', 'tabpanel');
@@ -762,6 +770,8 @@ tabs.forEach(function (t, i) {
 });
 doc.addEventListener('keydown', function (e) {
   var p = P[cur], tag = (doc.activeElement && doc.activeElement.tagName) || '';
+  // The gap map handles its own keys (gapmap.js).
+  if (!p) return;
   if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(tag)) { e.preventDefault(); p.qi.focus(); }
   else if (e.key === 'Escape') {
     if (!p.sres.hidden) p.sres.hidden = true;
@@ -823,6 +833,7 @@ doc.addEventListener('keydown', function (e) {
   // Keyboard focus is never hidden under a top or bottom bar, or under the pinned view bar:
   // scroll by the overlap.
   doc.addEventListener('focusin', function (ev) {
+    if (!P[cur]) return;
     var n = ev.target, e = eff(), el = P[cur].el, tb = $('.toolbar', el), vb = $('.vbar', el), fv = true;
     try { fv = n.matches(':focus-visible'); } catch (x) {}
     if (!tb || tb.contains(n) || (vb && vb.contains(n)) || !fv || root.classList.contains('xvopen')) return;
