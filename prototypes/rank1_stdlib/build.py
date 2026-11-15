@@ -778,12 +778,19 @@ def papers_table(M):
             '<div class="pp-host js-only"></div>' % (M["item_word"][1], page)), len(M["papers"])
 
 
+def lim_boxes(lims):
+    """The limitations as a row of boxes, one per string, word for word. .limw is the CSS
+    container that sets 4, 2 or 1 boxes per row. role="list" keeps the list semantics that
+    Safari drops with list-style: none. gapmap.js makes the same markup for the Q3 map."""
+    return '<div class="limw"><ul class="liml" role="list">%s</ul></div>' % "".join("<li>%s</li>" % esc(l) for l in lims)
+
+
 def limits_html(M):
     """Limitations under the graph: every string of this panel's own file, word for word (v7).
     HTML, not SVG, so it shows without JS and in both Graph and Matrix views."""
     return ('<div class="limh"><h4>Limitations</h4>'
             '<p class="lsrc">From the pack\'s answer file <code>%s</code> (field <code>limitations</code>).</p></div>'
-            '<ul class="liml">%s</ul>') % (esc(M["file"]), "".join("<li>%s</li>" % esc(l) for l in M["src"]["limitations"]))
+            '%s') % (esc(M["file"]), lim_boxes(M["src"]["limitations"]))
 
 
 def panel_html(M, geo):
@@ -858,13 +865,13 @@ def q3_panel_html(M):
     Without JS the panel is a short summary and a link to the claims page (every finding,
     gap and quote)."""
     C = M["src"]
-    lims = "".join("<li>%s</li>" % esc(l) for l in C["limitations"])
+    lims = lim_boxes(C["limitations"])
     return (
         '<section class="panel" id="panel-gapmap" data-q3panel aria-labelledby="h-gapmap">'
         '<div class="phead"><h2 id="h-gapmap">Gap map</h2><p class="nojs"><a href="claims-gapmap.html">Every finding, gap and quote</a></p></div>'
         '<div class="q3nojs"><p class="q">%s</p><p>%s</p>'
         '<p>The gap map needs JavaScript. Every finding, with its direction, certainty, rationale and quotes, and every gap '
-        'is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p><h3>Limitations</h3><ul class="lims">%s</ul></div>'
+        'is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p><h3>Limitations</h3>%s</div>'
         '<div class="q3host js-only" aria-busy="true"><p class="muted">Loading the gap map…</p></div>'
         '</section>'
     ) % (esc(C["question"]), esc(q3_summary(M)), lims)

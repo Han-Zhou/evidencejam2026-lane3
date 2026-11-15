@@ -91,7 +91,7 @@
 .q3dr { position: static; max-height: none; overflow: visible; margin-top: 18px; }
 .q3lim { margin-top: 18px; font-size: .9rem; color: var(--text-2); }
 .q3lim summary { cursor: pointer; color: var(--text); font-weight: 500; width: max-content; max-width: 100%; }
-.q3lim p, .q3lim ul { max-width: 90ch; }
+.q3lim p { max-width: 90ch; }
 
 @media (max-width: 900px) {
   .q3top { flex-wrap: wrap; }

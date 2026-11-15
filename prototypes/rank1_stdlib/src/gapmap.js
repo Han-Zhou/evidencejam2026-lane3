@@ -153,8 +153,9 @@ function skeleton(D) {
     '<div class="gact"><p class="q3n"></p><button type="button" class="tbtn" data-gm="png">Download PNG</button></div></div>' +
     '<section class="drawer q3dr" aria-labelledby="q3drh"><div class="dr-head"><h3 id="q3drh" tabindex="-1">Details</h3>' +
     '<button type="button" class="x" aria-label="Close details">×</button></div><div class="dr-body"><p class="muted">' + EMPTY + '</p></div></section>' +
-    '<details class="q3lim"><summary>Limitations and how this map was built</summary><ul class="lims">' +
-    D.lims.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul><p>' + esc(D.how) + '</p>' +
+    // The limitations as a row of boxes: the same markup as build.py lim_boxes().
+    '<details class="q3lim"><summary>Limitations and how this map was built</summary><div class="limw"><ul class="liml" role="list">' +
+    D.lims.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div><p>' + esc(D.how) + '</p>' +
     '<p>Certainty rule: <code>' + esc(D.rule) + '</code>. Source file: <code>answers/q3_grassland_gaps.json</code>.</p></details>';
 }
 
