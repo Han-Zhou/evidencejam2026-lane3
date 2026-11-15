@@ -37,7 +37,7 @@ Q2 (answers/q2_created_marshes.json; skipped with a note if the file is missing)
   a number for time to reference; no class or id names an "arrival" marker;
   short_answer.time_to_reference_note, the question, every limitation and every
   lagging attribute appear verbatim in index.html;
-- the Created marshes tab shows the pack counts (findings, claims, papers);
+- the Q2 tab (#tab-marshes) exists;
 - a shipped JSON file with the Q2 id equals the answer file.
 
 It also prints the size of every shipped file. Errors about Q2 start with "Q2";
@@ -173,10 +173,6 @@ def json_strings(obj, out):
     elif isinstance(obj, list):
         for v in obj:
             json_strings(v, out)
-
-
-def plural(n, word):
-    return f"{n} {word}" + ("" if n == 1 else "s")
 
 
 def has_class(node, cls):
@@ -495,15 +491,9 @@ def check_q2(Q2, A, B, pages, shipped_json, scripts, errors, warnings):
         if norm(lab) not in lag_text:
             errors.append(f"Q2: lagging attribute {lab!r} not in .q2-lags")
 
-    # The tab shows the pack counts.
-    tab = [n for n in idx.nodes if n["attrs"].get("id") == "tab-marshes"]
-    if not tab:
+    # The tab exists. It shows its name only (the tab counts are switched off).
+    if not any(n["attrs"].get("id") == "tab-marshes" for n in idx.nodes):
         errors.append("Q2: no #tab-marshes tab")
-    else:
-        papers = len({e["document_id"] for e in ev.values()})
-        for want in (plural(len(found), "finding"), plural(len(ev), "claim"), plural(papers, "paper")):
-            if want not in tab[0]["text"]:
-                errors.append(f"Q2: #tab-marshes does not say {want!r} (it says {tab[0]['text']!r})")
 
     # A shipped copy of the answer file is the answer file.
     for rel, obj in shipped_json.items():
