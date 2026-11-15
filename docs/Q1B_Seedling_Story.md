@@ -303,5 +303,3 @@ Example layout:
 | **Seedling type** recorded for each study | Lets users judge how findings apply to the specific seedlings used in their project. |
 
 ---
-
-<sub>Q1 Prototype · Panel B: Network · Data source: `answers/q1_tree_planting_graph.json`</sub>
