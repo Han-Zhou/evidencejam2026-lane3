@@ -11,16 +11,7 @@
   --mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0F151A; --surface: #161D23; --raised: #1D252C;
-    --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.20);
-    --text: #DADCDE; --text-2: #9EA4AA; --text-3: #8A9097;
-    --pill: #F2F2F2; --pill-text: #0F151A; --focus: #DADCDE; --fade: .4;
-    --inc: #48D5A6; --dec: #FF6B76; --mix: #F5A524; --null: #A3A9AF; --unc: #8E949A;
-    color-scheme: dark;
-  }
-}
+/* Light is the default for everyone. Dark only when the reader picks it with the toggle. */
 :root[data-theme="dark"] {
   --bg: #0F151A; --surface: #161D23; --raised: #1D252C;
   --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.20);
