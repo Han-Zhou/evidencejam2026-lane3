@@ -69,6 +69,8 @@ header.top { padding-top: 22px; }
 .hq2, .hq3, html.mr .hq1, html.q3 .hq1 { display: none; }
 html.mr h1 .hq2, html.q3 h1 .hq3 { display: inline; }
 html.mr p.hq2, html.q3 p.hq3 { display: block; }
+/* The header subtitles use the full header width (no 84ch limit), so a short one stays on one line. */
+p.hq1, p.hq2, p.hq3 { max-width: none; }
 footer { padding-top: 28px; padding-bottom: 48px; color: var(--text-3); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 64px; }
 
 /* theme toggle */
