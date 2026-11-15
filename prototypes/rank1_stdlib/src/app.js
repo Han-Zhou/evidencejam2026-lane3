@@ -203,7 +203,7 @@ function nameOf(p, ref) {
 // after the data file loads, and the live region speaks once per selection.
 function status(p, R) {
   var ref = p.pin, h, note = '', D = p.data;
-  if (!ref) return put(p, HINT);
+  if (!ref) return put(p, hint());
   var t = kindOf(ref), g = p.g[ref], a = p.attr[ref], it = D && D.items[ref];
   var w = p.k === 'findings' ? ['finding', 'findings'] : ['edge', 'edges'];
   // A unit (a count and its word, a direction, a grade) never breaks across two lines.
@@ -340,7 +340,7 @@ function drawerHtml(p, ref) {
   }
   return {title: title, html: h};
 }
-function apply(p) { status(p, highlight(p, p.pin)); }
+function apply(p) { status(p, highlight(p, p.pin)); keepFocus(p); }
 // Move focus to the drawer and scroll so it (or the claim to show) starts at the top.
 // On wide screens the stage comes into view, so the graph highlight and the drawer show together.
 function toDrawer(p, target) {
@@ -388,10 +388,46 @@ function clear(p, refocus, fromHash) {
   $('.dr-body', p.drawer).innerHTML = '<p class="muted">' + EMPTY + '</p>';
   if (!fromHash) setHash(p.k);
   if (!refocus) return;
-  var o = p.opener;
-  if (o && o.isConnected && o.getClientRects().length) o.focus();
-  else if (ref && focusable(p, ref)) focusable(p, ref).focus();
+  var o = p.opener, f = ref && focusable(p, ref);
+  if (o && o.isConnected && o.getClientRects().length && shownEl(o)) o.focus();
+  else if (f && shownEl(f)) f.focus();
+  // Variant B: the chip of a cleared edge hides, so its source node takes the focus.
+  else if (ref && srcNode(p, ref)) srcNode(p, ref).focus();
 }
+
+// ---------- variant B: edges hidden until selected ----------
+// With JS the panel graphs show the nodes only (CSS section "variant B"). The pathway of the
+// selected node, or the selected edge, shows in place: it is the .on class of highlight().
+// "Show all edges" (.eab, aria-pressed) sets <html class="ea">: every edge shows, as in v6.
+// One choice for both panels. It is not stored.
+// To remove the variant: delete this block, the calls to hint(), keepFocus(), shownEl() and
+// srcNode() above, the CSS section, and the .eab button and the "Edges:" legend row in build.py.
+// The expanded view (html.xvopen) always shows every edge, so it keeps the v6 hint.
+var HINT_B = 'Click a node to show its edges. Or use “Show all edges”.';
+function hint() { return root.classList.contains('ea') || root.classList.contains('xvopen') ? HINT : HINT_B; }
+function shownEl(n) { return getComputedStyle(n).visibility !== 'hidden'; }
+// The source node of an edge or a gap.
+function srcNode(p, ref) { var g = p.g[ref]; return g ? focusable(p, 'node:' + g.s) : null; }
+// A focused chip that hides (a second click on it, or Clear) gives the focus to its source node,
+// so keyboard focus is never on a hidden element.
+function keepFocus(p) {
+  var a = doc.activeElement, n;
+  if (!a || !p.svg.contains(a) || shownEl(a)) return;
+  n = srcNode(p, refOf(a));
+  if (n) n.focus({preventScroll: true});
+}
+$$('.eab').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var on = !root.classList.contains('ea');
+    root.classList.toggle('ea', on);
+    $$('.eab').forEach(function (x) { x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  });
+});
+// When "ea" or "xvopen" changes on <html>, write the hint again.
+if (window.MutationObserver) new MutationObserver(function () {
+  Object.keys(P).forEach(function (k) { apply(P[k]); });
+}).observe(root, {attributes: true, attributeFilter: ['class']});
+// ---------- end of variant B ----------
 
 // ---------- filters, lens, search ----------
 function passes(p, ref) {
