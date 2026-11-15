@@ -35,31 +35,48 @@
 .q3sw { background: var(--tc); border: 1px solid var(--line); }
 .q3top .seg { display: flex; flex-wrap: wrap; gap: 6px; }
 
-/* status line: the details are under the map at every width, so "Details below" always shows */
+/* sort and filter bar (gapmap.js bar()): the Q1 toolbar box, sticky at the top (style.css .toolbar),
+   with one group per axis, then the density filter and the count. gapmap.js puts its height in --q3tb. */
+.q3bar { gap: 10px 28px; }
+.q3grp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.q3gl { font-size: .72rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
+.q3bar .count { margin: 0; }
+.q3bar + .q3sum { margin-top: 14px; }
+
+/* status line: "Go to details" shows at every width. The map has many tab stops before the details. */
 .q3st { margin: 10px 0; }
 .q3st .tod { display: inline-flex; align-items: center; }
 
+/* stage: the map, and the details column at its right when a cell is selected (gapmap.js drawer()).
+   The column sticks while the page scrolls, and a long drawer scrolls inside it. The map keeps its
+   cell size and scrolls sideways in its box. Below 900 px the details are under the map. */
+.q3stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+.q3stage.open { grid-template-columns: minmax(0, 1fr) 340px; }
+.q3main, .q3dcol { min-width: 0; }
+.q3dcol { position: sticky; top: calc(var(--q3tb, 0px) + 20px); }
+
 /* the map */
 .q3card { padding: 12px 12px 10px; }
+/* .q3cut (gapmap.js edge()): columns are hidden at the right, so the right edge fades. */
+.q3scr { position: relative; }
+.q3scr::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 32px; pointer-events: none; opacity: 0;
+  background: linear-gradient(to right, transparent, var(--surface)); transition: opacity .15s; }
+.q3scr.q3cut::after { opacity: 1; }
 /* position: relative keeps the hidden "No evidence" labels (.vh, absolute) inside the scroll box,
-   so they cannot widen the page on a phone. */
-.q3box { position: relative; overflow-x: auto; }
+   so they cannot widen the page on a phone. The scroll padding keeps a focused cell clear of the
+   sticky row labels and of the fade. */
+.q3box { position: relative; overflow-x: auto; scroll-padding: 0 40px 0 calc(var(--rh, 14rem) + 6px); }
 .q3t { --rh: 14rem; --cw: 43px; --sp: 3px; table-layout: fixed; border-collapse: separate; border-spacing: var(--sp);
   width: calc(var(--rh) + var(--nc, 24) * (var(--cw) + var(--sp)) + var(--sp)); font-size: .8rem; line-height: 1.25; }
 .q3t th { font-weight: 500; color: var(--text-2); }
 .q3t .on { color: var(--text); font-weight: 700; }
-/* top-left block: sort and filter. It stays in view while the map scrolls sideways. */
+/* top-left cell: the names of the two axes. It stays in view while the map scrolls sideways. */
 .q3t td.q3k { width: var(--rh); position: sticky; left: 0; z-index: 3; vertical-align: bottom; padding: 0 12px 8px 0;
   background: var(--surface); box-shadow: -24px 0 0 var(--surface); }
-.q3ctl { display: grid; gap: 4px; font-size: .78rem; color: var(--text-2); }
 .q3ax { margin: 6px 0 0; font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); }
 .q3ax:first-child { margin-top: 0; }
-.q3ctl > label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.q3ctl select { font: inherit; width: 9.5rem; min-height: 26px; padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 999px;
-  background: var(--raised); color: var(--text); }
-.q3ctl .cb { justify-content: flex-start; margin-top: 2px; }
 .q3pick { position: relative; }
-.q3pick summary { display: flex; align-items: center; justify-content: space-between; min-height: 26px; padding: 2px 10px;
+.q3pick summary { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 2px 12px; font-size: .85rem;
   border: 1px solid var(--line-strong); border-radius: 999px; background: var(--raised); color: var(--text); cursor: pointer; list-style: none; }
 .q3pick summary::-webkit-details-marker { display: none; }
 .q3pick summary::after { content: "▾"; color: var(--text-3); }
@@ -85,19 +102,32 @@
 .q3t td.q3g { cursor: pointer; }
 .q3t td.q3g:hover { border-color: var(--text-3); }
 .q3c.pin, .q3t td.q3g.pin { outline: 3px solid var(--focus); outline-offset: 1px; }
-.gact .q3n { margin: 0 auto 0 0; font-size: .8rem; color: var(--text-2); }
 
-/* details: under the map */
-.q3dr { position: static; max-height: none; overflow: visible; margin-top: 18px; }
+/* details: in the sticky column (style.css .drawer gives the box and its own scroll) */
+.q3dr { position: static; max-height: calc(100vh - var(--q3tb, 0px) - 32px); }
 .q3lim { margin-top: 18px; font-size: .9rem; color: var(--text-2); }
 .q3lim summary { cursor: pointer; color: var(--text); font-weight: 500; width: max-content; max-width: 100%; }
 .q3lim p { max-width: 90ch; }
 
+@media (max-width: 1100px) {
+  .q3stage.open { grid-template-columns: minmax(0, 1fr) 300px; }
+}
 @media (max-width: 900px) {
   .q3top { flex-wrap: wrap; }
 }
+/* under the map, full height (style.css (max-width: 899px) gives .drawer its top margin) */
+@media (max-width: 899px) {
+  .q3stage, .q3stage.open { display: block; }
+  .q3dcol { position: static; }
+  .q3dr { max-height: none; overflow: visible; }
+}
 @media (max-width: 700px) {
   .q3t { --rh: 10rem; --cw: 40px; }
-  .q3ctl select { width: 6.5rem; }
+  .q3box { scroll-padding-left: calc(10rem + 6px); }
   .q3pop { width: min(300px, 80vw); }
+  /* phones: the bar wraps and scrolls away with the page (Q1's bar is one row that scrolls sideways,
+     which would clip the lists of rows and columns) */
+  .toolbar.q3bar { position: static; flex-wrap: wrap; overflow: visible; box-shadow: none; }
+  .q3bar > * { flex: 0 1 auto; }
+  .q3bar .count { white-space: normal; }
 }

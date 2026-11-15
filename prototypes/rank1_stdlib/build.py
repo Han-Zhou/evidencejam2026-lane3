@@ -38,6 +38,22 @@ CERT = {"high": (4, "High"), "moderate": (3, "Moderate"), "low": (2, "Low"), "ve
 CERT_ORDER = ["high", "moderate", "low", "very_low"]
 ARROW_TXT = "→"
 
+# Fixed UI copy: the title and plain-language subtitle of each question. The header shows the
+# pair for the open tab. The pack's exact "question" text stays in the Q2 and Q3 section heads
+# (screen readers, no-JS) and on every claims page.
+HEAD = {
+    "q1": ("Tree Planting: How Seedlings Survive and Grow",
+           "How planting-stock traits (seedling size, nursery fertilization, mycorrhizal inoculation) "
+           "affect survival and growth, and how it is changed by competing vegetation and site "
+           "preparation in the Canadian forest restoration context."),
+    "q2": ("Created Marshes: Time to Functional Biodiversity",
+           "How long created marshes take to reach biodiversity and functionality when compared to "
+           "natural wetlands, and which attributes lag behind."),
+    "q3": ("Grassland Restoration: Combined Interventions",
+           "Which intervention-outcome combinations have little evidence, which have no evidence, "
+           "and which have the most evidence."),
+}
+
 # Fixed UI copy for lane titles. Subtitles are the node_kinds text, verbatim.
 KIND_TITLE = {
     "planting_stock": "Planting stock",
@@ -868,13 +884,13 @@ def q3_panel_html(M):
     lims = lim_boxes(C["limitations"])
     return (
         '<section class="panel" id="panel-gapmap" data-q3panel aria-labelledby="h-gapmap">'
-        '<div class="phead"><h2 id="h-gapmap">Gap map</h2><p class="nojs"><a href="claims-gapmap.html">Every finding, gap and quote</a></p></div>'
+        '<div class="phead"><h2 id="h-gapmap">%s</h2><p class="nojs"><a href="claims-gapmap.html">Every finding, gap and quote</a></p></div>'
         '<div class="q3nojs"><p class="q">%s</p><p>%s</p>'
         '<p>The gap map needs JavaScript. Every finding, with its direction, certainty, rationale and quotes, and every gap '
         'is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p><h3>Limitations</h3>%s</div>'
         '<div class="q3host js-only" aria-busy="true"><p class="muted">Loading the gap map…</p></div>'
         '</section>'
-    ) % (esc(C["question"]), esc(q3_summary(M)), lims)
+    ) % (esc(HEAD["q3"][0]), esc(C["question"]), esc(q3_summary(M)), lims)
 
 
 def index_html(MA, MB, ga, gb, M3, Q=None):
@@ -906,11 +922,12 @@ def index_html(MA, MB, ga, gb, M3, Q=None):
         plural(len(M3["findings"]), "finding", "findings"), plural(len(M3["gaps"]), "gap", "gaps"),
         plural(len(M3["evidence"]), "claim", "claims"))
     q3 = '+(/^#(panel-)?gapmap/.test(location.hash)?" q3":"")'
-    # The heading and the question follow the open tab: Q1 for Findings and Network, Q3 for the gap map.
-    # (On the Q2 tab the question hides; see "html.js.mr .top .q" in style.css.)
-    head = ('<h1><span class="hq1">Tree planting in Canadian forest restoration</span>'
-            '<span class="hq3">Grassland restoration in Canada</span></h1>%s</div>'
-            '<p class="q hq1">%s</p><p class="q hq3">%s</p>') % (THEME_BTN, esc(A["question"]), esc(M3["src"]["question"]))
+    # The title and subtitle follow the open tab: Q1 for Findings and Network, Q2 for Created
+    # marshes, Q3 for the gap map (the classes mr and q3 on <html>; see ".hq1" in style.css).
+    qs = ("q1", "q2", "q3") if Q is not None else ("q1", "q3")
+    head = ('<h1>%s</h1>%s</div>%s') % (
+        "".join('<span class="h%s">%s</span>' % (k, esc(HEAD[k][0])) for k in qs), THEME_BTN,
+        "".join('<p class="q h%s">%s</p>' % (k, esc(HEAD[k][1])) for k in qs))
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -944,17 +961,40 @@ def claim_li(cid, ev):
         esc(cid), esc(ev["quote"]))
 
 
+def grade_rank(g):
+    return CERT_ORDER.index(g) if g in CERT_ORDER else len(CERT_ORDER)
+
+
 def by_paper(ids, evidence):
+    """Claims grouped by paper, ranked by claim grade (each claim's certainty_grade, unchanged):
+    the most claims at the highest grade first, then at the next grade, and so on. In a paper,
+    the claims go from the highest grade down. A tie keeps the order of the ids.
+    The same order as rankPapers() in src/app.js, so the drawer and the claims pages agree."""
     groups = defaultdict(list)
     order = []
-    for cid in ids:
+    pos = {}
+    for i, cid in enumerate(ids):
+        pos.setdefault(cid, i)
         d = evidence[cid]["document_id"]
         if d not in groups:
             order.append(d)
         groups[d].append(cid)
     first = {d: i for i, d in enumerate(order)}
-    order.sort(key=lambda d: (-len(groups[d]), first[d]))
+    for d in order:
+        groups[d].sort(key=lambda c: (grade_rank(evidence[c]["certainty_grade"]), pos[c]))
+    counts = {d: Counter(evidence[c]["certainty_grade"] for c in groups[d]) for d in order}
+    order.sort(key=lambda d: (tuple(-counts[d][g] for g in CERT_ORDER), first[d]))
     return [(d, groups[d]) for d in order]
+
+
+def grades_html(cids, evidence):
+    """The paper's grades: "Moderate", or "Moderate (3), Low (1)". The dots show the highest grade."""
+    n = Counter(evidence[c]["certainty_grade"] for c in cids)
+    ks = [g for g in CERT_ORDER if n[g]]
+    if not ks:
+        return ""
+    words = ", ".join(CERT[g][1] + (" (%d)" % n[g] if len(ks) > 1 else "") for g in ks)
+    return '<span class="dots" aria-hidden="true">%s</span> %s · ' % (dots_txt(ks[0]), esc(words))
 
 
 def claims_page(M):
@@ -972,8 +1012,8 @@ def claims_page(M):
             parts.append('<p class="rat">Direction means: %s</p>' % esc(it["dm"]))
         for d, cids in by_paper(it["ids"], ev):
             title, year, doi = M["papers"][d]
-            parts.append('<section class="paper"><h3>%s</h3><p class="pm">%s · %s</p><ol class="claims">%s</ol></section>' % (
-                paper_line(title, year), doi_html(d, doi), plural(len(cids), "claim", "claims"),
+            parts.append('<section class="paper"><h3>%s</h3><p class="pm">%s%s · %s</p><ol class="claims">%s</ol></section>' % (
+                paper_line(title, year), grades_html(cids, ev), doi_html(d, doi), plural(len(cids), "claim", "claims"),
                 "".join(claim_li(c, ev[c]) for c in cids)))
         parts.append("</section>")
         body.append("".join(parts))
@@ -1020,7 +1060,7 @@ def claims_page(M):
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>%s · Q1</title><meta name="description" content="Every claim and source quote behind the Q1 %s, grouped by %s and paper.">'
         '<script>%s</script><link rel="stylesheet" href="style.css"></head><body class="cp"><a class="skip" href="#main">Skip to content</a>'
-        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#%s">← Back to the Q1 site</a></p></div><h1>%s</h1><p class="q">%s</p>'
+        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#%s">← Back to the Q1 site</a></p></div><h1>%s</h1><p class="q">%s</p><p>The papers in each section are ranked by claim grade, highest first.</p>'
         '<nav aria-label="Contents"><ol class="toc">%s<li><a href="#papers">Papers</a></li></ol></nav></header>'
         '<main id="main">%s</main><footer><p>From <code>answers/%s</code>.</p></footer></body></html>\n'
     ) % (title, M["name"].lower(), M["item_word"][0], THEME_JS, key, title, esc(src["question"]), "".join(toc), "".join(body), esc(M["file"]))
@@ -1097,8 +1137,8 @@ def q3_claims_page(M):
                     esc(DENSITY.get(f["density"], f["density"])), esc(f["certainty_rationale"])))
             for d, cids in by_paper(f["edge_ids"], ev):
                 title, year, doi = M["papers"][d]
-                parts.append('<h4>%s</h4><p class="pm">%s · %s</p><ol class="claims">%s</ol>' % (
-                    paper_line(title, year), doi_html(d, doi), plural(len(cids), "claim", "claims"),
+                parts.append('<h4>%s</h4><p class="pm">%s%s · %s</p><ol class="claims">%s</ol>' % (
+                    paper_line(title, year), grades_html(cids, ev), doi_html(d, doi), plural(len(cids), "claim", "claims"),
                     "".join(re.sub(r'^<li id="[^"]*">', "<li>", claim_li(c, ev[c])) for c in cids)))
             parts.append("</section>")
         if gs:
@@ -1114,7 +1154,7 @@ def q3_claims_page(M):
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>%s · Q3</title><meta name="description" content="Every finding, gap, claim and source quote behind the Q3 grassland gap map.">'
         '<script>%s</script><link rel="stylesheet" href="style.css"></head><body class="cp"><a class="skip" href="#main">Skip to content</a>'
-        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#gapmap">← Back to the gap map</a></p></div><h1>%s</h1><p class="q">%s</p>'
+        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#gapmap">← Back to the gap map</a></p></div><h1>%s</h1><p class="q">%s</p><p>The papers in each section are ranked by claim grade, highest first.</p>'
         '<p>%s</p><nav aria-label="Interventions"><ol class="toc">%s</ol></nav></header>'
         '<main id="main">%s</main><footer><p>From <code>answers/q3_grassland_gaps.json</code>. Certainty rule <code>%s</code>.</p></footer></body></html>\n'
     ) % (title, THEME_JS, title, esc(C["question"]), esc(q3_summary(M)), "".join(toc), "".join(body), esc(C["rule"]))
@@ -1172,7 +1212,7 @@ Q2SLOT = {"below_reference": "left", "decrease": "left", "above_reference": "rig
 Q2KIND = {"ref": ("q2-k-ref", "Vs reference"), "age": ("q2-k-age", "With age")}
 Q2SCALE = {"ref": ("Below", "Same", "Above"), "age": ("Down", "None", "Up")}
 Q2_AGE = re.compile(r"(\d+)\s*(?:-\s*(\d+))?")
-Q2_TITLE = "Created marshes: how long to match nature?"
+Q2_TITLE = HEAD["q2"][0]
 Q2_DRAWER_EMPTY = "Select a finding or a gap. Its claims and quotes show here."
 
 
@@ -1253,7 +1293,50 @@ def q2_filters(Q):
             '<p class="q2-count" role="status" aria-live="polite"></p></div>') % (attrs, certs)
 
 
+def q2_has_when(f, kind):
+    """A row gets a "When was it measured?" dropdown when it lists ages, or when it is a with-age finding."""
+    return kind == "age" or bool(f["time_points"])
+
+
+def q2_bins(Q):
+    """5-year spans of the age axis, each with the number of findings that have a measurement in it.
+    A range counts in a span that it overlaps; a single age counts in the span that holds it."""
+    ymax, out = q2_ymax(Q), []
+    for lo in range(0, ymax, 5):
+        hi = lo + 5
+
+        def hit(a, b):
+            return (a < hi and b > lo) if a < b else (lo <= a < hi or (hi == ymax and a == hi))
+        n = sum(1 for f, _ in q2_all(Q) if any(hit(a, b) for a, b in q2_ages(f["time_points"])))
+        out.append((lo, hi, n))
+    return out
+
+
+def q2_coverage(Q):
+    """Evidence coverage bar: findings measured in each 5-year span since creation. A span with
+    no finding is drawn as a gap (hatched, "0"), not as a light shade. Static: all findings."""
+    ymax, bins = q2_ymax(Q), q2_bins(Q)
+    top = max([n for _, _, n in bins] or [0])
+    cells = []
+    for lo, hi, n in bins:
+        tier = 0 if n == 0 else -(-4 * n // top)  # 1 to 4: a quarter of the busiest span each
+        cells.append('<li class="q2-cb q2-cb%d"><span class="vh">%d to %d years: </span><b>%d</b><span class="vh"> %s</span></li>' % (
+            tier, lo, hi, n, "findings" if n != 1 else "finding"))
+    ticks = "".join('<span style="left:%s">%d</span>' % (q2_pct(y, ymax), y) for y in range(0, ymax + 1, 5))
+    with_ages = sum(1 for f, _ in q2_all(Q) if q2_ages(f["time_points"]))
+    return (
+        '<section class="q2-cov" aria-labelledby="q2-covh"><h3 id="q2-covh">Evidence coverage by marsh age</h3>'
+        '<ol class="q2-covbar" aria-labelledby="q2-covh">%s</ol>'
+        '<div class="q2-covx" aria-hidden="true"><div class="q2-ticks">%s</div><span class="q2-tlxl">Years since creation</span></div>'
+        '<p class="q2-note">Each cell counts the findings with a measurement in that 5-year span (%s of %s list ages). '
+        'Darker: more findings. Hatched: no finding, a gap and not a negative result. '
+        'These are measurement ages, not an arrival year: no study in this corpus reports '
+        'the year a created marsh matches the reference.</p></section>'
+    ) % ("".join(cells), ticks, with_ages, plural(len(q2_all(Q)), "finding", "findings"))
+
+
 def q2_board(Q):
+    ymax = q2_ymax(Q)
     out = ['<table class="q2-board"><caption>Created marshes: one row per pooled finding, then the gaps. '
            'Select an attribute to read its claims.</caption><thead><tr><th scope="col">Attribute</th>'
            '<th scope="col">Type</th><th scope="col">Finding</th><th scope="col">Certainty</th></tr></thead><tbody>']
@@ -1261,22 +1344,24 @@ def q2_board(Q):
         d, c, fid, lab = f["direction"], f["certainty"], f["id"], f["outcome"]["label"]
         slot = Q2SLOT[d]
         mark = "" if slot == "none" else '<span class="q2-mk d-%s"></span>' % d
-        ages = ('<span class="q2-sub">Ages: %s</span>' % esc(q2_ages_txt(f))) if f["time_points"] else ""
+        when = q2_has_when(f, kind)
         out.append(
-            '<tr class="q2-row" data-finding-id="%s" data-direction="%s" data-certainty="%s" data-studies="%d" data-claims="%d" '
+            '<tr class="q2-row%s" data-finding-id="%s" data-direction="%s" data-certainty="%s" data-studies="%d" data-claims="%d" '
             'data-kind="%s" data-attr="%s" data-q2-ref="%s">'
-            '<th scope="row"><a class="q2-sel" href="%s#%s" data-q2-ref="%s">%s</a>%s<span class="q2-sub">%s · %s</span>%s</th>'
+            '<th scope="row"><a class="q2-sel" href="%s#%s" data-q2-ref="%s">%s</a>%s<span class="q2-sub">%s · %s</span></th>'
             '<td><span class="q2-kind %s">%s</span></td>'
             '<td><div class="q2-meter q2-m-%s" aria-hidden="true">%s</div>'
             '<span class="q2-scale" aria-hidden="true"><span>%s</span> <span>%s</span> <span>%s</span></span>'
             '<span class="q2-dir d-%s"><span class="gl" aria-hidden="true">%s</span> %s</span></td>'
             '<td>%s<p class="q2-rat">%s</p></td></tr>' % (
-                esc(fid), esc(d), esc(c), f["studies"], f["claims"], kind, esc(lab), esc(fid),
+                " q2-hasw" if when else "", esc(fid), esc(d), esc(c), f["studies"], f["claims"], kind, esc(lab), esc(fid),
                 Q2_PAGE, "f-" + slug(fid), esc(fid), esc(lab),
                 ' <span class="q2-lagb">lags</span>' if f.get("lags") else "",
-                plural(f["studies"], "study", "studies"), plural(f["claims"], "claim", "claims"), ages,
+                plural(f["studies"], "study", "studies"), plural(f["claims"], "claim", "claims"),
                 Q2KIND[kind][0], Q2KIND[kind][1], slot, mark, *Q2SCALE[kind], esc(d), Q2DIR[d][0], esc(Q2DIR[d][1]),
                 cert_html(c), esc(f["certainty_rationale"])))
+        if when:
+            out.append(q2_when(f, kind, ymax))
     for g in q2_gaps(Q):
         gid, lab = g["id"], g["outcome"]["label"]
         out.append(
@@ -1291,7 +1376,16 @@ def q2_board(Q):
     return "".join(out)
 
 
-def q2_tl_row(f, kind, ymax):
+Q2_WHEN_KEY = {
+    "ref": "Solid marks: the ages at which studies compared the created marsh with the reference.",
+    "age": "Dashed bar: the span of ages in this with-age finding. Solid marks: each age measured.",
+}
+
+
+def q2_when(f, kind, ymax):
+    """The "When was it measured?" dropdown: a full-width row under its finding row, with its own
+    axis. Native <details>, so it opens without JS. The filters hide it with its row (data-attr,
+    data-certainty); the selection marks it with its row (data-q2-ref, no data-finding-id)."""
     d, c, fid = f["direction"], f["certainty"], f["id"]
     ranges = q2_ages(f["time_points"])
     marks = []
@@ -1307,25 +1401,15 @@ def q2_tl_row(f, kind, ymax):
                 d, q2_pct(lo, ymax), q2_pct(hi - lo, ymax)))
     if not f["time_points"]:
         marks.append('<span class="q2-tnone">No ages listed</span>')
-    ages = q2_ages_txt(f) if f["time_points"] else "none listed"
-    return ('<div class="q2-tlr" data-q2-ref="%s" data-kind="%s" data-attr="%s" data-certainty="%s">'
-            '<button type="button" class="q2-sel" data-q2-ref="%s">%s<small>%s · %s · Ages: %s</small></button>'
-            '<div class="q2-track" aria-hidden="true">%s</div></div>') % (
-        esc(fid), kind, esc(f["outcome"]["label"]), esc(c), esc(fid), esc(f["outcome"]["label"]),
-        CERT[c][1], esc(Q2DIR[d][1]), esc(ages), "".join(marks))
-
-
-def q2_timeline(Q):
-    ymax = q2_ymax(Q)
+    ages = ("Ages: " + q2_ages_txt(f)) if f["time_points"] else "No ages listed"
     ticks = "".join('<span style="left:%s">%d</span>' % (q2_pct(y, ymax), y) for y in range(0, ymax + 1, 5))
-    out = ['<div class="q2-tl" style="--q2-step:%s"><div class="q2-tlx" aria-hidden="true"><span class="q2-tlxl">Years since creation</span>'
-           '<div class="q2-ticks">%s</div></div>' % (q2_pct(5, ymax), ticks)]
-    out.append('<div class="q2-tls">Vs reference at these ages</div>')
-    out.extend(q2_tl_row(f, k, ymax) for f, k in q2_sort([(f, "ref") for f in Q["findings"] if f["time_points"]]))
-    out.append('<div class="q2-tls">Change as the marsh ages</div>')
-    out.extend(q2_tl_row(f, k, ymax) for f, k in q2_sort([(f, "age") for f in Q["with_time"]]))
-    out.append("</div>")
-    return "".join(out)
+    return ('<tr class="q2-when" data-q2-ref="%s" data-kind="%s" data-attr="%s" data-certainty="%s"><td colspan="4">'
+            '<details class="q2-wd"><summary>When was it measured? <span class="q2-wa">%s</span></summary>'
+            '<div class="q2-wbox" style="--q2-step:%s"><div class="q2-ticks" aria-hidden="true">%s</div>'
+            '<div class="q2-track" aria-hidden="true">%s</div>'
+            '<p class="q2-wk"><span>Years since creation.</span> %s</p></div></details></td></tr>') % (
+        esc(fid), kind, esc(f["outcome"]["label"]), esc(c), esc(ages), q2_pct(5, ymax), ticks, "".join(marks),
+        esc(Q2_WHEN_KEY[kind]) if f["time_points"] else "This finding does not list the ages of the marshes.")
 
 
 def q2_section(Q):
@@ -1333,19 +1417,17 @@ def q2_section(Q):
         '<section class="q2" id="panel-marshes" aria-labelledby="h-marshes">'
         '<div class="q2-head"><h2 id="h-marshes">%s</h2><p class="q2-q">%s</p>'
         '<p class="nojs"><a href="%s">All claims and quotes</a></p></div>'
-        '%s<div class="q2-layout"><div class="q2-main">%s'
+        '%s%s<div class="q2-layout"><div class="q2-main">%s'
         '<h3>Findings</h3><p class="q2-note">Two kinds of rows. <b>Vs reference</b>: a created or restored marsh compared with a '
         'natural reference marsh. <b>With age</b>: how the attribute changes as the created marsh gets older. '
-        'A <b>gap</b> means that no study tested that attribute. A gap is not a negative result.</p>%s'
-        '<h3>When was it measured?</h3><p class="q2-note">The axis shows the years since the marsh was created. The marks show the ages '
-        'at which studies measured each attribute. They are not an arrival year: no study in this corpus reports the year a '
-        'created marsh matches the reference. Solid marks: vs reference at that age. Dashed bar: the span of ages in a with-age finding.</p>%s'
+        'A <b>gap</b> means that no study tested that attribute. A gap is not a negative result. '
+        'Open <b>When was it measured?</b> under a row to see the marsh ages that its studies measured.</p>%s'
         '<div class="q2-foot">%s<details class="q2-built"><summary>How this was built</summary><p>%s</p>'
         '<p>Certainty rule: <code>%s</code>. Source file: <code>answers/%s</code>.</p></details></div></div>'
         '<aside class="q2-dcol js-only"><section class="q2-drawer" aria-labelledby="q2-drh">'
         '<div class="dr-head"><h3 id="q2-drh" tabindex="-1">Details</h3><button type="button" class="q2-x" aria-label="Close details">×</button></div>'
         '<div class="q2-body"><p class="muted">%s</p></div></section></aside></div></section>'
-    ) % (Q2_TITLE, esc(Q["question"]), Q2_PAGE, q2_clock(Q), q2_filters(Q), q2_board(Q), q2_timeline(Q),
+    ) % (esc(Q2_TITLE), esc(Q["question"]), Q2_PAGE, q2_coverage(Q), q2_clock(Q), q2_filters(Q), q2_board(Q),
          limits_html({"file": Q2_FILE, "src": Q}), esc(Q["how_built"]), esc(Q["rule"]), Q2_FILE, Q2_DRAWER_EMPTY)
 
 
@@ -1380,8 +1462,8 @@ def q2_claims_page(Q):
                      ('<p class="rat">Ages: %s</p>' % esc(q2_ages_txt(f))) if f["time_points"] else "")]
         for d, cids in by_paper(f["edge_ids"], ev):
             title, year, doi = papers[d]
-            parts.append('<section class="paper"><h3>%s</h3><p class="pm">%s · %s</p><ol class="claims">%s</ol></section>' % (
-                paper_line(title, year), doi_html(d, doi), plural(len(cids), "claim", "claims"),
+            parts.append('<section class="paper"><h3>%s</h3><p class="pm">%s%s · %s</p><ol class="claims">%s</ol></section>' % (
+                paper_line(title, year), grades_html(cids, ev), doi_html(d, doi), plural(len(cids), "claim", "claims"),
                 "".join(q2_claim_li(c, ev[c]) for c in cids)))
         parts.append("</section>")
         body.append("".join(parts))
@@ -1413,7 +1495,7 @@ def q2_claims_page(Q):
         '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>%s · Q2</title><meta name="description" content="Every claim and source quote behind the Q2 created-marsh findings, grouped by finding and paper.">'
         '<script>%s</script><link rel="stylesheet" href="style.css"></head><body class="cp"><a class="skip" href="#main">Skip to content</a>'
-        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#marshes">← Back to the site</a></p></div><h1>%s</h1><p class="q">%s</p>'
+        '<header class="top"><div class="bar"><p class="eyebrow"><a href="index.html#marshes">← Back to the site</a></p></div><h1>%s</h1><p class="q">%s</p><p>The papers in each section are ranked by claim grade, highest first.</p>'
         '<nav aria-label="Contents"><ol class="toc"><li><a href="#time">Time to reference</a></li>%s'
         '<li><a href="#limitations">Limitations</a></li><li><a href="#papers">Papers</a></li></ol></nav></header>'
         '<main id="main">%s</main><footer><p>From <code>answers/%s</code>.</p></footer></body></html>\n'

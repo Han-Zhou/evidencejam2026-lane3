@@ -64,10 +64,11 @@ header.top { padding-top: 22px; }
 .hrow h1 { margin: 0; }
 .eyebrow { margin: 0; color: var(--text-2); font-size: .85rem; letter-spacing: .02em; }
 .q { max-width: 84ch; font-size: 1.08rem; line-height: 1.6; color: var(--text-2); margin: 8px 0 16px; }
-/* The heading and the question follow the open tab: Q1 (Findings, Network) or Q3 (Gap map). */
-.hq3, html.q3 .hq1 { display: none; }
-html.q3 h1 .hq3 { display: inline; }
-html.q3 p.hq3 { display: block; }
+/* The title and subtitle follow the open tab: Q1 (Findings, Network), Q2 (Created marshes, class mr)
+   or Q3 (Gap map, class q3). Without JS the header shows Q1; the Q2 and Q3 sections show their own. */
+.hq2, .hq3, html.mr .hq1, html.q3 .hq1 { display: none; }
+html.mr h1 .hq2, html.q3 h1 .hq3 { display: inline; }
+html.mr p.hq2, html.q3 p.hq3 { display: block; }
 footer { padding-top: 28px; padding-bottom: 48px; color: var(--text-3); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 64px; }
 
 /* theme toggle */
@@ -91,9 +92,8 @@ html:not(.js) .theme { display: none; }
 html:not(.js) .panel + .panel { margin-top: 56px; border-top: 1px solid var(--line-strong); }
 html.js:not(.nw) #panel-network, html.js.nw #panel-findings { display: none; }
 html.js.q3 #panel-findings, html.js:not(.q3) #panel-gapmap, .js .q3nojs { display: none; }
-/* Q2 tab (class mr on <html>): only the created-marshes section shows, and the Q1 question hides. */
+/* Q2 tab (class mr on <html>): only the created-marshes section shows. */
 html.js.mr #panel-findings, html.js.mr #panel-network, html.js:not(.mr) #panel-marshes { display: none; }
-html.js.mr .top .q { display: none; }
 html:not(.js) .js-only { display: none !important; }
 .phead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 /* With JS the tab names the panel, so its h2 is for screen readers only. */
