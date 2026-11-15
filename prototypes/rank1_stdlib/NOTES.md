@@ -654,3 +654,48 @@ the graph is still there.
   page shows titles verbatim and never parses data as HTML.
 - `python3 -m http.server` sends no compression, so the byte counts above are also the
   transfer sizes.
+
+## Q2 panel
+
+A third tab, "Created marshes", answers Q2 from `../../answers/q2_created_marshes.json`.
+It follows the design of `q2_export/q2_marshes.html`: a "Time to reference" card, filters, one
+findings board, a "When was it measured?" timeline and a details drawer.
+
+What was added:
+
+- `build.py`: new `q2_*` functions. They render the tab, the Q2 section, `claims-marshes.html`
+  and `data/marshes.json`. `index_html()` takes the Q2 file as an optional argument. With no
+  argument its output is the old page.
+- The Q2 section (`#panel-marshes`) is not a `[data-panel]`, so the Q1 code in `app.js` never
+  sets it up. Its rows carry `data-finding-id`, `data-direction`, `data-certainty`,
+  `data-studies` and `data-claims` (or `data-gap-id`) with the pack values.
+- The timeline marks are placed in Python. The axis ends at the largest age in the file,
+  rounded up to 5. There is no "arrival" line: no study reports the year a created marsh
+  matches its reference, and the page says so.
+- `src/app.js`: the tabs loop finds the Q2 section by id, `select()` sets the class `mr` and
+  loads `q2.js`, `route()` accepts `#marshes` and `#marshes/<id>`, and the key and focus
+  handlers stop early on the Q2 tab.
+- `src/style.css`: the `mr` visibility rules, and three tab columns (two on a phone).
+- `src/q2.js` (loaded on the first visit to the tab) and `src/q2.css` (bundled into
+  `style.css`).
+
+Bytes (this build; `q2.js` and `q2.css` can still change):
+
+| File | Bytes | Before Q2 |
+| --- | ---: | ---: |
+| `index.html` | 94,575 | 67,156 |
+| `style.css` (with `q2.css`) | 31,931 | 22,510 |
+| `app.js` | 32,972 | 32,584 |
+| `q2.js` | 9,679 | — |
+| `data/marshes.json` | 34,820 | — |
+| `claims-marshes.html` | 42,209 | — |
+| **Total** | 1,004,271 | |
+| **First view** | **159,478** | **122,250** |
+
+How the Findings and Network outputs stay the same: the Q1 functions are not changed, and the
+Q2 code only calls some of them. A check script compares a new build with the build from
+before Q2. `claims-findings.html`, `claims-network.html`, `data/findings.json`,
+`data/network.json`, `explore.js`, `explore.css`, `snap.js` and `export.js` are byte-identical,
+and so are the `#panel-findings` and `#panel-network` sections of `index.html`. In headless
+Chrome, the Q1 panels after a hash selection give the same DOM as before. Two builds are
+byte-identical.

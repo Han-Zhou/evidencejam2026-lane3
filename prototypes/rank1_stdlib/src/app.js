@@ -96,6 +96,9 @@ var tabs = $$('[data-tab]');
 function select(k) {
   cur = k;
   root.classList.toggle('nw', k === 'network');
+  // Q2 (created marshes): its own section, not a [data-panel]. q2.js loads on first use.
+  root.classList.toggle('mr', k === 'marshes');
+  if (k === 'marshes') need('q2').then(function () { window.Q2.init(); }, function () {});
   tabs.forEach(function (t) {
     var on = t.getAttribute('data-tab') === k;
     t.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -107,6 +110,12 @@ function setHash(h) {
 }
 function route() {
   var h = decodeURIComponent(location.hash.slice(1));
+  var q = /^marshes(?:\/(.+))?$/.exec(h);
+  if (q) {
+    select('marshes');
+    need('q2').then(function () { window.Q2.init(); window.Q2.go(q[1] || null); }, function () {});
+    return;
+  }
   var m = /^(findings|network)(?:\/([a-z]+)\/(.+))?$/.exec(h);
   if (!m) { if (!h) select(cur); return; }
   select(m[1]);
@@ -783,7 +792,7 @@ var tl = $('.cards');
 tl.setAttribute('role', 'tablist');
 tl.setAttribute('aria-label', 'Panels');
 tabs.forEach(function (t, i) {
-  var k = t.getAttribute('data-tab'), panel = P[k].el;
+  var k = t.getAttribute('data-tab'), panel = P[k] ? P[k].el : doc.getElementById('panel-' + k);
   t.setAttribute('role', 'tab');
   t.setAttribute('aria-controls', panel.id);
   panel.setAttribute('role', 'tabpanel');
@@ -798,6 +807,8 @@ tabs.forEach(function (t, i) {
 });
 doc.addEventListener('keydown', function (e) {
   var p = P[cur], tag = (doc.activeElement && doc.activeElement.tagName) || '';
+  // The Q2 tab has no P entry: q2.js handles its own keys.
+  if (!p) return;
   if (e.key === '/' && !/INPUT|SELECT|TEXTAREA/.test(tag)) { e.preventDefault(); p.qi.focus(); }
   else if (e.key === 'Escape') {
     if (!p.sres.hidden) p.sres.hidden = true;
@@ -822,6 +833,7 @@ doc.addEventListener('keydown', function (e) {
   // Keyboard focus is never hidden under the toolbar or under the pinned view bar:
   // scroll by the overlap.
   doc.addEventListener('focusin', function (ev) {
+    if (!P[cur]) return;
     var n = ev.target, el = P[cur].el, tb = $('.toolbar', el), vb = $('.vbar', el), fv = true;
     try { fv = n.matches(':focus-visible'); } catch (x) {}
     if (!tb || tb.contains(n) || (vb && vb.contains(n)) || !fv || root.classList.contains('xvopen')) return;
