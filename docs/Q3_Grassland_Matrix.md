@@ -237,5 +237,3 @@ Ties in any sort break by first-seen order in the JSON, so results are always re
 | **Glossary of terms** | The list of interventions is long, and some industry workers may not be familiar with all of the terminology. A glossary would explain each intervention in plain language, improving understanding of the options and making the heat map accessible to a wider audience. |
 
 ---
-
-<sub>Q3 Prototype · Grassland Research Gaps · Data source: `answers/q3_grassland_gaps.json`</sub>
