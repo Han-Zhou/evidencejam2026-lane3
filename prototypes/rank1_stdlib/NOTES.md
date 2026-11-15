@@ -75,6 +75,22 @@ Back / Next (Done on the last step). The tours do not share steps.
 | Created marshes | `src/tour-marshes.js` | 7 |
 | Gap map | `src/tour-gapmap.js` | 7 |
 
+**Step order.** Findings sets the pattern: first how to read the panel and its findings, then the
+details with the claims and quotes, then the tools, and the limitations last.
+- **Findings:** how to read the graph, the findings, details (claims and quotes), views and the
+  status line, search and filter, export and limitations.
+- **Created marshes** follows the same order:
+  1. The short answer.
+  2. Evidence by marsh age (the coverage bar).
+  3. The findings (one row; its limit gives the gap rule).
+  4. When was it measured? The tour opens the fold-out under a row and closes it again on the
+     next step. A fold-out the reader opened stays open.
+  5. Details: claims and quotes.
+  6. Filter the list.
+  7. Limitations and method.
+- **Gap map:** what the map shows, the colours, rows and columns, sort and filter, select a cell,
+  details (claims and quotes), and the limitations and "How this map was built" (`.q3foot`).
+
 **Files.**
 - `src/tour.js` is the engine. The comment at its top gives the step format: `target` (a
   selector inside the panel, a function, or `null` for a centred card), `title`, `text`, `limit`,
@@ -118,9 +134,9 @@ the tour selects one example and clears it on the next step. It uses the hash (Q
 - The Q2 tour says that time to reference is unknown. Its text has no digits, so `check_site.py`
   stays clean.
 
-**Size.** The first view grew by 1,847 bytes (161,737; before: 159,890): the four buttons, their
-CSS and the loader. On the first click: `tour.js` 10,652, `tour.css` 2,900, and one steps file of
-3,889 to 6,728 bytes.
+**Size.** The tours added 1,847 bytes to the first view: the four buttons, their CSS and the
+loader. On the first click: `tour.js` 10,652, `tour.css` 2,900, and one steps file of 4,055 to
+6,728 bytes.
 
 **How it was built.** One agent wrote the engine and the button. Then four agents worked at the
 same time, one for each panel. Each one edited only its own steps file and tested it in its own
@@ -130,7 +146,7 @@ browser tab.
 - `check_site.py` PASS. Two builds are byte-identical.
 - Browser at 1440 × 900 and 390 × 844, light and dark: every step of every tour lights its part.
 - At 1440 the card covers none of the lit part. The one exception is Gap map step 3: the map
-  fills the screen, and the card covers 8% of it.
+  fills the screen, and the card covers 6% of it.
 - On a phone, a part that is taller than the screen is partly under the docked card (the graph,
   the drawers, the full map).
 - After Done, × or Esc, the hash, scroll, view, edges toggle and selection were as before. No

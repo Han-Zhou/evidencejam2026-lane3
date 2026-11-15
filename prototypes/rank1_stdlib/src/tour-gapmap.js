@@ -1,7 +1,8 @@
 // Tour of the Gap map panel (Q3). The engine and the step format are in tour.js.
-// Steps 5 to 7 need a selected cell. When the reader has none, the tour selects one example
+// Steps 5 and 6 need a selected cell. When the reader has none, the tour selects one example
 // cell (the top shown row, its densest cell) and clears it again on every other step and when
 // the tour closes. A cell that the reader selected stays as it is. Nothing else changes.
+// Step 7 lights the limitations under the map (.q3foot).
 (function () {
 'use strict';
 var own = null; // the cell that the tour selected, or null
@@ -97,35 +98,26 @@ Q1Tour.add('gapmap', {
       before: demo
     },
     {
-      // The top of the details: the pairing, its density, certainty, direction and rationale.
+      // The details from the top (the pairing, density, certainty, direction and rationale) to the
+      // first claim with its quote. The part of it that the details box scrolls away is not lit.
       target: function (p) {
         var d = details(p);
         if (!d || d.whole) return d ? [d.dr] : [];
-        var out = [d.head];
-        for (var i = 0; i < d.body.children.length; i++) {
-          out.push(d.body.children[i]);
-          if (d.body.children[i].matches('.rat')) break;
-        }
-        return out;
+        var li = d.body.querySelector('section.pp .claims > li');
+        return li ? [d.head, li] : [d.dr];
       },
-      title: 'Certainty and rationale',
-      text: 'The details panel shows the certainty grade and the direction of the finding. ' +
-        'The rationale tells you why it has that grade. For a gap, the details show what was searched for.',
+      title: 'Details: claims and quotes',
+      text: 'The details panel shows the certainty grade, the reason for it and the direction. ' +
+        'Then each paper lists its claims, each with the exact quote from the source. For a gap, it shows what was searched for.',
       before: demo
     },
     {
-      // The claims: the heading, then the first paper and its first claim with the quote.
-      target: function (p) {
-        var d = details(p);
-        if (!d || d.whole) return d ? [d.dr] : [];
-        var pp = d.body.querySelector('section.pp');
-        return [d.body.querySelector('h4'), pp && pp.querySelector('h5'), pp && pp.querySelector('.pm'),
-          pp && pp.querySelector('.claims > li')].filter(Boolean);
-      },
-      title: 'Claims and quotes',
-      text: 'Below the grade, each paper shows its title and DOI, then its claims. ' +
-        'Each claim has the exact quote from the source, so you can check the finding.',
-      before: demo
+      // The limitations under the map (a row of boxes) and "How this map was built".
+      target: '.q3foot',
+      title: 'Limitations and method',
+      text: 'These are the limits of the gap map, word for word from the pack. Read them before you use a cell. ' +
+        'Open <b>How this map was built</b> to see how the claims were grouped and graded.',
+      before: undemo
     }
   ]
 });
