@@ -6,6 +6,8 @@
   --text: #1A1A1A; --text-2: #555555; --text-3: #636363;
   --pill: #111111; --pill-text: #FFFFFF; --focus: #1A1A1A; --fade: .3;
   --inc: #0B6E4F; --dec: #C21F33; --mix: #8F5100; --null: #5F6368; --unc: #626262;
+  /* Paper blocks whose claims mostly say increase or decrease: 5% of --inc or --dec over --raised. */
+  --inc-bg: #F3F8F6; --dec-bg: #FCF4F5;
   /* Density tiers of the Q3 gap map: electric indigo (#6F00FF), lightest = thin, full = densest.
      --tN is the fill, --tN-fg a text colour for it (AA: 14.5, 10.1, 6.0, 6.7 to 1). */
   --t1: #F1E6FF; --t2: #D7B8FF; --t3: #B47AFF; --t4: #6F00FF;
@@ -22,6 +24,8 @@
   --text: #DADCDE; --text-2: #9EA4AA; --text-3: #8A9097;
   --pill: #F2F2F2; --pill-text: #0F151A; --focus: #DADCDE; --fade: .4;
   --inc: #48D5A6; --dec: #FF6B76; --mix: #F5A524; --null: #A3A9AF; --unc: #8E949A;
+  /* 3% here, so --text-3 stays at AA (4.5 to 1) on the tint. */
+  --inc-bg: #1E2A30; --dec-bg: #24272E;
   /* Dark density tiers: dim indigo = thin, full electric indigo = densest (white text: 14.8, 12.0, 9.1, 6.7 to 1). */
   --t1: #311465; --t2: #440E95; --t3: #5A07CA; --t4: #6F00FF;
   --t1-fg: #FFFFFF; --t2-fg: #FFFFFF; --t3-fg: #FFFFFF; --t4-fg: #FFFFFF;
@@ -362,6 +366,24 @@ html:not(.js) .vbar { display: none; }
 .sdbar { display: flex; height: 22px; border-radius: 999px; overflow: hidden; gap: 2px; margin: 4px 0; }
 .sdbar span { background: var(--c); color: var(--pill-text); font: 700 .74rem var(--mono); display: flex; align-items: center; justify-content: center; min-width: 26px; }
 .pp { border-top: 1px solid var(--line); margin-top: 14px; }
+/* The majority direction of the block's claims as a faint tint (app.js tint()). Mixed blocks stay plain.
+   The negative margin keeps the text in line with the plain blocks. */
+.pp.t-up, .pp.t-dn { margin-inline: -10px; padding: 1px 10px 2px; border-radius: 0 0 10px 10px; }
+.pp.t-up { background: var(--inc-bg); }
+.pp.t-dn { background: var(--dec-bg); }
+/* A paper as a dropdown of its claims (app.js paperBlock()): one row per paper, the chevron at the right. */
+details.pp { margin-top: 0; }
+details.pp:last-child { border-bottom: 1px solid var(--line); }
+details.pp.t-up, details.pp.t-dn { padding-block: 0; border-radius: 0; }
+details.pp[open] { padding-bottom: 6px; }
+details.pp > summary { display: block; list-style: none; cursor: pointer; position: relative; padding: 10px 26px 10px 0; }
+details.pp > summary::-webkit-details-marker { display: none; }
+details.pp > summary::after { content: ""; position: absolute; right: 6px; top: 15px; width: 7px; height: 7px; border: solid var(--text-3); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); }
+details.pp[open] > summary::after { top: 19px; transform: rotate(-135deg); }
+details.pp > summary h5 { margin: 0 0 .25em; }
+details.pp > summary:hover h5 { text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+details.pp > summary .pm { display: block; }
+details.pp > summary .pm + .pm { margin-top: 2px; }
 .pm { margin: 0; font-size: .8rem; color: var(--text-3); }
 .drawer .pm { color: var(--text-3); }
 ol.claims { list-style: none; padding: 0; margin: 6px 0 0; }

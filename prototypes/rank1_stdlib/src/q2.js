@@ -95,10 +95,9 @@ function byPaper(ids) {
   ids = ids.filter(function (c) { return E[c]; });
   R = Q.rankPapers(ids, function (c) { return E[c].document_id; }, function (c) { return E[c].certainty_grade; });
   return '<h4>Claims by paper (' + pl(R.length, 'paper', 'papers') + ')</h4><p class="pm">' + esc(Q.RANKN) + '</p>' + R.map(function (x) {
-    var C = E[x.ids[0]];
-    return '<section class="pp"><h5>' + esc(C.title) + (C.year != null ? ' (' + esc(C.year) + ')' : '') + '</h5><p class="pm">' +
-      Q.gradesH(x.n, certW) + ' · ' + doiH(x.d, C.doi) + ' · ' + pl(x.ids.length, 'claim', 'claims') +
-      '</p><ol class="claims">' + x.ids.map(function (c) { return claimLi(c, E[c]); }).join('') + '</ol></section>';
+    var C = E[x.ids[0]], ds = x.ids.map(function (c) { return E[c].direction; });
+    return Q.paperBlock({t: esc(C.title) + (C.year != null ? ' (' + esc(C.year) + ')' : ''), g: Q.gradesH(x.n, certW), doi: doiH(x.d, C.doi), ds: ds,
+      dirs: Q.dirTally(ds, DIR, DORD), lis: x.ids.map(function (c) { return claimLi(c, E[c]); }).join(''), open: R.length === 1});
   }).join('');
 }
 function drawerHtml(ref) {

@@ -325,13 +325,35 @@ function gradesH(n, word) {
   }).join(', '));
 }
 var RANKN = 'Ranked by claim grade, highest first.';
+// A faint tint for a block of claims (style.css .t-up, .t-dn): more than half of the claims say
+// increase (Q2: above reference) or decrease (Q2: below reference). Any other block stays plain.
+function tint(ds) {
+  var u = 0, d = 0;
+  ds.forEach(function (x) { if (x === 'increase' || x === 'above_reference') u++; else if (x === 'decrease' || x === 'below_reference') d++; });
+  return u * 2 > ds.length ? ' t-up' : d * 2 > ds.length ? ' t-dn' : '';
+}
+// A block's claim directions as text, in the panel's order: "↑ Increase 3 · = No effect (tested) 1".
+function dirTally(ds, dir, ord) {
+  var n = {};
+  ds.forEach(function (d) { n[d] = (n[d] || 0) + 1; });
+  return ord.filter(function (d) { return n[d]; }).map(function (d) {
+    return '<span class="gl d-' + d + '" aria-hidden="true">' + dir[d][0] + '</span> ' + esc(dir[d][1]) + ' ' + n[d];
+  }).join(' · ');
+}
+// One paper's claims as a dropdown (style.css details.pp). Closed at the start, unless it is the only
+// paper; pin() opens the paper of a claim it shows. The summary keeps the title, grades, claim count
+// and claim directions, so a closed paper still reads. The DOI link is inside: no link in the summary.
+// o: {t: title HTML, g: grades HTML, doi: DOI HTML, ds: claim directions, dirs: their tally HTML, lis: claim items, open}
+function paperBlock(o) {
+  return '<details class="pp' + tint(o.ds) + '"' + (o.open ? ' open' : '') + '><summary><h5>' + o.t + '</h5><span class="pm">' + o.g + ' · ' +
+    pl(o.ds.length, 'claim', 'claims') + '</span><span class="pm">' + o.dirs + '</span></summary><p class="pm">' + o.doi + '</p><ol class="claims">' + o.lis + '</ol></details>';
+}
 function byPaper(p, ids, heading) {
   var D = p.data, R = rankPapers(ids, function (c) { return D.claims[c].doc; }, function (c) { return D.claims[c].g; });
   return '<h4>' + heading + ' (' + pl(R.length, 'paper', 'papers') + ')</h4><p class="pm">' + RANKN + '</p>' + R.map(function (x) {
-    var P_ = D.papers[x.d];
-    return '<section class="pp"><h5>' + paperT(P_) + '</h5><p class="pm">' + gradesH(x.n, function (k) { return CERT[k][1]; }) + ' · ' +
-      doiH(x.d, P_[2]) + ' · ' + pl(x.ids.length, 'claim', 'claims') +
-      '</p><ol class="claims">' + x.ids.map(function (c) { return claimLi(p, c); }).join('') + '</ol></section>';
+    var P_ = D.papers[x.d], ds = x.ids.map(function (c) { return D.claims[c].d; });
+    return paperBlock({t: paperT(P_), g: gradesH(x.n, function (k) { return CERT[k][1]; }), doi: doiH(x.d, P_[2]), ds: ds,
+      dirs: dirTally(ds, DIR, DORD), lis: x.ids.map(function (c) { return claimLi(p, c); }).join(''), open: R.length === 1});
   }).join('');
 }
 function edgeList(p, title, refs, from) {
@@ -352,7 +374,7 @@ function drawerHtml(p, ref) {
       var mine = ids.filter(function (c) { return D.claims[c].doc === id; });
       if (!mine.length) return;
       mine = rankPapers(mine, function () { return id; }, function (c) { return D.claims[c].g; })[0].ids;
-      h += '<section class="pp"><h4>' + go(r, x.ty === 'inter' ? 'Interaction claim' : esc(lab(x))) + '</h4><ol class="claims">' +
+      h += '<section class="pp' + tint(mine.map(function (c) { return D.claims[c].d; })) + '"><h4>' + go(r, x.ty === 'inter' ? 'Interaction claim' : esc(lab(x))) + '</h4><ol class="claims">' +
         mine.map(function (c) { return claimLi(p, c); }).join('') + '</ol></section>';
     });
     return {title: title, html: h};
@@ -409,7 +431,8 @@ function pin(p, ref, opener, how) {
     p.drawer.classList.add('open');
     if (how !== 'hash') setHash(p.k + '/' + ref.replace(':', '/'));
     var target = focusClaim && doc.getElementById('dc-' + p.k + '-' + focusClaim.slice(10));
-    if (target) target.classList.add('flash');
+    // An interaction shows its one claim outside any paper dropdown.
+    if (target) { target.classList.add('flash'); var pd = target.closest('details'); if (pd) pd.open = true; }
     if (wide.matches) p.drawer.scrollTop = 0;
     if (how === 'hash') return;
     // Keep the highlighted graph in view when a node is chosen on a narrow screen:
@@ -824,7 +847,7 @@ window.Q1 = {DIR: DIR, CERT: CERT, DORD: DORD, P: P, load: load, related: relate
   // For the Q3 gap map (gapmap.js): module loader and the drawer pieces.
   need: need, esc: esc, pl: pl, dots: dots, dirH: dirH, certH: certH, sdBar: sdBar, byPaper: byPaper,
   // For the Q2 drawer (q2.js): the same paper ranking.
-  rankPapers: rankPapers, gradesH: gradesH, RANKN: RANKN};
+  rankPapers: rankPapers, gradesH: gradesH, RANKN: RANKN, paperBlock: paperBlock, dirTally: dirTally};
 
 $$('[data-panel]').forEach(setup);
 var tl = $('.cards');
