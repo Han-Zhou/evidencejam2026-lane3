@@ -820,11 +820,11 @@ def limits_html(M):
             '%s') % (esc(M["file"]), lim_boxes(M["src"]["limitations"]))
 
 
-def help_btn(key):
-    """"Want help?" at the top of a panel: it opens a short guided tour of that panel only.
-    tour.js, tour.css and the panel's own steps (src/tour-<key>.js) load on the first click."""
-    return ('<div class="helprow js-only"><button type="button" class="helpbtn" data-tour="%s" '
-            'aria-haspopup="dialog" aria-expanded="false"><span class="hq" aria-hidden="true">?</span>Want help?</button></div>') % key
+# "Want help?" right after the page title: one button for all panels. It opens the guided tour of
+# the open panel only (app.js passes the open tab, because data-tour is empty). tour.js, tour.css
+# and that panel's steps (src/tour-<key>.js) load on the first click.
+HELP_BTN = ('<button type="button" class="helpbtn js-only" data-tour="" aria-haspopup="dialog" aria-expanded="false">'
+            '<span class="hq" aria-hidden="true">?</span>Want help?</button>')
 
 
 def panel_html(M, geo):
@@ -848,7 +848,7 @@ def panel_html(M, geo):
         '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="nojs"><a href="%(page)s">All claims and quotes</a></p></div>'
         # '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="muted">From <code>answers/%(file)s</code></p></div>'
         # '%(glance)s'
-        '%(help)s%(toolbar)s'
+        '%(toolbar)s'
         '<div class="stage"><div class="viz"><h3 id="gh-%(k)s" class="vh-h">Graph of the %(name_l)s</h3>'
         # The view bar is one row: Graph | Matrix, Expand and the status line. It sticks under the toolbar.
         '<div class="vbar"><div class="vtools"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
@@ -885,7 +885,7 @@ def panel_html(M, geo):
     ) % {
         "k": key, "name": M["name"], "name_l": M["name"].lower(), "page": page,
         # "file": M["file"], "glance": glance(M),
-        "help": help_btn(key), "toolbar": toolbar(M), "svg": svg_graph(M, geo), "lims": limits_html(M),
+        "toolbar": toolbar(M), "svg": svg_graph(M, geo), "lims": limits_html(M),
         # "legend": legend(M), "Words": word[1].capitalize(), "n": len(M["items"]), "items": items_table(M),
         # "ng": len(M["gaps"]), "gaps": gaps_table(M), "inter_title": inter_title, "inter": inter,
         # "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0],
@@ -903,13 +903,12 @@ def q3_panel_html(M):
     return (
         '<section class="panel" id="panel-gapmap" data-q3panel aria-labelledby="h-gapmap">'
         '<div class="phead"><h2 id="h-gapmap">%s</h2><p class="nojs"><a href="claims-gapmap.html">Every finding, gap and quote</a></p></div>'
-        '%s'
         '<div class="q3nojs"><p class="q">%s</p><p>%s</p>'
         '<p>The gap map needs JavaScript. Every finding, with its direction, certainty, rationale and quotes, and every gap '
         'is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p><h3>Limitations</h3>%s</div>'
         '<div class="q3host js-only" aria-busy="true"><p class="muted">Loading the gap map…</p></div>'
         '</section>'
-    ) % (esc(HEAD["q3"][0]), help_btn("gapmap"), esc(C["question"]), esc(q3_summary(M)), lims)
+    ) % (esc(HEAD["q3"][0]), esc(C["question"]), esc(q3_summary(M)), lims)
 
 
 def index_html(MA, MB, ga, gb, M3, Q=None):
@@ -929,8 +928,9 @@ def index_html(MA, MB, ga, gb, M3, Q=None):
     # The title and subtitle follow the open tab: Q1 for Findings and Network, Q2 for Created
     # marshes, Q3 for the gap map (the classes mr and q3 on <html>; see ".hq1" in style.css).
     qs = ("q1", "q2", "q3") if Q is not None else ("q1", "q3")
-    head = ('<h1>%s</h1>%s</div>%s') % (
-        "".join('<span class="h%s">%s</span>' % (k, esc(HEAD[k][0])) for k in qs), THEME_BTN,
+    # "Want help?" follows the title text (.htitle), and the theme toggle stays at the right.
+    head = ('<div class="htitle"><h1>%s</h1>%s</div>%s</div>%s') % (
+        "".join('<span class="h%s">%s</span>' % (k, esc(HEAD[k][0])) for k in qs), HELP_BTN, THEME_BTN,
         "".join('<p class="q h%s">%s</p>' % (k, esc(HEAD[k][1])) for k in qs))
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
@@ -1410,7 +1410,7 @@ def q2_when(f, kind, ymax):
 
 def q2_section(Q):
     return (
-        '<section class="q2" id="panel-marshes" aria-labelledby="h-marshes">%s'
+        '<section class="q2" id="panel-marshes" aria-labelledby="h-marshes">'
         '<div class="q2-head"><h2 id="h-marshes">%s</h2><p class="q2-q">%s</p>'
         '<p class="nojs"><a href="%s">All claims and quotes</a></p></div>'
         '%s%s<div class="q2-layout"><div class="q2-main">%s'
@@ -1423,7 +1423,7 @@ def q2_section(Q):
         '<aside class="q2-dcol js-only"><section class="q2-drawer" aria-labelledby="q2-drh">'
         '<div class="dr-head"><h3 id="q2-drh" tabindex="-1">Details</h3><button type="button" class="q2-x" aria-label="Close details">×</button></div>'
         '<div class="q2-body"><p class="muted">%s</p></div></section></aside></div></section>'
-    ) % (help_btn("marshes"), esc(Q2_TITLE), esc(Q["question"]), Q2_PAGE, q2_coverage(Q), q2_clock(Q), q2_filters(Q), q2_board(Q),
+    ) % (esc(Q2_TITLE), esc(Q["question"]), Q2_PAGE, q2_coverage(Q), q2_clock(Q), q2_filters(Q), q2_board(Q),
          limits_html({"file": Q2_FILE, "src": Q}), esc(Q["how_built"]), esc(Q["rule"]), Q2_FILE, Q2_DRAWER_EMPTY)
 
 

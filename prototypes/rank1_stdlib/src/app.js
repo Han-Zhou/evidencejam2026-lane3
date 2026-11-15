@@ -841,11 +841,12 @@ function need(name, css) {
   return loaded[name];
 }
 // ---------- panel tours (tour.js) ----------
-// "Want help?" at the top of each panel opens a guided tour of that panel only. tour.js and
-// tour.css (the engine) and the panel's own steps (tour-<panel>.js) load on the first click.
+// "Want help?" next to the page title opens a guided tour of the open panel only (cur, when the
+// button's data-tour is empty). tour.js and tour.css (the engine) and that panel's own steps
+// (tour-<panel>.js) load on the first click.
 $$('[data-tour]').forEach(function (b) {
-  var k = b.getAttribute('data-tour');
   b.addEventListener('click', function () {
+    var k = b.getAttribute('data-tour') || cur;
     b.setAttribute('aria-busy', 'true');
     need('tour', true).then(function () { return need('tour-' + k); }).then(function () {
       b.removeAttribute('aria-busy'); window.Q1Tour.start(k, b);

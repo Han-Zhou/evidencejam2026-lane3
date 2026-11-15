@@ -1,4 +1,4 @@
-// Panel tours. "Want help?" at the top of a panel opens a short guided tour of that panel.
+// Panel tours. "Want help?" next to the page title opens a short guided tour of the open panel.
 // Each step dims the page and leaves one part lit, with a small card of text beside it.
 // This file is the engine only. The steps of each panel are in tour-<panel>.js, which calls
 // Q1Tour.add(). app.js loads this file, tour.css and the open panel's steps file on the first
@@ -6,7 +6,8 @@
 //
 // A tour definition:
 //   Q1Tour.add('findings', {
-//     title: 'Findings',              // shown on the card: "Findings · Step 2 of 6"
+//     title: 'Findings',              // fallback name on the card; the panel's tab name wins:
+//                                     // "Seedling findings · Step 2 of 6"
 //     start: function (panel) {},     // optional: runs when the tour opens
 //     end: function (panel) {},       // optional: runs when the tour closes (put the panel back)
 //     steps: [{
@@ -202,7 +203,7 @@ function show(i) {
   var step = def.steps[i], c = S.card;
   run(step.before, S.panel);
   var paras = [].concat(step.text || []).map(function (t) { return '<p>' + t + '</p>'; }).join('');
-  S.num.textContent = (def.title ? def.title + ' · ' : '') + 'Step ' + (i + 1) + ' of ' + n;
+  S.num.textContent = (S.name ? S.name + ' · ' : '') + 'Step ' + (i + 1) + ' of ' + n;
   S.h.innerHTML = step.title || '';
   S.body.innerHTML = paras + (step.limit ? '<p class="tour-lim"><b>Limit:</b> ' + step.limit + '</p>' : '');
   S.prog.innerHTML = def.steps.map(function (s, j) { return '<i' + (j === i ? ' class="on"' : j < i ? ' class="past"' : '') + '></i>'; }).join('');
@@ -269,6 +270,10 @@ function start(key, btn) {
     num: card.querySelector('.tour-n'), h: card.querySelector('#tour-h'), body: card.querySelector('.tour-b'),
     prog: card.querySelector('.tour-prog'), back: card.querySelector('.tour-back'), next: card.querySelector('.tour-next'),
     live: card.querySelector('[aria-live]'), inert: [], sx: scrollX, sy: scrollY};
+  // The card names the panel as its tab does ("Seedling findings · Step 2 of 6"); def.title is the
+  // fallback when there is no tab.
+  var tab = doc.getElementById('tab-' + key);
+  S.name = (tab && tab.textContent.replace(/\s+/g, ' ').trim()) || def.title || '';
   // Everything else on the page is inert while the tour is open: no clicks, no focus, no screen reader.
   Array.prototype.forEach.call(doc.body.children, function (c) {
     if (c.tagName === 'SCRIPT' || c.inert || c.hasAttribute('inert')) return;

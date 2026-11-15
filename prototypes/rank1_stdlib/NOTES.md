@@ -63,10 +63,11 @@ The expanded view itself (27,636 bytes) loads only when a reader opens it.
 
 ## Panel tours ("Want help?")
 
-Each of the four panels has a **Want help?** button at the top right. It opens a short guided
-tour of that panel only. Each step dims the page, lights one part, and shows a small card beside
-it: the step number, a title, one to three short sentences, sometimes a "Limit:" line, and
-Back / Next (Done on the last step). The tours do not share steps.
+One **Want help?** button sits right after the page title. The title changes with the open tab,
+and the button opens a short guided tour of the open panel only. Each step dims the page, lights
+one part, and shows a small card beside it: the panel's tab name and the step number, a title,
+one to three short sentences, sometimes a "Limit:" line, and Back / Next (Done on the last step).
+The tours do not share steps.
 
 | Panel | Steps file | Steps |
 | --- | --- | ---: |
@@ -97,10 +98,15 @@ details with the claims and quotes, then the tools, and the limitations last.
   `place`, `pad`, `before` / `after`, and the tour-level `start` / `end`.
 - `src/tour.css` holds the veil, the lit box and the card. It uses the page tokens, so the card
   follows the theme.
-- `help_btn()` in `build.py` writes the button (`.helprow`, `button.helpbtn[data-tour]`, js-only)
-  at the top of each panel. `TOUR_PANELS` lists the four steps files that `build.py` ships.
-- `app.js` (block "panel tours") loads `tour.js`, `tour.css` and the open panel's steps file with
-  `need()` on the first click. Nothing loads on the first view.
+- `HELP_BTN` in `build.py` is the button (`button.helpbtn[data-tour=""]`, js-only). `index_html()`
+  puts it after the `<h1>` in `.htitle`. The h1 is inline there, so the button follows the last
+  word of the title at every width; it goes to the next line only when that line is full.
+  `TOUR_PANELS` lists the four steps files that `build.py` ships.
+- `app.js` (block "panel tours"): an empty `data-tour` means the open tab (`cur`). On the first
+  click it loads `tour.js`, `tour.css` and that panel's steps file with `need()`. Nothing loads on
+  the first view.
+- The card takes the panel name from its tab (`#tab-<key>`), so it follows a tab rename. The
+  `title` in each steps file is only the fallback.
 
 **How it works.**
 - **Lit part:** a fixed `.tour-hole` with a very wide shadow is the dark veil. A transparent
@@ -136,8 +142,8 @@ light a claim and its quote, and closes it again. A paper that was open already 
 - The Q2 tour says that time to reference is unknown. Its text has no digits, so `check_site.py`
   stays clean.
 
-**Size.** The tours added 1,847 bytes to the first view: the four buttons, their CSS and the
-loader. On the first click: `tour.js` 10,652, `tour.css` 2,900, and one steps file of 4,055 to
+**Size.** The tours add about 1.4 KB to the first view: the one button, its CSS and the loader
+(one button is 461 bytes less than the four panel buttons before it). On the first click: `tour.js` 10,652, `tour.css` 2,900, and one steps file of 4,055 to
 6,728 bytes.
 
 **How it was built.** One agent wrote the engine and the button. Then four agents worked at the

@@ -102,8 +102,12 @@ html.js.q3 #panel-findings, html.js:not(.q3) #panel-gapmap, .js .q3nojs { displa
 /* Q2 tab (class mr on <html>): only the created-marshes section shows. */
 html.js.mr #panel-findings, html.js.mr #panel-network, html.js:not(.mr) #panel-marshes { display: none; }
 html:not(.js) .js-only { display: none !important; }
-/* "Want help?" (panel tours, tour.js): one short row at the top of each panel. */
-.helprow { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+/* "Want help?" (panel tours, tour.js): one button right after the page title, for the open panel. */
+/* The title is inline, so the button follows its last word at every width, and it wraps to the
+   next line only when that line is full. .htitle has the h1 size, so "middle" is the middle of the title. */
+.htitle { flex: 1 1 auto; min-width: 0; font-size: clamp(2rem, 4.6vw, 2.5rem); line-height: 1.2; }
+.htitle h1 { display: inline; }
+.htitle .helpbtn { margin-left: 14px; vertical-align: middle; white-space: nowrap; }
 .helpbtn { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: .85rem; min-height: 32px; padding: 4px 14px 4px 5px;
   border: 1px solid var(--line-strong); border-radius: 999px; background: var(--raised); color: var(--text); cursor: pointer; }
 .helpbtn:hover { border-color: var(--text-3); }
