@@ -1,3 +1,12 @@
+# Instructions
+
+To see our prototype, run:
+```bash
+cd prototypes/rank1_stdlib
+./build.sh                                        # builds the site into site/
+python3 -m http.server 8102 --directory site      # serves it on port 8102
+```
+
 # Questions
 
 - LLM summaries for sections?
