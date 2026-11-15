@@ -65,7 +65,7 @@ function model(p) {
     var ref = Q.refOf(g), a = p.attr[ref] || {}, s = by[g.getAttribute('data-s')], t = by[g.getAttribute('data-t')] || null;
     var chip = (p.refs[ref] || []).filter(function (x) { return x.closest('svg') === p.svg && x.hasAttribute('tabindex'); })[0];
     var e = {ref: ref, s: s, t: t, te: g.getAttribute('data-te'), gap: !!a.gap, dir: a.dir, cert: a.cert,
-      sw: +$('.p', g).getAttribute('stroke-width') || 1.5, aria: chip ? chip.getAttribute('aria-label') : ref, u: 0.5};
+      aria: chip ? chip.getAttribute('aria-label') : ref, u: 0.5};
     s.deg++;
     if (t) { t.deg++; L.push({a: s, b: t, len: e.gap ? 280 : 240, str: 0.15}); }
     E.push(e); byRef[ref] = e;
@@ -117,7 +117,7 @@ function render(X) {
     var d = e.gap ? ' gap' : ' d-' + e.dir + (e.te ? ' mod' : '');
     e.g = sv('g', {'class': 'xe' + d, 'data-ref': e.ref}, gl);
     e.hit = sv('line', {'class': 'hit'}, e.g);
-    e.ln = sv('line', {'class': 'p', 'stroke-width': e.sw}, e.g);
+    e.ln = sv('line', {'class': 'p'}, e.g);
     if (!e.gap && !e.te) e.ah = sv('path', {'class': 'ah'}, e.g);
     if (e.te) e.dia = sv('path', {'class': 'dia d-' + e.dir, 'data-ref': e.ref}, gd);
     e.c = sv('g', {'class': 'xch' + d, 'data-ref': e.ref, tabindex: 0, role: 'button', 'aria-label': e.aria}, gc);
@@ -185,7 +185,7 @@ function draw(X) {
     var a = e.s, b = e.t, dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / d, uy = dy / d;
     var rb = b.r + (b.kind === 'outcome' ? 6 : 3);
     e.x1 = a.x + ux * (a.r + 3); e.y1 = a.y + uy * (a.r + 3); e.x2 = b.x - ux * rb; e.y2 = b.y - uy * rb;
-    var al = e.gap ? 0 : 9, ah = Math.max(4, e.sw / 2 + 2.5);
+    var al = e.gap ? 0 : 9, ah = 4;
     seg(e.ln, e.x1, e.y1, e.x2 - ux * al, e.y2 - uy * al);
     seg(e.hit, e.x1, e.y1, e.x2, e.y2);
     if (e.ah) e.ah.setAttribute('d', 'M' + r1(e.x2) + ' ' + r1(e.y2) + 'L' + r1(e.x2 - ux * al - uy * ah) + ' ' + r1(e.y2 - uy * al + ux * ah) +
@@ -324,7 +324,6 @@ function create(p) {
   var ft = h('div', 'xv-foot', ov), lg = h('p', '', ft);
   DORD.forEach(function (d) { var sp = h('span', 'd-' + d, lg); h('b', 'gl', sp, Q.DIR[d][0]); sp.appendChild(doc.createTextNode(' ' + Q.DIR[d][1])); });
   h('span', '', lg, '●●●● certainty (filled of 4)');
-  h('span', '', lg, 'line width = studies');
   h('span', '', lg, 'faded = not selected');
   h('span', '', lg, '- - No evidence: a gap, not a negative result');
   if (X.E.some(function (e) { return e.te; })) h('span', '', lg, '···◆ changes the effect of that edge (moderation)');

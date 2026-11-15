@@ -9,14 +9,13 @@
 .glg .g { font-weight: 700; fill: var(--c); }
 .glg path, .glg rect { fill: none; }
 .glg .lgr { stroke: var(--line-strong); stroke-width: 1; }
-.glg .ls { stroke: var(--c); stroke-width: 2.6; }
+.glg .ls { stroke: var(--c); stroke-width: 2.1; }
 .glg .la { fill: var(--c); }
-.glg .lw { stroke: var(--text-2); }
 .glg .lg { stroke: var(--text-3); stroke-width: 1.6; stroke-dasharray: 7 5; }
 .glg .lm { stroke: var(--text-2); stroke-width: 3; stroke-dasharray: .1 5.5; stroke-linecap: round; }
 .glg .ld { fill: var(--text-2); }
 .glg .lmem { stroke: var(--text-3); stroke-width: 1.4; stroke-dasharray: .1 4.5; stroke-linecap: round; }
-.glg .lfnt { stroke: var(--inc); stroke-opacity: var(--fade); stroke-width: 2.6; }
+.glg .lfnt { stroke: var(--inc); stroke-opacity: var(--fade); stroke-width: 2.1; }
 .glg .ldt { color: var(--text-2); }
 .glg .lsh { fill: var(--raised); stroke: var(--line-strong); stroke-width: 1.25; }
 .glg .lcb { stroke-dasharray: 4 3; }

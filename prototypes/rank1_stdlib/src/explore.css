@@ -33,7 +33,7 @@
 .xg.panning { cursor: grabbing; }
 .xg:focus, .xg [tabindex]:focus { outline: none; }
 .xg:focus-visible { outline: 2px solid var(--focus); outline-offset: -3px; }
-.xg .xe .p { fill: none; stroke: var(--c); stroke-opacity: var(--fade); stroke-linecap: round; }
+.xg .xe .p { fill: none; stroke: var(--c); stroke-width: 2.1; stroke-opacity: var(--fade); stroke-linecap: round; }
 .xg .xe .hit { stroke: transparent; stroke-width: 12; cursor: pointer; }
 .xg .xe .ah, .xg .dia { fill: var(--c); fill-opacity: var(--fade); }
 .xg .xe.gap .p { stroke: var(--xv-mut); stroke-width: 1.5; stroke-dasharray: 6 5; }

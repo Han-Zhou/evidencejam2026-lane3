@@ -180,7 +180,8 @@ html:not(.js) .vbar { display: none; }
 .graph [tabindex]:focus { outline: none; }
 .lt1 { font: 500 15px var(--serif); fill: var(--text); letter-spacing: -.01em; }
 .lt2 { font-size: 12px; fill: var(--text-3); }
-.ln .p { fill: none; stroke: var(--c); stroke-linecap: round; }
+/* One width for every evidence line (layout.LINE_W). Width does not show the number of studies. */
+.ln .p { fill: none; stroke: var(--c); stroke-width: 2.1; stroke-linecap: round; }
 .ln .hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; stroke-linecap: round; }
 .ln .ah { fill: var(--c); }
 .dia { fill: var(--c); stroke: var(--raised); stroke-width: 1.5; }
@@ -258,7 +259,6 @@ html:not(.js) .vbar { display: none; }
 */
 .ls { stroke: var(--c); stroke-width: 2.6; }
 .la { fill: var(--c); }
-.lw { stroke: var(--text-2); }
 .lg { stroke: var(--text-3); stroke-width: 1.6; stroke-dasharray: 6 4; }
 .lm { stroke: var(--text); stroke-width: 3; stroke-dasharray: .1 5.5; stroke-linecap: round; }
 .ld { fill: var(--text); }
