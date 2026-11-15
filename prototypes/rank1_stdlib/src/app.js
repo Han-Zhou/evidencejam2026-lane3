@@ -70,8 +70,9 @@ function load(p) {
 }
 
 // ---------- theme toggle (SPEC 4.2) ----------
-var tbtn = $('.theme'), dark = matchMedia('(prefers-color-scheme: dark)');
-function theme() { return root.getAttribute('data-theme') || (dark.matches ? 'dark' : 'light'); }
+// Light is the default. The system setting is not read; dark only when the reader picks it.
+var tbtn = $('.theme');
+function theme() { return root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
 function syncTheme() {
   var d = theme() === 'dark';
   tbtn.setAttribute('aria-pressed', d ? 'true' : 'false');
@@ -84,7 +85,6 @@ if (tbtn) {
     try { localStorage.setItem('q1-theme', t); } catch (e) {}
     syncTheme();
   });
-  if (dark.addEventListener) dark.addEventListener('change', syncTheme);
   syncTheme();
 }
 
