@@ -14,8 +14,8 @@ var saved = null, own = null; // own: the ref of the example finding that the to
 var sx = null; // the graph box's own sideways scroll before step 2 moved it (phone)
 var GRAPH = 'Factors are on the left, outcomes on the right. Each chip between them is one finding. ' +
   '<b>Mixed</b> and <b>No effect</b> are real results, not gaps. Click a chip or a node to select it.';
-var DETAILS = 'This part shows the details of what you select. For a finding, you get the certainty grade and the reason for it, ' +
-  'the study counts, and each claim with its source quote and paper.';
+var DETAILS = 'This part shows the details of what you select: the certainty grade, the reason for it and the study counts. ' +
+  'Each paper is a dropdown: open it to read its claims and their source quotes.';
 var EXAMPLE = '<i>The tour selected one finding as an example.</i>';
 var FILTERS = 'Search finds nodes, findings, papers and words in the quotes. The direction buttons and the certainty menu hide the findings that you do not need. ' +
   'The count tells you how many show.';
@@ -39,6 +39,16 @@ function unChips(p) {
   sx = null;
 }
 function state() { return window.Q1 && window.Q1.P && window.Q1.P.findings; }
+// The details list one closed dropdown per paper. Step 3 opens the first one, so a claim and its
+// quote show, and closes it again. A paper that was open already stays as it is.
+var paper = null;
+function openPaper(el) {
+  if (paper && paper.isConnected) return;
+  var d = el && el.querySelector('details.pp');
+  paper = d && !d.open ? d : null;
+  if (paper) paper.open = true;
+}
+function shutPaper() { if (paper && paper.isConnected) paper.open = false; paper = null; }
 // Change the hash without a history entry, then let app.js route it (its hashchange handler).
 function route(h) {
   history.replaceState(history.state, '', h);
@@ -95,13 +105,15 @@ var steps = [
     target: function (p) {
       var d = $('.drawer', p);
       if (!d || !d.classList.contains('open')) return [];
+      openPaper(d);
       var li = $('.dr-body .claims > li', d);
       return li ? [$('.dr-head', d), li] : [d];
     },
     title: 'Details: claims and quotes',
     text: DETAILS,
     limit: 'The pack finds claims by keywords, so it can miss a claim with unusual words.',
-    before: function (p) { demo(p); steps[2].text = own ? [DETAILS, EXAMPLE] : DETAILS; }
+    before: function (p) { demo(p); steps[2].text = own ? [DETAILS, EXAMPLE] : DETAILS; },
+    after: shutPaper
   },
   {
     // Wide screens: one row. Below 1100 px the bar has no box of its own, so its two parts are named.

@@ -35,6 +35,16 @@ function shut() {
   if (opened) opened.open = false;
   opened = null;
 }
+// The details list one closed dropdown per paper. The Details step opens the first one, so a claim
+// and its quote show, and closes it again. A paper that was open already stays as it is.
+var paper = null;
+function openPaper(el) {
+  if (paper && paper.isConnected) return;
+  var d = el && el.querySelector('details.pp');
+  paper = d && !d.open ? d : null;
+  if (paper) paper.open = true;
+}
+function shutPaper() { if (paper && paper.isConnected) paper.open = false; paper = null; }
 
 Q1Tour.add('marshes', {
   title: 'Created marshes',
@@ -98,6 +108,7 @@ Q1Tour.add('marshes', {
       // claim, so that a quote shows above the docked card.
       target: function (p) {
         var d = p.querySelector('.q2-drawer'), h, li;
+        openPaper(d);
         if (d && getComputedStyle(d).maxHeight === 'none') {
           h = d.querySelector('.q2-body h4'); li = d.querySelector('.q2-body ol.claims > li');
           if (h && li) return [h, li];
@@ -105,8 +116,8 @@ Q1Tour.add('marshes', {
         return d;
       },
       title: 'Details: claims and quotes',
-      text: 'Select an attribute name to see its details. At the end, the details list each claim with its source quote and its paper. ' +
-        'Select the name again to close them.',
+      text: 'Select an attribute name to see its details. At the end, each paper is a dropdown: open it to read its claims and their source quotes. ' +
+        'Select the name again to close the details.',
       limit: 'The side of each claim (created or natural marsh) comes from keywords, so check it in the quote.',
       // Nothing selected: show the first finding as an example (as from a hash: no focus move).
       before: function (p) {
@@ -116,6 +127,7 @@ Q1Tour.add('marshes', {
         if (made) window.Q2.go(made);
       },
       after: function (p) {
+        shutPaper();
         if (made && window.Q2 && current(p) === made) window.Q2.go(null);
         made = null;
       }

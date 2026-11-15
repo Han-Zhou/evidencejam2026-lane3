@@ -11,6 +11,16 @@ var saved = null;
 function net() { return window.Q1 && window.Q1.P && window.Q1.P.network; }
 function all(panel, s) { return Array.prototype.slice.call(panel.querySelectorAll(s)); }
 function press(b) { if (b) b.click(); }
+// The details list one closed dropdown per paper. The Details step opens the first one, so a claim
+// and its quote show, and closes it again. A paper that was open already stays as it is.
+var paper = null;
+function openPaper(el) {
+  if (paper && paper.isConnected) return;
+  var d = el && el.querySelector('details.pp');
+  paper = d && !d.open ? d : null;
+  if (paper) paper.open = true;
+}
+function shutPaper() { if (paper && paper.isConnected) paper.open = false; paper = null; }
 function box(panel) { return panel.querySelector('.gbox'); }
 // On a narrow screen the graph is wider than its box, and the box scrolls sideways.
 function narrow(panel) { var b = box(panel); return !!b && b.scrollWidth > b.clientWidth + 1; }
@@ -139,10 +149,12 @@ Q1Tour.add('network', {
       before: function (panel) { want(panel, {graph: true, lens: 'all', pin: moder, fit: inter}); },
       text: 'A dotted line to a ◆ is a moderation: it changes the effect of that edge. ' +
         'A dashed node is a combined treatment. Thin dotted lines link it to its members. This step selects one example.'},
-    {target: '.drawer', title: 'Claims and quotes', place: 'left',
+    {target: function (panel) { var d = panel.querySelector('.drawer'); openPaper(d); return d ? [d] : []; },
+      title: 'Claims and quotes', place: 'left',
       before: function (panel) { want(panel, {pin: example}); },
+      after: shutPaper,
       text: 'Click a chip to select one edge. The details panel shows its direction, its certainty and the reason for the grade. ' +
-        'Below are its claims, each with the quote, paper, year and DOI.',
+        'Below, each paper is a dropdown: open it to read its claims, each with the quote, year and DOI.',
       limit: 'Conditions are matched by keyword, so read the claims behind an edge before you rely on it.'},
     {target: '.gfoot', title: 'Export and limitations',
       before: function (panel) { want(panel, {}); },

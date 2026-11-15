@@ -122,7 +122,9 @@ details with the claims and quotes, then the tools, and the limitations last.
 **State.** Each tour puts the panel back as the reader left it: view, lens, "Show all edges",
 filters, selection, URL hash and scroll. When a step needs a selection and the reader has none,
 the tour selects one example and clears it on the next step. It uses the hash (Q1 panels),
-`Q2.go()` (Q2) or a cell click (Q3). A selection the reader made is never changed.
+`Q2.go()` (Q2) or a cell click (Q3). A selection the reader made is never changed. The details
+show one closed dropdown per paper (`details.pp`), so each Details step opens the first paper, to
+light a claim and its quote, and closes it again. A paper that was open already stays open.
 
 **Content rules.**
 - The steps text has no numbers from the data, because those change when the pack rebuilds.

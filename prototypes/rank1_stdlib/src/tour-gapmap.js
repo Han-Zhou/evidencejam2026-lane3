@@ -9,6 +9,16 @@ var own = null; // the cell that the tour selected, or null
 var TIER = {thin: 1, some: 2, dense: 3, densest: 4};
 
 function pinned(p) { return p.querySelector('.q3t .pin'); }
+// The details list one closed dropdown per paper. Step 6 opens the first one, so a claim and its
+// quote show, and closes it again. A paper that was open already stays as it is.
+var paper = null;
+function openPaper(el) {
+  if (paper && paper.isConnected) return;
+  var d = el && el.querySelector('details.pp');
+  paper = d && !d.open ? d : null;
+  if (paper) paper.open = true;
+}
+function shutPaper() { if (paper && paper.isConnected) paper.open = false; paper = null; }
 // A cell in the part of the map that shows now: not hidden, not under the row labels, not
 // scrolled out of the map box.
 function inView(p, e) {
@@ -103,13 +113,15 @@ Q1Tour.add('gapmap', {
       target: function (p) {
         var d = details(p);
         if (!d || d.whole) return d ? [d.dr] : [];
-        var li = d.body.querySelector('section.pp .claims > li');
+        openPaper(d.body);
+        var li = d.body.querySelector('.pp .claims > li');
         return li ? [d.head, li] : [d.dr];
       },
       title: 'Details: claims and quotes',
       text: 'The details panel shows the certainty grade, the reason for it and the direction. ' +
-        'Then each paper lists its claims, each with the exact quote from the source. For a gap, it shows what was searched for.',
-      before: demo
+        'Then each paper is a dropdown: open it to read its claims and their exact quotes. For a gap, it shows what was searched for.',
+      before: demo,
+      after: shutPaper
     },
     {
       // The limitations under the map (a row of boxes) and "How this map was built".
