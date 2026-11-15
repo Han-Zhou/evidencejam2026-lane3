@@ -512,6 +512,19 @@ function moreBtn(p, b) {
   });
 }
 */
+// Graph | Matrix: put the graph box and the matrix box in one grid cell (.vstack in style.css).
+// The cell is as tall as the graph, so the matrix uses the same space.
+// This runs once at start-up, so the graph has the same layout before and after a switch.
+function stack(el) {
+  var g = $('.gbox', el), m = $('.mbox', el), w;
+  if (!g || !m || g.parentNode.classList.contains('vstack')) return;
+  w = doc.createElement('div');
+  w.className = 'vstack';
+  g.parentNode.insertBefore(w, g);
+  w.appendChild(g);
+  w.appendChild(m);
+}
+$$('[data-panel]').forEach(stack);
 function renderMatrix(p) {
   var D = p.data, box = $('.mbox', p.el);
   if (box.firstChild) return;
@@ -528,8 +541,8 @@ function renderMatrix(p) {
   function te(c) { return c.indexOf('te:') === 0; }
   rows.sort(function (a, b) { return order[a] - order[b]; });
   cols.sort(function (a, b) { return (te(a) - te(b)) || (te(a) ? 0 : order[a] - order[b]); });
-  var h = '<table class="mx"><caption>Matrix: rows are sources, columns are targets. One cell is one ' + (p.k === 'findings' ? 'finding' : 'edge') +
-    '. A blank cell: no claims in this corpus link the two.</caption><thead><tr><td></td>' + cols.map(function (c) {
+  var h = '<table class="mx"><caption><span>Matrix: rows are sources, columns are targets. One cell is one ' + (p.k === 'findings' ? 'finding' : 'edge') +
+    '. A blank cell: no claims in this corpus link the two.</span></caption><thead><tr><td class="rh"></td>' + cols.map(function (c) {
       return '<th scope="col">' + esc(te(c) ? 'Effect of ' + lab(D.items['edge:' + c.slice(3)]) : D.items['node:' + c].label) + '</th>';
     }).join('') + '</tr></thead><tbody>';
   rows.forEach(function (s) {
@@ -544,6 +557,10 @@ function renderMatrix(p) {
     h += '</tr>';
   });
   box.innerHTML = h + '</tbody></table>';
+  // The number of target columns sets the table's minimum width (see .mx in style.css).
+  $('.mx', box).style.setProperty('--nc', cols.length);
+  // Now the matrix can replace the graph (style.css shows it only in a .built stack).
+  box.parentNode.classList.add('built');
   index(p, $$('[data-go]', box));
   refresh(p);
 }

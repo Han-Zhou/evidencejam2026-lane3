@@ -163,11 +163,22 @@ html:not(.js) .vbar { display: none; }
 .clr:hover { color: var(--pill-text); border-color: var(--pill); text-decoration: underline; }
 .tod { display: none; }
 .pathn { flex-basis: 100%; margin: 2px 0 2px; font-size: .92rem; line-height: 1.45; color: var(--text-2); }
-.gbox { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px 16px; }
-.mbox { overflow-x: auto; margin-top: 14px; }
-.js .mbox { display: none; margin-top: 0; }
-.js .viz.mxon .mbox { display: block; }
-.js .viz.mxon .gbox { display: none; }
+/* The graph box and the matrix box are the same card. */
+.gbox, .mbox { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px 16px; }
+.js .mbox { display: none; }
+/* Graph | Matrix. At start-up app.js puts .gbox and .mbox in a .vstack (see stack()). They
+   share one grid cell, so the cell is as tall as the graph and the matrix fills the same box.
+   In Matrix view the graph stays in the layout to keep that size. visibility: hidden takes it
+   out of view, out of the tab order and out of the accessibility tree.
+   renderMatrix() adds .built when the matrix exists. Until then (its data loads on the first
+   click) the graph stays in view. */
+.vstack { display: grid; grid-template-columns: minmax(0, 1fr); }
+.vstack > .gbox, .vstack > .mbox { grid-area: 1 / 1; min-width: 0; }
+.js .viz.mxon .vstack.built > .mbox { display: flex; flex-direction: column; }
+.js .viz.mxon .vstack.built > .gbox { visibility: hidden; }
+/* snap.js adds .q1-snap to the SVG while it reads the styles. Show the graph for that
+   moment, so "Copy image" in Matrix view does not copy a hidden graph. Nothing paints then. */
+.js .viz.mxon .vstack.built > .gbox:has(.q1-snap) { visibility: visible; }
 /* Path note under the Network graph (switched off in v5: it is in the in-graph legend now).
 .limit { font-size: .98rem; line-height: 1.55; color: var(--text-2); max-width: 90ch; margin: 14px 4px 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--text); }
 .limit b { font-family: var(--sans); font-size: .85rem; color: var(--text); font-weight: 600; }
@@ -229,19 +240,40 @@ html:not(.js) .vbar { display: none; }
 .graph.sel .ln.far .p, .graph.sel .ln.far .ah { opacity: .42; }
 .graph .it.off, .mx .off { opacity: .06 !important; pointer-events: none; }
 
-/* matrix */
-.mx { border-collapse: separate; border-spacing: 3px; font-size: .85rem; }
-.mx caption { text-align: left; color: var(--text-3); padding-bottom: 6px; caption-side: top; }
-.mx th { font-weight: 600; text-align: left; padding: 4px 8px; vertical-align: bottom; max-width: 160px; }
-.mx th[scope="row"] { vertical-align: middle; }
+/* matrix: it fills the box. The table is a flex item that grows to the box height, so the
+   body rows share the height (the caption is part of the flex item, so it fits too).
+   The row-header column has a set width (--rh). The target columns share the rest of the
+   width equally (fixed layout). Below the minimum width (--nc columns of at least --cw)
+   the box scrolls sideways. */
+.mx { --rh: 11rem; --cw: 92px; --sp: 4px; flex: 1 0 auto; width: 100%; min-width: calc(var(--rh) + var(--nc, 1) * var(--cw) + (var(--nc, 1) + 1) * var(--sp));
+  table-layout: fixed; border-collapse: separate; border-spacing: var(--sp); font-size: .85rem; line-height: 1.4; }
+.mx caption { text-align: left; color: var(--text-3); padding: 0 var(--sp) 6px; caption-side: top; }
+/* When the table is wider than the box, the caption text still wraps to the visible width
+   (cqi: the .mbox width) and stays in view while the table scrolls. */
+.mbox { container-type: inline-size; }
+.mx caption span { display: block; position: sticky; left: 0; max-width: calc(100cqi - 2 * var(--sp)); }
+.mx th { font-weight: 600; text-align: left; padding: 4px 8px; vertical-align: bottom; overflow-wrap: break-word; }
+.mx thead th { text-align: center; padding: 4px; }
+/* The row labels and the corner cell stay in view while the table scrolls sideways.
+   The shadow covers the box padding on their left, so no cell shows through there. */
+.mx th[scope="row"] { padding: 3px 8px; vertical-align: middle; }
+.mx th[scope="row"], .mx thead td.rh { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: -24px 0 0 var(--surface); }
+.mx .rh { width: var(--rh); }
 .mx thead td { border: 0; background: none; }
-.mx tbody td { min-width: 96px; height: 40px; text-align: center; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0; }
+/* Every body row starts a little taller than a two-line row label (2 x 1.4em + 6px padding),
+   so all rows start equal and grow equally. */
+.mx tbody td { height: calc(2.8em + 7px); text-align: center; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 0; }
 .mx td.empty { background: transparent; border-style: dotted; border-color: var(--line-strong); }
 .mx td.gapc { background: repeating-linear-gradient(45deg, var(--surface) 0 6px, var(--line) 6px 12px); border: 1px dashed var(--text-3); }
-.mx button { font: inherit; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; color: var(--text); border-radius: 10px; border: 0; background: none; cursor: pointer; }
+/* The button fills its cell, so a taller cell is a taller target. */
+.mx button { font: inherit; font-size: 1rem; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; color: var(--text); border-radius: 10px; border: 0; background: none; cursor: pointer; }
 .mx button.mc { border: 1.5px solid var(--c); background: var(--raised); }
 .mx button.pin { outline: 3px solid var(--focus); outline-offset: 1px; }
-.mx td.gapc button { color: var(--text-2); }
+.mx td.gapc button { color: var(--text-2); font-size: .9rem; }
+/* On a phone: narrower columns, so a 2-column matrix fits without sideways scroll. */
+@media (max-width: 700px) {
+  .mx { --rh: 8rem; --cw: 88px; }
+}
 /* tables (switched off): study directions in a row, "cited by" lists.
 .sdx i { font-style: normal; font-weight: 700; font-family: var(--mono); color: var(--c); margin-right: 7px; white-space: nowrap; }
 .cl { list-style: none; margin: 0; padding: 0; }
