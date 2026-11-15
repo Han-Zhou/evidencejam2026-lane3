@@ -51,6 +51,8 @@ LANE0_GROUPS = ["planting_stock", "site_treatment", "combination"]
 # Variant B: the start state of "Show all edges" in each panel. True: every edge shows (the v6
 # look). False: with JS the graph shows nodes only until a selection.
 EDGES_ALL = {"findings": True, "network": False}
+# Panels with a "Want help?" tour: each has its own steps file, src/tour-<key>.js.
+TOUR_PANELS = ("findings", "network", "marshes", "gapmap")
 
 GAP_NOTE = "No study in this corpus tested this pairing. This is a gap, not a negative result."
 DRAWER_EMPTY = "Select a node or an edge. Its details, claims and quotes show here."
@@ -786,6 +788,13 @@ def limits_html(M):
             '<ul class="liml">%s</ul>') % (esc(M["file"]), "".join("<li>%s</li>" % esc(l) for l in M["src"]["limitations"]))
 
 
+def help_btn(key):
+    """"Want help?" at the top of a panel: it opens a short guided tour of that panel only.
+    tour.js, tour.css and the panel's own steps (src/tour-<key>.js) load on the first click."""
+    return ('<div class="helprow js-only"><button type="button" class="helpbtn" data-tour="%s" '
+            'aria-haspopup="dialog" aria-expanded="false"><span class="hq" aria-hidden="true">?</span>Want help?</button></div>') % key
+
+
 def panel_html(M, geo):
     key = M["key"]
     src = M["src"]
@@ -807,7 +816,7 @@ def panel_html(M, geo):
         '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="nojs"><a href="%(page)s">All claims and quotes</a></p></div>'
         # '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="muted">From <code>answers/%(file)s</code></p></div>'
         # '%(glance)s'
-        '%(toolbar)s'
+        '%(help)s%(toolbar)s'
         '<div class="stage"><div class="viz"><h3 id="gh-%(k)s" class="vh-h">Graph of the %(name_l)s</h3>'
         # The view bar is one row: Graph | Matrix, Expand and the status line. It sticks under the toolbar.
         '<div class="vbar"><div class="vtools"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
@@ -844,7 +853,7 @@ def panel_html(M, geo):
     ) % {
         "k": key, "name": M["name"], "name_l": M["name"].lower(), "page": page,
         # "file": M["file"], "glance": glance(M),
-        "toolbar": toolbar(M), "svg": svg_graph(M, geo), "lims": limits_html(M),
+        "help": help_btn(key), "toolbar": toolbar(M), "svg": svg_graph(M, geo), "lims": limits_html(M),
         # "legend": legend(M), "Words": word[1].capitalize(), "n": len(M["items"]), "items": items_table(M),
         # "ng": len(M["gaps"]), "gaps": gaps_table(M), "inter_title": inter_title, "inter": inter,
         # "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0],
@@ -862,12 +871,13 @@ def q3_panel_html(M):
     return (
         '<section class="panel" id="panel-gapmap" data-q3panel aria-labelledby="h-gapmap">'
         '<div class="phead"><h2 id="h-gapmap">Gap map</h2><p class="nojs"><a href="claims-gapmap.html">Every finding, gap and quote</a></p></div>'
+        '%s'
         '<div class="q3nojs"><p class="q">%s</p><p>%s</p>'
         '<p>The gap map needs JavaScript. Every finding, with its direction, certainty, rationale and quotes, and every gap '
         'is on the <a href="claims-gapmap.html">Q3 claims page</a>.</p><h3>Limitations</h3><ul class="lims">%s</ul></div>'
         '<div class="q3host js-only" aria-busy="true"><p class="muted">Loading the gap map…</p></div>'
         '</section>'
-    ) % (esc(C["question"]), esc(q3_summary(M)), lims)
+    ) % (help_btn("gapmap"), esc(C["question"]), esc(q3_summary(M)), lims)
 
 
 def index_html(MA, MB, ga, gb, M3, Q=None):
@@ -1323,7 +1333,7 @@ def q2_timeline(Q):
 
 def q2_section(Q):
     return (
-        '<section class="q2" id="panel-marshes" aria-labelledby="h-marshes">'
+        '<section class="q2" id="panel-marshes" aria-labelledby="h-marshes">%s'
         '<div class="q2-head"><h2 id="h-marshes">%s</h2><p class="q2-q">%s</p>'
         '<p class="nojs"><a href="%s">All claims and quotes</a></p></div>'
         '%s<div class="q2-layout"><div class="q2-main">%s'
@@ -1338,7 +1348,7 @@ def q2_section(Q):
         '<aside class="q2-dcol js-only"><section class="q2-drawer" aria-labelledby="q2-drh">'
         '<div class="dr-head"><h3 id="q2-drh" tabindex="-1">Details</h3><button type="button" class="q2-x" aria-label="Close details">×</button></div>'
         '<div class="q2-body"><p class="muted">%s</p></div></section></aside></div></section>'
-    ) % (Q2_TITLE, esc(Q["question"]), Q2_PAGE, q2_clock(Q), q2_filters(Q), q2_board(Q), q2_timeline(Q),
+    ) % (help_btn("marshes"), Q2_TITLE, esc(Q["question"]), Q2_PAGE, q2_clock(Q), q2_filters(Q), q2_board(Q), q2_timeline(Q),
          limits_html({"file": Q2_FILE, "src": Q}), esc(Q["how_built"]), esc(Q["rule"]), Q2_FILE, Q2_DRAWER_EMPTY)
 
 
@@ -1483,6 +1493,11 @@ def main():
         "gapmap.css": mini(src_text("gapmap.css")),
         # The Q2 panel's behaviour: loaded by need('q2') on the first visit to the Q2 tab.
         "q2.js": mini(src_opt("q2.js")),
+        # Panel tours ("Want help?"): the engine and its styles, then one steps file per panel.
+        # app.js loads tour.js, tour.css and the open panel's steps on the first click.
+        "tour.js": mini(src_text("tour.js")),
+        "tour.css": mini(src_text("tour.css")),
+        **{"tour-%s.js" % k: mini(src_opt("tour-%s.js" % k)) for k in TOUR_PANELS},
     }
     for rel, text in files.items():
         (out / rel).write_text(text, encoding="utf-8")

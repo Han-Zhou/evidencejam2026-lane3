@@ -95,6 +95,13 @@ html.js.q3 #panel-findings, html.js:not(.q3) #panel-gapmap, .js .q3nojs { displa
 html.js.mr #panel-findings, html.js.mr #panel-network, html.js:not(.mr) #panel-marshes { display: none; }
 html.js.mr .top .q { display: none; }
 html:not(.js) .js-only { display: none !important; }
+/* "Want help?" (panel tours, tour.js): one short row at the top of each panel. */
+.helprow { display: flex; justify-content: flex-end; margin: 0 0 10px; }
+.helpbtn { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: .85rem; min-height: 32px; padding: 4px 14px 4px 5px;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--raised); color: var(--text); cursor: pointer; }
+.helpbtn:hover { border-color: var(--text-3); }
+.helpbtn .hq { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--pill); color: var(--pill-text); font: 600 .8rem/1 var(--sans); }
+.helpbtn[aria-busy="true"] { cursor: progress; opacity: .7; }
 .phead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 /* With JS the tab names the panel, so its h2 is for screen readers only. */
 .js .phead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

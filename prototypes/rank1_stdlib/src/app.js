@@ -788,6 +788,18 @@ function need(name, css) {
   })).catch(function (e) { loaded[name] = null; throw e; });
   return loaded[name];
 }
+// ---------- panel tours (tour.js) ----------
+// "Want help?" at the top of each panel opens a guided tour of that panel only. tour.js and
+// tour.css (the engine) and the panel's own steps (tour-<panel>.js) load on the first click.
+$$('[data-tour]').forEach(function (b) {
+  var k = b.getAttribute('data-tour');
+  b.addEventListener('click', function () {
+    b.setAttribute('aria-busy', 'true');
+    need('tour', true).then(function () { return need('tour-' + k); }).then(function () {
+      b.removeAttribute('aria-busy'); window.Q1Tour.start(k, b);
+    }, function () { b.removeAttribute('aria-busy'); });
+  });
+});
 // ---------- expanded view (explore.js) ----------
 function explore(p, btn) { need('explore', true).then(function () { window.Q1X.open(p, btn); }, function () {}); }
 // Shared with the modules that load later (snap.js, export.js). explore.js moves the panel's own SVG and needs none of it.
@@ -844,7 +856,7 @@ doc.addEventListener('keydown', function (e) {
     if (!P[cur]) return;
     var n = ev.target, el = P[cur].el, tb = $('.toolbar', el), vb = $('.vbar', el), fv = true;
     try { fv = n.matches(':focus-visible'); } catch (x) {}
-    if (!tb || tb.contains(n) || (vb && vb.contains(n)) || !fv || root.classList.contains('xvopen')) return;
+    if (!tb || tb.contains(n) || (vb && vb.contains(n)) || !fv || root.classList.contains('xvopen') || root.classList.contains('touring')) return;
     setTimeout(function () {
       var r = n.getBoundingClientRect(), t = tb.getBoundingClientRect(), up = t.bottom;
       var hid = r.bottom > t.top && r.top < t.bottom;

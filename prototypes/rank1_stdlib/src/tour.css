@@ -1,0 +1,44 @@
+/* Panel tours (tour.js). Loads with tour.js on the first click on "Want help?".
+   The lit part is a hole in a dark veil: one fixed box with a very wide shadow.
+   The veil under it takes the clicks, so the page does not react during the tour. */
+.tour-root { position: fixed; inset: 0; z-index: 100; }
+.tour-veil { position: fixed; inset: 0; background: transparent; }
+.tour-root.none .tour-veil { background: rgba(6, 8, 10, .74); }
+.tour-hole { position: fixed; border-radius: 10px; pointer-events: none;
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 6px rgba(255, 255, 255, .22), 0 0 0 200vmax rgba(6, 8, 10, .74); }
+.tour-root.none .tour-hole { display: none; }
+.tour-root.mv .tour-hole { transition: left .32s ease, top .32s ease, width .32s ease, height .32s ease; }
+.tour-card { position: fixed; left: 50%; top: 50%; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--raised); color: var(--text); border: 1px solid var(--line-strong); border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .35); padding: 14px 18px 14px; font: 15px/1.5 var(--sans); }
+.tour-root.mv .tour-card { transition: left .32s ease, top .32s ease; }
+.tour-card.dock { width: calc(100vw - 32px); max-height: 46vh; }
+.tour-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tour-n { margin: 0; font: .75rem/1.4 var(--mono); color: var(--text-2); letter-spacing: .01em; }
+.tour-x { font: inherit; font-size: 1.25rem; line-height: 1; width: 32px; height: 32px; margin-right: -8px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--text-2); cursor: pointer; }
+.tour-x:hover { background: var(--surface); color: var(--text); }
+.tour-card h2 { font: 500 1.3rem/1.25 var(--serif); letter-spacing: -.015em; margin: 4px 0 8px; }
+/* The heading takes the focus only so that a screen reader starts there. It is not a control. */
+.tour-card h2:focus, .tour-card h2:focus-visible { outline: none; }
+.tour-b p { margin: 0 0 8px; }
+.tour-b .tour-lim { font-size: .86rem; color: var(--text-2); border-left: 3px solid var(--line-strong); padding: 2px 0 2px 10px; margin-top: 10px; }
+.tour-b .tour-lim b { color: var(--text); font-weight: 600; }
+.tour-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
+.tour-prog { display: flex; gap: 5px; }
+.tour-prog i { width: 14px; height: 4px; border-radius: 2px; background: var(--line-strong); }
+.tour-prog i.past { background: var(--text-3); }
+.tour-prog i.on { background: var(--text); width: 22px; }
+.tour-nav { display: flex; gap: 8px; }
+.tour-nav button { font: inherit; font-size: .88rem; min-height: 34px; padding: 4px 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line-strong); background: var(--raised); color: var(--text); }
+.tour-nav button:disabled { opacity: .45; cursor: default; }
+.tour-nav .tour-next { background: var(--pill); color: var(--pill-text); border-color: var(--pill); min-width: 76px; }
+@media (prefers-reduced-motion: reduce) {
+  .tour-root.mv .tour-hole, .tour-root.mv .tour-card { transition: none; }
+}
+/* Forced colours drop box shadows, so the veil would vanish: draw the lit box as an outline. */
+@media (forced-colors: active) {
+  .tour-hole { outline: 3px solid Highlight; }
+  .tour-card { border: 2px solid CanvasText; }
+}

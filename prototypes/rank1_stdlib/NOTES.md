@@ -61,6 +61,84 @@ v3 adds 1,590 bytes more (the faint-line rules, the compact strips and one legen
 v4 adds 2,254 bytes more (the two Expand buttons, `data-label` on each node, the loader).
 The expanded view itself (27,636 bytes) loads only when a reader opens it.
 
+## Panel tours ("Want help?")
+
+Each of the four panels has a **Want help?** button at the top right. It opens a short guided
+tour of that panel only. Each step dims the page, lights one part, and shows a small card beside
+it: the step number, a title, one to three short sentences, sometimes a "Limit:" line, and
+Back / Next (Done on the last step). The tours do not share steps.
+
+| Panel | Steps file | Steps |
+| --- | --- | ---: |
+| Findings | `src/tour-findings.js` | 6 |
+| Network | `src/tour-network.js` | 7 |
+| Created marshes | `src/tour-marshes.js` | 7 |
+| Gap map | `src/tour-gapmap.js` | 7 |
+
+**Files.**
+- `src/tour.js` is the engine. The comment at its top gives the step format: `target` (a
+  selector inside the panel, a function, or `null` for a centred card), `title`, `text`, `limit`,
+  `place`, `pad`, `before` / `after`, and the tour-level `start` / `end`.
+- `src/tour.css` holds the veil, the lit box and the card. It uses the page tokens, so the card
+  follows the theme.
+- `help_btn()` in `build.py` writes the button (`.helprow`, `button.helpbtn[data-tour]`, js-only)
+  at the top of each panel. `TOUR_PANELS` lists the four steps files that `build.py` ships.
+- `app.js` (block "panel tours") loads `tour.js`, `tour.css` and the open panel's steps file with
+  `need()` on the first click. Nothing loads on the first view.
+
+**How it works.**
+- **Lit part:** a fixed `.tour-hole` with a very wide shadow is the dark veil. A transparent
+  `.tour-veil` under it takes the clicks.
+- **Focus and keyboard:** every other child of `<body>` is `inert` while the tour is open. The
+  card is `role="dialog"` and `aria-modal="true"`. The focus goes to its heading when the tour
+  opens, then stays on Back or Next. A polite live region reads each new step. Esc closes, the
+  arrow keys step, and Tab stays inside the card. The page keys (Esc, "/") wait while the tour is
+  open. On close the page scroll goes back to where it was, and the focus goes back to the button.
+- **Position loop:** one loop keeps the lit box on its part while the page scrolls, resizes or
+  draws late (q2.js, gapmap.js and the drawers). The targets are read again every 400 ms. The
+  lit box is cut to any parent box that scrolls (the graph and the gap map on a phone).
+- **Scrolling:** the page scrolls only when the part is not in view. It keeps the part below
+  the pinned toolbar and view bar, and scrolls again when the part grows in the first moments.
+- **Card position:** right, left, below or above the part. When no side has room, the card goes
+  to the corner that covers the least of the part. Below 700 px it docks at the bottom or the top.
+- **Reduced motion:** no glide and no smooth scroll. **Forced colours:** an outline marks the lit part.
+
+**State.** Each tour puts the panel back as the reader left it: view, lens, "Show all edges",
+filters, selection, URL hash and scroll. When a step needs a selection and the reader has none,
+the tour selects one example and clears it on the next step. It uses the hash (Q1 panels),
+`Q2.go()` (Q2) or a cell click (Q3). A selection the reader made is never changed.
+
+**Content rules.**
+- The steps text has no numbers from the data, because those change when the pack rebuilds.
+- The limits come from each answer file's `limitations` or from the judging rules:
+  - A gap is not a negative result.
+  - Mixed and no effect are findings.
+  - A path through a condition is not one tested effect.
+  - The gap map colour is study count, not direction or certainty.
+- The Q2 tour says that time to reference is unknown. Its text has no digits, so `check_site.py`
+  stays clean.
+
+**Size.** The first view grew by 1,847 bytes (161,737; before: 159,890): the four buttons, their
+CSS and the loader. On the first click: `tour.js` 10,652, `tour.css` 2,900, and one steps file of
+3,889 to 6,728 bytes.
+
+**How it was built.** One agent wrote the engine and the button. Then four agents worked at the
+same time, one for each panel. Each one edited only its own steps file and tested it in its own
+browser tab.
+
+**Checks.**
+- `check_site.py` PASS. Two builds are byte-identical.
+- Browser at 1440 × 900 and 390 × 844, light and dark: every step of every tour lights its part.
+- At 1440 the card covers none of the lit part. The one exception is Gap map step 3: the map
+  fills the screen, and the card covers 8% of it.
+- On a phone, a part that is taller than the screen is partly under the docked card (the graph,
+  the drawers, the full map).
+- After Done, × or Esc, the hash, scroll, view, edges toggle and selection were as before. No
+  `inert` was left, and the focus was on "Want help?". No console errors.
+- Lighthouse and axe-core were not run.
+- In a hidden or background tab the browser slows its animation frames, so the lit box can lag
+  until the tab shows.
+
 ## Q3 gap map panel (after v7)
 
 The fourth tab, **Gap map** (after Q2's **Created marshes**), shows Q3 (`answers/q3_grassland_gaps.json`) as one matrix. It has
