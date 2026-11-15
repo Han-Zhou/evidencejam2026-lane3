@@ -45,7 +45,7 @@ body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 var
 a, .lk { color: var(--text); text-decoration: underline 1px var(--line-strong); text-underline-offset: 3px; }
 a:hover, .lk:hover { text-decoration-thickness: 2px; text-decoration-color: currentColor; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
-code, .mono, .n, .num, .dots, .cc, .count { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+code, .mono, .n, .num, .dots, .count { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 code, .mono { font-size: .86em; overflow-wrap: anywhere; }
 .small { font-size: .8em; }
 .muted { color: var(--text-3); }
@@ -84,14 +84,15 @@ footer { padding-top: 28px; padding-bottom: 48px; color: var(--text-3); font-siz
 html:not(.js) .theme { display: none; }
 
 /* panel cards (tabs with JS) */
-/* Four tabs: Findings and Network (Q1), Created marshes (Q2), Gap map (Q3). Phones show them 2 x 2 (media rule below). */
+/* Four tabs at the top of the page: Seedling findings and Seedling story (Q1), Marsh timelines (Q2),
+   Grassland matrix (Q3). Each shows its name only, centred. Phones show them 2 x 2 (media rule below). */
+.top nav { margin-bottom: 20px; }
 .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
-.card { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 8px 18px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s; }
+.card { display: flex; align-items: center; justify-content: center; text-align: center; padding: 8px 18px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s; }
 .card:hover { border-color: var(--line-strong); text-decoration: none; }
 .card[aria-selected="true"] { border-color: var(--text); }
 .cn { font: 500 1.15rem/1.25 var(--serif); letter-spacing: -.02em; }
 /* .cd { color: var(--text-2); font-size: .9rem; } */
-.cc { font-size: .8rem; color: var(--text-2); }
 
 /* panels */
 .panel { padding-top: 14px; }
