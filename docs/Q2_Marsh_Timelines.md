@@ -6,7 +6,7 @@
 |---|---|
 | **Question** | Q2: How long do created marshes take to reach biodiversity and function comparable to natural reference wetlands, and which attributes lag? |
 | **Data source** | `answers/q2_created_marshes.json` |
-| **Primary view** | Intervention-outcome rows, each with a slider against the wetland baseline |
+| **Primary view** | Attribute difference rows, each with a slider against the wetland baseline |
 | **Colour scheme** | Burgundy plum |
 | **Audience** | Restoration practitioners, industry and researchers |
 
@@ -166,8 +166,7 @@ Q2 is a list of intervention-outcome combinations rather than a network, so ther
 
 | Action | Result |
 |---|---|
-| **Click a combination** | The row is highlighted and the right-hand drawer opens. It summarises the **overall direction, number of studies and claims, certainty, and sentiment of claims**, followed by **every individual claim** so users can validate the information independently. |
-| **Close the drawer** | The page returns to the full overview, with every combination visible again. |
+| **Click an attribute** | The row is highlighted and the right-hand drawer opens. It summarises the **overall direction, number of studies and claims, certainty, and sentiment of claims**, followed by **every individual claim** so users can validate the information independently. |
 
 ---
 
@@ -183,8 +182,6 @@ These controls manage the list of combinations. None of them change the underlyi
 
 Ties in any ordering break by first-seen order in the JSON, so results are always reproducible.
 
-> **Tip.** To find research priorities, order by certainty with the lowest first. The combinations at the top are the ones where the question is least answered.
-
 ---
 
 ## 10. Room for Growth
@@ -195,4 +192,3 @@ Ties in any ordering break by first-seen order in the JSON, so results are alway
 
 ---
 
-<sub>Q2 Prototype · Created Marshes · Data source: `answers/q2_created_marshes.json`</sub>
