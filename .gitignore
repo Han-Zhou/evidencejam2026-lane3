@@ -2,6 +2,10 @@
 .claude/
 q2_export/
 
+# build output
+/site/
+__pycache__/
+
 # files
 .env
 opening_presentation.pptx

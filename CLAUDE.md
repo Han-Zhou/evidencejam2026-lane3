@@ -4,17 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-The starter pack for **Evidence Jam 2026, Lane 3 (Decision Support)**. The task is to build a **static website** that answers three restoration-practitioner questions from precomputed evidence, and draws the Q1 answer as an interactive graph. The answers already exist in `answers/`. No site or build pipeline exists yet: that is the work. `README.md` is the challenge brief and the reference for the JSON shapes. Read it before designing anything.
+The starter pack for **Evidence Jam 2026, Lane 3 (Decision Support)**. The task is to build a **static website** that answers three restoration-practitioner questions from precomputed evidence, and draws the Q1 answer as an interactive graph. The answers already exist in `answers/`. The site is built by `./build.sh` (it runs `sitegen/build.py`, the former "rank 1" prototype, Python standard library only), and `tools/check_site.py` checks a built site against the answer files. `docs/` has the design spec and release notes. The top of `README.md` has the build instructions; below them is the challenge brief, the reference for the JSON shapes.
 
 ## Commands
 
 ```bash
 python3 make_answers.py   # rebuild answers/*.json, answers/answers.md and manifest.json (~4 s)
+./build.sh site/          # build the site into site/ (~0.1 s, no network, no LLM)
+python3 tools/check_site.py site   # check the built site against answers/*.json
 ```
 
 - Use `python3`. `python` is not on PATH on this machine. The only dependency is PyYAML (it uses `CSafeLoader` when available).
 - The script is deterministic and offline: no LLM, no network. Rerunning it on an unmodified checkout gives byte-identical output, so `git status` after a run shows whether anything really changed.
-- There are no tests, linters or other tooling in the pack.
+- There are no tests or linters. `tools/check_site.py` is the only check.
 
 ## Data flow
 

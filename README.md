@@ -1,46 +1,42 @@
-# Instructions
+# Our submission: build and view
 
-To see our prototype, run:
+One command builds the site from a clean checkout:
+
 ```bash
-cd prototypes/rank1_stdlib
-./build.sh                                        # builds the site into site/
-python3 -m http.server 8102 --directory site      # serves it on port 8102
+./build.sh site/
 ```
 
-To see the prototype of every worktree on one page, run this from the main checkout:
+Then serve it:
+
 ```bash
-python3 prototypes/preview.py serve               # builds every worktree, serves http://127.0.0.1:8899/
-python3 prototypes/preview.py serve 9000          # same, on a different port
-python3 prototypes/preview.py                     # builds only, prints a summary table
-python3 prototypes/preview.py note <slug> "Idea"  # sets the one-line idea note of a worktree
+python3 -m http.server 8000 --directory site
 ```
-- Each worktree is at `http://127.0.0.1:8899/<slug>/`. The gallery shows the slugs.
-- To see new changes, click **Rebuild all** on the gallery page. You do not have to restart the server.
-- Use **Compare** to see two worktrees side by side.
-- An agent can set its own note from inside its worktree:
-  `git config branch."$(git branch --show-current)".description "Idea"`
 
-# Questions
+Open http://localhost:8000/. The site has four tabs: Q1 Findings, Q1 Network, Q2 Created
+marshes and Q3 Gap map.
 
-- LLM summaries for sections?
-- make_answers.py - do we need to make changes on top of this?
-- containerization?
-~~- where does the use of an LLM come from? Transitions between sections in the websites?~~ (A: website generator's build process - for tasks like generating summaries for sections)
-~~- what type (graph, tabular) etc.~~ (A: a panel for each json, with graph view and additional information)
+- **Requirements:** `python3` (tested with 3.12.4) and its standard library only. There
+  is nothing to install and nothing to pin. Nothing is specific to an architecture, so it
+  runs on aarch64 Linux.
+- **Network and LLM:** the build makes no network call and no LLM call. It does not read
+  `BRINE_URL`, `BRINE_MODEL` or `BRINE_API_KEY`.
+- **Input:** the committed `answers/*.json` files and the group order in
+  `groups/lane3_groups.yaml`. The build does not run `make_answers.py`. Every direction,
+  certainty grade, rationale and count on the page is copied from the JSON.
+- **Output:** static HTML, CSS, JS and JSON. The page loads nothing from another origin
+  and calls nothing at view time. Two builds of the same input are byte-identical.
+- **Check a build:** `python3 tools/check_site.py site` compares every finding, gap,
+  node, edge and quote on the built pages with the answer files.
 
+| Path | What it is |
+| --- | --- |
+| `build.sh` | The build command. It runs `sitegen/build.py`. |
+| `sitegen/` | The site generator (`build.py`, `layout.py`) and the browser code in `src/`. |
+| `tools/check_site.py` | The accuracy checker for a built site. |
+| `docs/` | Design spec, release notes, tech stack decision and the Q1 Findings guide. |
+| `answers/`, `graph/`, `groups/`, `make_answers.py`, `manifest.json` | The starter pack files, not changed. |
 
-# Notes
-
-- look more into the difference between Q1 findings json and Q1 graph json: needs a panel for each
-- rank sources by relevance
-- look at examples from slides
-
-
-
-
-
-
-original readme under here -----
+# Challenge brief (from the starter pack)
 
 # Lane 3 — Decision Support
 
