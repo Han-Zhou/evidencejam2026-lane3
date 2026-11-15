@@ -127,10 +127,10 @@ Q1Tour.add('network', {
     saved = null;
   },
   steps: [
-    {target: '.toolbar', title: 'Search, lens and filters', place: 'below',
+    {target: '.toolbar', title: 'Search and filters', place: 'below',
       before: function (panel) { want(panel, {}); },
-      text: 'Search finds nodes, edges, papers and quotes. The <b>Lens</b> picks which edges to show: direct, through conditions, ' +
-        'or interactions. The filters hide edges by direction or certainty. On a phone, swipe this bar sideways.'},
+      text: 'Search finds nodes, edges, papers and quotes. ' +
+        'The filters hide edges by direction or certainty. On a phone, swipe this bar sideways.'},
     {target: '.vtools, .selbar', title: 'Edges show when you select', place: 'below',
       before: function (panel) { want(panel, {}); },
       text: 'The graph starts with the nodes only. Click a node to see its edges, or turn on <b>Show all edges</b>. ' +

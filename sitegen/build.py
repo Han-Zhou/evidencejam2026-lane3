@@ -635,13 +635,6 @@ def toolbar(M):
     key = M["key"]
     items = M["items"]
     dc = Counter(it["dir"] for it in items)
-    lens = ""
-    if key == "network":
-        lens = ('<div class="seg lens" role="group" aria-label="Lens">'
-                '<button type="button" data-lens="all" aria-pressed="true">All</button>'
-                '<button type="button" data-lens="direct" aria-pressed="false">Direct</button>'
-                '<button type="button" data-lens="via" aria-pressed="false">Via conditions</button>'
-                '<button type="button" data-lens="inter" aria-pressed="false">Interactions</button></div>')
     chips = "".join('<button type="button" class="fchip" data-dir="%s" aria-pressed="true">%s %s <span class="n">%d</span></button>' % (
         d, glyph(d), esc(DIR[d][1]), dc[d]) for d in DIR_ORDER)
     # The labels "Search" and "Certainty" are for screen readers only: the placeholder and the
@@ -652,13 +645,12 @@ def toolbar(M):
         '<div class="toolbar js-only">'
         '<div class="srch"><label class="vh" for="q-%s">Search</label><input type="search" id="q-%s" placeholder="Search labels, quotes, papers" autocomplete="off" aria-keyshortcuts="/">'
         '<div class="sres" id="sr-%s" hidden></div></div>'
-        '%s'
         '<div class="filters" role="group" aria-label="Filters">%s'
         '<label class="sel"><span class="vh">Certainty</span><select data-min><option value="0">Any certainty</option>%s</select></label>'
         # The count sits in the filter group, so it shares a row with the last filters.
         '<label class="cb"><input type="checkbox" data-gaps checked> Show gaps</label>'
         '<p class="count" aria-live="polite"></p></div></div>'
-    ) % (key, key, key, lens, chips, certs)
+    ) % (key, key, key, chips, certs)
 
 
 def legend(M):

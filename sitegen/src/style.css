@@ -518,7 +518,7 @@ html.xvopen { overflow: hidden; }
 @media (max-width: 700px) {
   .toolbar { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; gap: 8px 14px; padding: 8px 12px; }
   .toolbar > *, .filters > * { flex: none; }
-  .filters, .seg.lens { flex-wrap: nowrap; }
+  .filters { flex-wrap: nowrap; }
   .toolbar .seg button, .fchip, .count { white-space: nowrap; }
   .srch input { width: 246px; }
 }
