@@ -4,8 +4,8 @@
   --bg: #E8E8E8; --surface: #F7F7F7; --raised: #FFFFFF;
   --line: rgba(0,0,0,.08); --line-strong: rgba(0,0,0,.18);
   --text: #1A1A1A; --text-2: #555555; --text-3: #636363;
-  --pill: #111111; --pill-text: #FFFFFF; --focus: #0B6FE8;
-  --inc: #0A5FC2; --dec: #C21F33; --mix: #8F5100; --null: #5F6368; --unc: #626262;
+  --pill: #111111; --pill-text: #FFFFFF; --focus: #1A1A1A; --fade: .3;
+  --inc: #0B6E4F; --dec: #C21F33; --mix: #8F5100; --null: #5F6368; --unc: #626262;
   --serif: "Iowan Old Style", "Palatino Linotype", Charter, Georgia, ui-serif, serif;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, Arial, sans-serif;
   --mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
@@ -16,8 +16,8 @@
     --bg: #0F151A; --surface: #161D23; --raised: #1D252C;
     --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.20);
     --text: #DADCDE; --text-2: #9EA4AA; --text-3: #8A9097;
-    --pill: #F2F2F2; --pill-text: #0F151A; --focus: #1A88FF;
-    --inc: #4DA3FF; --dec: #FF6B76; --mix: #F5A524; --null: #A3A9AF; --unc: #8E949A;
+    --pill: #F2F2F2; --pill-text: #0F151A; --focus: #DADCDE; --fade: .4;
+    --inc: #48D5A6; --dec: #FF6B76; --mix: #F5A524; --null: #A3A9AF; --unc: #8E949A;
     color-scheme: dark;
   }
 }
@@ -25,8 +25,8 @@
   --bg: #0F151A; --surface: #161D23; --raised: #1D252C;
   --line: rgba(255,255,255,.08); --line-strong: rgba(255,255,255,.20);
   --text: #DADCDE; --text-2: #9EA4AA; --text-3: #8A9097;
-  --pill: #F2F2F2; --pill-text: #0F151A; --focus: #1A88FF;
-  --inc: #4DA3FF; --dec: #FF6B76; --mix: #F5A524; --null: #A3A9AF; --unc: #8E949A;
+  --pill: #F2F2F2; --pill-text: #0F151A; --focus: #DADCDE; --fade: .4;
+  --inc: #48D5A6; --dec: #FF6B76; --mix: #F5A524; --null: #A3A9AF; --unc: #8E949A;
   color-scheme: dark;
 }
 .d-increase { --c: var(--inc); }
@@ -49,17 +49,21 @@ code, .mono { font-size: .86em; overflow-wrap: anywhere; }
 .skip { position: absolute; left: 12px; top: -48px; background: var(--pill); color: var(--pill-text); padding: 8px 14px; border-radius: 999px; z-index: 50; }
 .skip:focus { top: 12px; }
 h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: -.02em; line-height: 1.2; color: var(--text); }
-h1 { font-size: clamp(2rem, 4.6vw, 2.5rem); margin: .3em 0 .35em; }
+h1 { font-size: clamp(2rem, 4.6vw, 2.5rem); margin: .1em 0 .3em; }
 h2 { font-size: 1.75rem; margin: 0; }
 h3 { font-size: 1.3rem; margin: 1.6em 0 .5em; }
 h4 { font-size: .8rem; font-weight: 600; color: var(--text-2); margin: 1.1em 0 .35em; letter-spacing: .01em; }
 h5 { font: 500 1rem/1.35 var(--serif); margin: .9em 0 .2em; }
-.q, .built p, .lims, .rat, blockquote, .note, .limit, .pathn { font-family: var(--serif); }
-header.top, main, footer { max-width: 1320px; margin: 0 auto; padding: 0 32px; }
+.q, .rat, blockquote, .note, .pathn { font-family: var(--serif); }
+/* tables (switched off): .built p, .lims and .limit also used the serif. */
+header.top, main, footer { max-width: 1560px; margin: 0 auto; padding: 0 32px; }
 header.top { padding-top: 22px; }
-.bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 36px; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 24px; }
+/* index.html: the h1 and the theme toggle share the top row (the eyebrow line is gone). */
+.hrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.hrow h1 { margin: 0; }
 .eyebrow { margin: 0; color: var(--text-2); font-size: .85rem; letter-spacing: .02em; }
-.q { max-width: 68ch; font-size: 1.08rem; line-height: 1.6; color: var(--text-2); margin: 0 0 32px; }
+.q { max-width: 84ch; font-size: 1.08rem; line-height: 1.6; color: var(--text-2); margin: 8px 0 16px; }
 footer { padding-top: 28px; padding-bottom: 48px; color: var(--text-3); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 64px; }
 
 /* theme toggle */
@@ -70,70 +74,88 @@ html:not(.js) .theme { display: none; }
 
 /* panel cards (tabs with JS) */
 .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.card { display: flex; flex-direction: column; gap: 3px; padding: 18px 22px; border: 1.5px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s; }
+.card { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; padding: 8px 18px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); text-decoration: none; transition: border-color .15s; }
 .card:hover { border-color: var(--line-strong); text-decoration: none; }
 .card[aria-selected="true"] { border-color: var(--text); }
-.cn { font: 500 1.35rem/1.25 var(--serif); letter-spacing: -.02em; }
-.cd { color: var(--text-2); font-size: .9rem; }
-.cc { font-size: .82rem; color: var(--text); }
+.cn { font: 500 1.15rem/1.25 var(--serif); letter-spacing: -.02em; }
+/* .cd { color: var(--text-2); font-size: .9rem; } */
+.cc { font-size: .8rem; color: var(--text-2); }
 
 /* panels */
-.panel { padding-top: 48px; }
+.panel { padding-top: 14px; }
 html:not(.js) .panel + .panel { margin-top: 56px; border-top: 1px solid var(--line-strong); }
 html.js:not(.nw) #panel-network, html.js.nw #panel-findings { display: none; }
 html:not(.js) .js-only { display: none !important; }
 .phead { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+/* With JS the tab names the panel, so its h2 is for screen readers only. */
+.js .phead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .phead p { margin: 0; font-size: .85rem; }
+.js .phead .nojs { display: none; }
 
-.glance { margin-top: 18px; padding: 18px 24px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
-.glance h3 { margin: 0 0 10px; font-size: 1.1rem; }
-.stats { display: flex; flex-wrap: wrap; gap: 12px 36px; margin: 0; }
+/* At a glance (switched off in v5)
+.glance { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 32px; margin-top: 12px; padding: 12px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.glance h3 { margin: 0; font-size: 1.05rem; }
+.stats { flex: 1 1 560px; display: flex; flex-wrap: wrap; gap: 6px 32px; margin: 0; }
+.stats > div { display: flex; align-items: baseline; gap: 10px; }
 .stats dt { font-size: .78rem; color: var(--text-3); }
 .stats dd { margin: 0; }
 .stats ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .92rem; }
 .stats b { font: 600 .92rem var(--mono); font-variant-numeric: tabular-nums; }
-.built { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: .92rem; }
+.built { flex: none; font-size: .92rem; }
+.built[open] { flex-basis: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
 .built summary { cursor: pointer; color: var(--text); font-weight: 500; }
 .built p { max-width: 74ch; color: var(--text-2); font-size: 1rem; line-height: 1.6; }
 .kinds div { display: flex; gap: 10px; }
 .kinds dt { font-family: var(--mono); font-size: .8rem; min-width: 10em; color: var(--text-2); }
 .kinds dd { margin: 0; color: var(--text-2); }
+*/
 
 .gl { color: var(--c, inherit); font-weight: 700; }
 .dots { letter-spacing: 1px; font-size: .85em; }
 
 /* toolbar */
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 16px 0 0; padding: 14px 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin: 10px 0 0; padding: 10px 20px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
 .srch { position: relative; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* The visible "Search", "Lens" and "Direction" labels and the search hint are gone (v5).
 .srch label, .lbl { font-size: .82rem; color: var(--text-2); }
-.srch input { font: inherit; font-size: .92rem; width: min(300px, 70vw); padding: 6px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--raised); color: var(--text); }
 .hint { font-size: .76rem; color: var(--text-3); }
+*/
+.srch input { font: inherit; font-size: .92rem; width: min(300px, 70vw); padding: 6px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--raised); color: var(--text); }
 .sres { position: absolute; top: calc(100% + 6px); left: 0; z-index: 25; width: min(560px, 90vw); max-height: 60vh; overflow: auto; background: var(--raised); border: 1px solid var(--line-strong); border-radius: 16px; padding: 10px 16px; font-size: .9rem; }
 .sres h4 { margin: .6em 0 .2em; }
 .sres ul { list-style: none; margin: 0; padding: 0; }
 .sres .rc { margin: 0; color: var(--text-3); }
 .lk { font: inherit; text-align: left; background: none; border: 0; padding: 3px 0; cursor: pointer; }
 .seg, .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.seg button, .fchip, .more, .more2, .clr, .tod { font: inherit; font-size: .85rem; padding: 4px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--raised); color: var(--text-2); cursor: pointer; min-height: 30px; }
-.seg button:hover, .fchip:hover, .more:hover, .more2:hover, .clr:hover, .tod:hover { border-color: var(--line-strong); color: var(--text); }
+.seg button, .fchip, .more, .more2, .clr, .tod, .xbtn, .tbtn { font: inherit; font-size: .85rem; padding: 4px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--raised); color: var(--text-2); cursor: pointer; min-height: 30px; }
+.seg button:hover, .fchip:hover, .more:hover, .more2:hover, .clr:hover, .tod:hover, .xbtn:hover, .tbtn:hover { border-color: var(--line-strong); color: var(--text); }
 .seg button[aria-pressed="true"] { background: var(--pill); color: var(--pill-text); border-color: var(--pill); }
 .fchip[aria-pressed="true"] { border-color: var(--c); color: var(--text); }
 .fchip[aria-pressed="false"] { background: transparent; color: var(--text-3); text-decoration: line-through; border-style: dashed; border-color: var(--line-strong); }
 .fchip .n { color: var(--text-3); }
 .sel, .cb { font-size: .85rem; display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); }
+.cb input { accent-color: var(--pill); }
 .sel select { font: inherit; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--raised); color: var(--text); }
-.count { margin: 0; font-size: .8rem; color: var(--text-2); }
+.count { margin: 0 0 0 12px; font-size: .8rem; color: var(--text-2); }
 .more, .more2 { margin: 10px 0 4px; }
 
 /* stage: graph + drawer side by side; the drawer never covers the graph */
-.stage { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: stretch; margin-top: 28px; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: stretch; margin-top: 18px; }
 /* The drawer column is as tall as the graph column; a long drawer scrolls inside it. */
 .dcol { position: relative; min-width: 0; }
 html:not(.js) .stage { display: block; }
 .viz { min-width: 0; }
-.vbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; min-height: 30px; }
-.vat { font-size: .85rem; margin-left: auto; }
-.selbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 40px; margin: 0 0 10px; padding: 6px 8px 6px 16px; border-radius: 16px; background: var(--raised); border: 1px solid var(--line); font-size: .88rem; color: var(--text-2); }
+/* view bar: Graph | Matrix, Expand, Copy image, CSV | XLSX, then the status line.
+   It wraps; the status line takes a row of its own when less than 320 px is left. */
+.vbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 10px; min-height: 30px; }
+html:not(.js) .vbar { display: none; }
+.xbtn { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.xbtn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tbtn { flex: none; white-space: nowrap; }
+.seg.xp { flex: none; flex-wrap: nowrap; }
+.tbtn:disabled, .tbtn[aria-busy="true"] { opacity: .6; cursor: progress; }
+/* .vat { font-size: .85rem; margin-left: auto; white-space: nowrap; } */
+.selbar { flex: 1 1 320px; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 40px; margin: 0; padding: 6px 8px 6px 16px; border-radius: 16px; background: var(--raised); border: 1px solid var(--line); font-size: .88rem; color: var(--text-2); }
 .selbar b { color: var(--text); font-weight: 600; }
 .selbar .n { color: var(--text); font-size: .85rem; }
 .selbar .acts { margin-left: auto; display: flex; gap: 6px; }
@@ -141,13 +163,15 @@ html:not(.js) .stage { display: block; }
 .clr:hover { color: var(--pill-text); border-color: var(--pill); text-decoration: underline; }
 .tod { display: none; }
 .pathn { flex-basis: 100%; margin: 2px 0 2px; font-size: .92rem; line-height: 1.45; color: var(--text-2); }
-.gbox { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px; }
+.gbox { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px 16px; }
 .mbox { overflow-x: auto; margin-top: 14px; }
 .js .mbox { display: none; margin-top: 0; }
 .js .viz.mxon .mbox { display: block; }
 .js .viz.mxon .gbox { display: none; }
+/* Path note under the Network graph (switched off in v5: it is in the in-graph legend now).
 .limit { font-size: .98rem; line-height: 1.55; color: var(--text-2); max-width: 90ch; margin: 14px 4px 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--text); }
 .limit b { font-family: var(--sans); font-size: .85rem; color: var(--text); font-weight: 600; }
+*/
 
 /* SVG graph: colours only from CSS variables */
 .graph { display: block; width: 100%; height: auto; min-width: 720px; margin: 0 auto; font-family: var(--sans); }
@@ -156,16 +180,16 @@ html:not(.js) .stage { display: block; }
 .graph [tabindex]:focus { outline: none; }
 .lt1 { font: 500 15px var(--serif); fill: var(--text); letter-spacing: -.01em; }
 .lt2 { font-size: 12px; fill: var(--text-3); }
-.ln .p { fill: none; stroke: var(--c); stroke-linecap: round; transition: opacity .18s; }
+.ln .p { fill: none; stroke: var(--c); stroke-linecap: round; }
 .ln .hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; stroke-linecap: round; }
-.ln .ah { fill: var(--c); transition: opacity .18s; }
+.ln .ah { fill: var(--c); }
 .dia { fill: var(--c); stroke: var(--raised); stroke-width: 1.5; }
 .ln.mod .p { stroke-dasharray: .1 5.5; stroke-width: 3; }
 .ln.gap .p { stroke: var(--text-3); stroke-width: 1.6; stroke-dasharray: 7 5; }
 .mem { fill: none; stroke: var(--text-3); stroke-width: 1.4; stroke-dasharray: .1 4.5; stroke-linecap: round; }
 .chip { color: var(--c); }
 .chip .r { fill: var(--raised); stroke: var(--c); stroke-width: 1.25; }
-.chip text { fill: var(--c); font-size: 16px; font-weight: 700; text-anchor: middle; }
+.chip text { fill: currentColor; font-size: 16px; font-weight: 700; text-anchor: middle; }
 .chip.mod .r { stroke-dasharray: 3 3; }
 .gapl rect { fill: var(--raised); stroke: var(--text-3); stroke-width: 1.25; stroke-dasharray: 5 4; }
 .gapl text { fill: var(--text-3); font-size: 12.5px; text-anchor: middle; }
@@ -181,9 +205,23 @@ html:not(.js) .stage { display: block; }
 .chip:hover .r { stroke-width: 2.25; }
 .gapl:hover rect { stroke: var(--text-2); }
 .ln:hover .hit { stroke: var(--line); }
+/* With JS, every connection starts in a faded version of its direction colour.
+   It shows at full strength only when it is active: on the pathway of the
+   selected node, or the selected edge itself. Chip glyphs and dots keep full
+   colour and contrast, so direction and certainty stay readable. */
+.js .graph .ln .p { stroke-opacity: var(--fade); }
+.js .graph .ln .ah, .js .graph .dia { fill-opacity: var(--fade); }
+.js .graph .mem { stroke-opacity: .5; }
+.js .graph .chip .r { stroke-opacity: .45; }
+.js .graph.sel .ln.on .p, .js .graph.sel .mem.on, .js .graph.sel .chip.on .r { stroke-opacity: 1; }
+.js .graph.sel .ln.on .ah, .js .graph.sel .dia.on { fill-opacity: 1; }
+.ln .p { transition: opacity .18s, stroke-opacity .18s; }
+.ln .ah { transition: opacity .18s, fill-opacity .18s; }
+.chip .r { transition: stroke-opacity .18s; }
+.graph .mem, .graph .dia { transition: opacity .18s, stroke-opacity .18s, fill-opacity .18s; }
 /* keyboard focus ring and the selected item */
-.nd:focus-visible .bx, .chip:focus-visible .r, .gapl:focus-visible rect { stroke: var(--focus); stroke-width: 2.5; stroke-dasharray: none; }
-.nd.pin .bx, .chip.pin .r, .gapl.pin rect { stroke: var(--focus); stroke-width: 3.5; stroke-dasharray: none; }
+.nd:focus-visible .bx, .chip:focus-visible .r, .gapl:focus-visible rect { stroke: var(--focus) !important; stroke-opacity: 1 !important; stroke-width: 2.5; stroke-dasharray: none; }
+.nd.pin .bx, .chip.pin .r, .gapl.pin rect { stroke: var(--focus) !important; stroke-opacity: 1 !important; stroke-width: 3.5; stroke-dasharray: none; }
 /* click selection: active pathways stay bright, the rest fades */
 .graph .it.lo, .graph .it.miss, .mx .lo, .mx .miss { opacity: .18; }
 .graph.sel .it:not(.on) { opacity: .12; }
@@ -204,17 +242,20 @@ html:not(.js) .stage { display: block; }
 .mx button.mc { border: 1.5px solid var(--c); background: var(--raised); }
 .mx button.pin { outline: 3px solid var(--focus); outline-offset: 1px; }
 .mx td.gapc button { color: var(--text-2); }
+/* tables (switched off): study directions in a row, "cited by" lists.
 .sdx i { font-style: normal; font-weight: 700; font-family: var(--mono); color: var(--c); margin-right: 7px; white-space: nowrap; }
 .cl { list-style: none; margin: 0; padding: 0; }
+*/
 
-/* legend */
-.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 28px; margin: 28px 0 0; padding: 14px 22px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); font-size: .85rem; color: var(--text-2); }
+/* legend block under the graph (switched off in v5: the legend is inside the SVG now)
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 28px; margin: 20px 0 0; padding: 14px 22px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); font-size: .85rem; color: var(--text-2); }
 .legend h4 { margin: .6em 0 .25em; }
 .legend ul { list-style: none; margin: 0; padding: 0; }
 .legend li { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
 .legend li.shapes { display: block; }
 .legend .wide { grid-column: 1 / -1; }
 .legend svg { flex: none; overflow: visible; }
+*/
 .ls { stroke: var(--c); stroke-width: 2.6; }
 .la { fill: var(--c); }
 .lw { stroke: var(--text-2); }
@@ -222,12 +263,16 @@ html:not(.js) .stage { display: block; }
 .lm { stroke: var(--text); stroke-width: 3; stroke-dasharray: .1 5.5; stroke-linecap: round; }
 .ld { fill: var(--text); }
 .lmem { stroke: var(--text-3); stroke-width: 1.4; stroke-dasharray: .1 4.5; stroke-linecap: round; }
-.lfar { stroke: var(--text); stroke-width: 2.6; opacity: .42; }
+.lfnt { stroke: var(--inc); stroke-opacity: var(--fade); stroke-width: 2.6; }
 .sh { display: inline-block; padding: 1px 10px; margin: 3px 6px 3px 0; border: 1px solid var(--line-strong); background: var(--raised); color: var(--text); border-radius: 12px; }
+/* Only the old legend block used these (switched off in v5). The swatch classes above stay:
+   the in-graph legend uses them.
+.lfar { stroke: var(--text); stroke-width: 2.6; opacity: .42; }
 .s-st { border-radius: 3px; }
 .s-co { border-left: 5px solid var(--text-3); }
 .s-ou { border: 3px double var(--line-strong); }
 .s-cb { border-style: dashed; }
+*/
 
 /* drawer: a column beside the graph (in the page flow under it on narrow screens) */
 .drawer { position: absolute; top: 0; left: 0; right: 0; max-height: 100%; overflow: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--raised); padding: 6px 20px 20px; font-size: .9rem; }
@@ -257,9 +302,8 @@ ol.claims li.flash { background: var(--surface); border-radius: 10px; padding: 1
 blockquote { margin: 8px 0 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--line-strong); font-size: 1rem; line-height: 1.55; color: var(--text); }
 .el { list-style: none; padding: 0; margin: 0; }
 .el li { padding: 3px 0; }
+/* tables (switched off in v5): restore this block with the tables in build.py and app.js.
 .tag { font-size: .7rem; border: 1px solid var(--line-strong); border-radius: 999px; padding: 0 7px; color: var(--text-2); font-weight: 400; white-space: nowrap; }
-
-/* tables */
 .th { margin-top: 56px; }
 details.tb { border-top: 1px solid var(--line-strong); padding: 12px 0; }
 details.tb > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
@@ -280,6 +324,7 @@ details.tb > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .sdp { white-space: nowrap; margin-right: 6px; }
 .cites { list-style: none; margin: 0; padding: 0; font-size: .85rem; }
 .lims { max-width: 78ch; color: var(--text-2); font-size: 1rem; line-height: 1.6; }
+*/
 
 /* claims pages */
 .cp main, .cp header.top, .cp footer { max-width: 920px; }
@@ -291,8 +336,11 @@ details.tb > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .paper { background: var(--surface); border-radius: 16px; padding: 4px 18px 10px; margin-top: 12px; }
 .plist li { margin-bottom: 8px; font-size: .9rem; }
 
+/* expanded view: the page side. The dialog's own styles are in explore.css, loaded on first use. */
+html.xvopen { overflow: hidden; }
+
 @media (max-width: 1100px) {
-  .stage { grid-template-columns: minmax(0, 1fr) 320px; }
+  .stage { grid-template-columns: minmax(0, 1fr) 300px; }
 }
 @media (max-width: 899px) {
   header.top, main, footer { padding: 0 16px; }
@@ -303,13 +351,18 @@ details.tb > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
   .drawer { position: static; max-height: none; overflow: visible; margin-top: 20px; }
   .dr-head { top: 0; }
   .graph { min-width: 760px; }
-  .hint { display: none; }
+  /* .hint { display: none; } */
   .tod { display: inline-flex; align-items: center; }
-  .panel { padding-top: 36px; }
+  .panel { padding-top: 12px; }
 }
 @media (max-width: 700px) {
-  .cards { grid-template-columns: 1fr; gap: 10px; }
-  .glance, .toolbar, .legend { padding-left: 16px; padding-right: 16px; }
+  .cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card { padding: 6px 12px; }
+  .selbar { order: 3; flex-basis: 100%; }
+  .toolbar { padding-left: 16px; padding-right: 16px; }
+  /* .stats > div { display: block; } */
+  /* .glance, .legend { padding-left: 16px; padding-right: 16px; } */
+  /* tables (switched off): one card per row on a phone.
   .tbl { background: transparent; border: 0; }
   .tbl thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .tbl, .tbl tbody, .tbl tr, .tbl th, .tbl td { display: block; width: 100%; }
@@ -331,7 +384,58 @@ details.tb > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
   .tp td:nth-of-type(3)::before { content: "Claims"; }
   .tp td:nth-of-type(4)::before { content: "Cited by"; }
   .tbl caption { display: block; }
+  */
 }
+
+/* ---------- toolbar dock (experiment) ----------
+   The toolbar stays in view while the panel scrolls. <html data-dock> holds its place:
+   top, bottom, left or right. DOCK_JS in build.py sets it before the first paint; the
+   "toolbar dock" block in app.js adds the switch and stores the choice ("q1-dock").
+   Below 1100 px, left and right fall back to top (the graph needs the width).
+   Below 701 px the docked toolbar is one row that scrolls sideways, so it covers little.
+   The search results use fixed positioning (app.js places them), so a toolbar that
+   scrolls inside itself does not clip them.
+   To remove the experiment: delete this section, that block in app.js and DOCK_JS. */
+html[data-dock] .toolbar { position: sticky; top: 8px; z-index: 20; box-shadow: 0 0 0 8px var(--bg); }
+html[data-dock] .sres { position: fixed; top: auto; left: auto; }
+/* scrollIntoView() stops clear of the bar. --dockh is the bar height (app.js; 0 for a side column).
+   Not scroll-padding on <html>: that made a focus inside the stuck bar scroll the page back up. */
+html[data-dock] .stage, html[data-dock] .drawer, html[data-dock] ol.claims li { scroll-margin-top: calc(var(--dockh, 0px) + 24px); }
+html[data-dock="bottom"] .stage, html[data-dock="bottom"] .drawer, html[data-dock="bottom"] ol.claims li { scroll-margin-top: 0; scroll-margin-bottom: calc(var(--dockh, 0px) + 24px); }
+.dock { flex-wrap: nowrap; gap: 3px; margin-left: auto; }
+.seg.dock button { display: inline-flex; align-items: center; justify-content: center; padding: 4px 7px; }
+.dock svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; }
+.dock svg .f { fill: currentColor; stroke: none; }
+/* bottom: the toolbar moves after the stage and sticks to the bottom of the viewport */
+html[data-dock="bottom"] .panel { display: flex; flex-direction: column; }
+html[data-dock="bottom"] .toolbar { order: 1; top: auto; bottom: 8px; margin: 16px 0 8px; }
+/* left and right: a narrow column beside the stage that scrolls inside itself when tall */
+@media (min-width: 1100px) {
+  html[data-dock="left"] .panel, html[data-dock="right"] .panel { display: grid; grid-template-columns: 256px minmax(0, 1fr); column-gap: 18px; align-items: start; }
+  html[data-dock="right"] .panel { grid-template-columns: minmax(0, 1fr) 256px; }
+  html[data-dock="left"] .toolbar, html[data-dock="right"] .toolbar { grid-row: 1; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; margin: 18px 0 0; padding: 14px; box-shadow: none; }
+  html[data-dock="left"] .toolbar, html[data-dock="right"] .stage { grid-column: 1; }
+  html[data-dock="right"] .toolbar, html[data-dock="left"] .stage { grid-column: 2; }
+  html[data-dock="left"] .stage, html[data-dock="right"] .stage { grid-row: 1; }
+  html[data-dock="left"] .srch input, html[data-dock="right"] .srch input, html[data-dock="left"] .sel select, html[data-dock="right"] .sel select { width: 100%; }
+  html[data-dock="left"] .srch input, html[data-dock="right"] .srch input { font-size: .86rem; padding: 6px 10px 6px 12px; }
+  html[data-dock="left"] .sel, html[data-dock="right"] .sel { display: flex; }
+  html[data-dock="left"] .fchip, html[data-dock="right"] .fchip { display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 4px 12px; font-size: .82rem; text-align: left; border-radius: 14px; }
+  html[data-dock="left"] .fchip .n, html[data-dock="right"] .fchip .n { margin-left: auto; }
+  html[data-dock="left"] .dock, html[data-dock="right"] .dock, html[data-dock="left"] .count, html[data-dock="right"] .count { margin-left: 0; }
+}
+@media (max-width: 1099px) {
+  .seg.dock [data-dock="left"], .seg.dock [data-dock="right"] { display: none; }
+}
+@media (max-width: 700px) {
+  html[data-dock] .toolbar { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; gap: 8px 14px; padding: 8px 12px; }
+  html[data-dock] .toolbar > *, html[data-dock] .filters > * { flex: none; }
+  html[data-dock] .filters, html[data-dock] .seg.lens { flex-wrap: nowrap; }
+  html[data-dock] .toolbar .seg button, html[data-dock] .fchip, html[data-dock] .count { white-space: nowrap; }
+  html[data-dock] .srch input { width: 246px; }
+}
+/* ---------- end of toolbar dock ---------- */
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; scroll-behavior: auto !important; }
 }

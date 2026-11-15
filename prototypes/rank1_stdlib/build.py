@@ -18,7 +18,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from layout import CHIP_H, CHIP_W, GAP_H, GAP_W, layout, stroke_w
+from layout import CHIP_H, CHIP_W, GAP_H, GAP_W, LG_LINE, LG_SG, LG_SW, layout, stroke_w
 
 HERE = Path(__file__).resolve().parent
 ANSWERS = HERE.parent.parent / "answers"
@@ -47,11 +47,16 @@ KIND_LANE = {"planting_stock": 0, "site_treatment": 0, "combination": 0, "condit
 LANE0_GROUPS = ["planting_stock", "site_treatment", "combination"]
 
 GAP_NOTE = "No study in this corpus tested this pairing. This is a gap, not a negative result."
-DRAWER_EMPTY = "Select a node, an edge or a table row. Its details, claims and quotes appear here."
+DRAWER_EMPTY = "Select a node or an edge. Its details, claims and quotes show here."
 
 # Applied in <head> before the stylesheet, so a stored theme shows with no flash (SPEC 4.2).
 THEME_JS = ('try{var t=localStorage.getItem("q1-theme");'
             'if(t=="dark"||t=="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}')
+# Experiment: toolbar dock (top, bottom, left, right). Sets data-dock on <html> before the first paint.
+# To remove the experiment: delete this constant and its use in index_html(), the "toolbar dock"
+# block in app.js and the "toolbar dock" section in style.css.
+DOCK_JS = ('try{var d=localStorage.getItem("q1-dock")}catch(e){}'
+           'document.documentElement.setAttribute("data-dock",/^(top|bottom|left|right)$/.test(d)?d:"top");')
 THEME_BTN = (
     '<button type="button" class="theme" aria-pressed="false" aria-label="Switch to dark theme">'
     '<svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>'
@@ -59,6 +64,7 @@ THEME_BTN = (
     '<path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>'
     '</button>')
 MEMBER_NOTE = "member of a combination — not an evidence edge"
+XICON = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>')
 
 
 def esc(s):
@@ -264,14 +270,58 @@ def layout_spec(M):
     if M["key"] == "findings":
         return {"lanes": [{"title": "Factor", "subtitle": ""},
                           {"title": "Outcome", "subtitle": ""}],
-                "nodes": M["nodes"], "edges": edges, "cg": 120}
+                "nodes": M["nodes"], "edges": edges, "cg": 160,
+                "chip_title": CHIP_TITLE, "legend": legend_spec(M)}
     kinds = M["src"]["node_kinds"]
     groups = [{"key": k, "title": KIND_TITLE[k], "subtitle": kinds[k]} for k in LANE0_GROUPS
               if any(n["kind"] == k for n in M["nodes"])]
     return {"lanes": [None,
                       {"title": KIND_TITLE["condition"], "subtitle": kinds["condition"]},
                       {"title": KIND_TITLE["outcome"], "subtitle": kinds["outcome"]}],
-            "groups": groups, "nodes": M["nodes"], "edges": edges, "cg": 94}
+            "groups": groups, "nodes": M["nodes"], "edges": edges, "cg": 94,
+            "chip_title": CHIP_TITLE, "legend": legend_spec(M)}
+
+
+# Title above each chip column (the pill on each edge). Fixed UI copy.
+CHIP_TITLE = {"title": "Effect · certainty", "parts": ["arrow: direction", "dots: certainty"]}
+SHAPE_KEY = [("planting_stock", "Planting stock:", "round"),
+             ("site_treatment", "Site treatment:", "square"),
+             ("condition", "Condition:", "side bar"),
+             ("outcome", "Outcome:", "double line"),
+             ("combination", "Combination:", "dashed")]
+
+
+def legend_spec(M):
+    """Content of the legend inside the graph. layout.legend_place() places it and
+    svg_legend() draws it. The path note is the pack's own text (limitations[0])."""
+    cols = [
+        {"head": "Direction", "tw": 175, "rows": [
+            {"sw": "dir", "dir": d, "lead": DIR[d][0], "bold": False, "text": DIR[d][1]} for d in DIR_ORDER]},
+        {"head": "Certainty", "tw": 80, "rows": [
+            {"sw": "cert", "n": CERT[c][0], "text": CERT[c][1]} for c in CERT_ORDER]},
+        {"head": "Line width", "tw": 80, "rows": [
+            {"sw": "width", "n": n, "text": plural(n, "study", "studies")} for n in (1, 5, 10)]},
+    ]
+    gap = {"sw": "gap", "lead": "No evidence:", "text": GAP_NOTE}
+    fade = {"sw": "fade", "lead": "Faded line:", "js": True,
+            "text": "not selected. Click a node or an edge to show it at full strength."}
+    if M["key"] == "findings":
+        cols.append({"head": "Other marks", "fill": True, "min": 200, "rows": [gap, fade]})
+        return {"cols": cols}
+    cols.append({"head": "Other lines", "tw": 190, "rows": [
+        {"sw": "mod", "lead": "Moderation:", "text": "changes the effect of the edge at the ◆"},
+        {"sw": "mem", "text": MEMBER_NOTE[0].upper() + MEMBER_NOTE[1:]},
+        dict(fade, text="not selected")]})
+    cols.append({"head": "Node kinds", "tw": 170, "rows": [
+        {"sw": "shape", "shape": k, "lead": lead, "text": text} for k, lead, text in SHAPE_KEY]})
+    # Notes: always a full-width row under the columns.
+    cols.append({"head": "", "fill": True, "min": 600, "rows": [
+        gap,
+        {"sw": "chip", "lead": "Chips in the Conditions lane:",
+         "text": "edges that go from a stock or treatment straight to an outcome. They do not pass through a condition."},
+        {"sw": None, "lead": "Paths through a condition:", "text": M["src"]["limitations"][0]},
+    ]})
+    return {"cols": cols}
 
 
 def svg_defs(key):
@@ -298,13 +348,14 @@ def svg_graph(M, geo):
     key = M["key"]
     W, H = geo["width"], geo["height"]
     out = ['<svg class="graph" id="svg-%s" viewBox="0 0 %d %d" width="%d" height="%d" role="group" '
-           'aria-labelledby="gh-%s" style="max-width:%dpx">' % (key, W, H, W, H, key, W), svg_defs(key)]
-    # lane titles
+           'aria-labelledby="gh-%s" style="max-width:%dpx">' % (key, W, H, W, H, key, round(W * 1.2)), svg_defs(key)]
+    # lane titles, and the title above each chip column (centred on the column)
     out.append('<g class="lt">')
     for t in geo["titles"]:
-        out.append('<text class="lt1" x="%s" y="%s">%s</text>' % (fmt(t["x"]), fmt(t["y"] + 13), esc(t["title"])))
+        anc = ' text-anchor="middle"' if t.get("anchor") == "middle" else ""
+        out.append('<text class="lt1" x="%s" y="%s"%s>%s</text>' % (fmt(t["x"]), fmt(t["y"] + 13), anc, esc(t["title"])))
         for i, line in enumerate(t["sub"]):
-            out.append('<text class="lt2" x="%s" y="%s">%s</text>' % (fmt(t["x"]), fmt(t["y"] + 31 + 15 * i), esc(line)))
+            out.append('<text class="lt2" x="%s" y="%s"%s>%s</text>' % (fmt(t["x"]), fmt(t["y"] + 31 + 15 * i), anc, esc(line)))
     out.append("</g>")
     # membership connectors
     if geo["members"]:
@@ -346,7 +397,7 @@ def svg_graph(M, geo):
             attrs = 'data-node-id="%s" data-kind="%s"' % (esc(n["id"]), esc(n["kind"]))
         else:
             attrs = 'data-ref="node:%s"' % esc(n["id"])
-        attrs += ' tabindex="0" role="button" aria-label="%s"' % esc(aria)
+        attrs += ' data-label="%s" tabindex="0" role="button" aria-label="%s"' % (esc(n["label"]), esc(aria))
         w, h = g["w"], g["h"]
         rx = {"site_treatment": 3}.get(shape, 12)
         out.append('<g class="nd k-%s" %s transform="translate(%s %s)">' % (shape, attrs, fmt(g["x"]), fmt(g["y"])))
@@ -392,7 +443,70 @@ def svg_graph(M, geo):
         g = geo["edges"][it["ref"]]
         if g["diamond"]:
             out.append('<path class="dia d-%s" data-ref="%s" d="%s"/>' % (it["dir"], esc(it["ref"]), g["diamond"]))
+    if geo.get("legend"):
+        out.append(svg_legend(key, geo["legend"]))
     out.append("</svg>")
+    return "".join(out)
+
+
+def legend_swatch(key, r, y):
+    """One legend swatch, LG_SW wide, centred on the line y. Classes are legend-only
+    (see graph.css), so the selection fade in app.js and style.css never reaches them."""
+    sw, Y = r.get("sw"), fmt(y)
+    if sw == "dir":
+        return ('<path class="ls d-%s" d="M0 %sH21"/><path class="la d-%s" d="M30 %sL21 %sV%sZ"/>' % (
+            r["dir"], Y, r["dir"], Y, fmt(y - 4.5), fmt(y + 4.5)))
+    if sw == "cert":
+        return '<use class="ldt" href="#%s-c%d" x="4" y="%s"/>' % (key[0], r["n"], Y)
+    if sw == "width":
+        return '<path class="lw" d="M0 %sH30" stroke-width="%s"/>' % (Y, fmt(stroke_w(r["n"])))
+    if sw in ("gap", "mem", "fade"):
+        return '<path class="%s" d="M0 %sH30"/>' % ({"gap": "lg", "mem": "lmem", "fade": "lfnt"}[sw], Y)
+    if sw == "mod":
+        return '<path class="lm" d="M1 %sH19"/><path class="ld" d="M24.5 %sL30 %sL24.5 %sL19 %sZ"/>' % (
+            Y, fmt(y - 5.5), Y, fmt(y + 5.5), Y)
+    if sw == "chip":
+        return '<rect class="lsh" x="1" y="%s" width="28" height="14" rx="7"/>' % fmt(y - 7)
+    if sw == "shape":
+        k = r["shape"]
+        out = '<rect class="lsh%s" x="1" y="%s" width="28" height="16" rx="%s"/>' % (
+            " lcb" if k == "combination" else "", fmt(y - 8), "1.5" if k == "site_treatment" else "5")
+        if k == "condition":
+            out += '<rect class="lsb" x="4.5" y="%s" width="2.5" height="10" rx="1"/>' % fmt(y - 5)
+        if k == "outcome":
+            out += '<rect class="lsi" x="3.5" y="%s" width="23" height="11" rx="3"/>' % fmt(y - 5.5)
+        return out
+    return ""
+
+
+def svg_legend(key, L):
+    """The legend band under the graph, drawn in the SVG: labels are SVG <text>, so they
+    are DOM text and a copied image of the graph carries them. Not focusable, no hooks."""
+    tx = LG_SW + LG_SG
+    # font-size as an attribute too: a clone of the SVG without the style sheet keeps the size the layout assumed.
+    out = ['<g class="glg" role="group" aria-label="Legend" font-size="12">',
+           '<path class="lgr" d="M%s %sH%s"/>' % (fmt(L["rule"][0]), fmt(L["rule"][1]), fmt(L["rule"][2]))]
+    for c in L["cols"]:
+        out.append('<g transform="translate(%s %s)">' % (fmt(L["x"] + c["x"]), fmt(L["y"] + c["y"])))
+        if c["head"]:
+            out.append('<text class="lh" y="12">%s</text>' % esc(c["head"]))
+        for r in c["rows"]:
+            y = r["y"]
+            row = [legend_swatch(key, r, y + 9), '<text x="%d" y="%s">' % (tx, fmt(y + 13))]
+            for i, line in enumerate(r["lines"]):
+                lead = r.get("lead")
+                if i == 0 and lead and line.startswith(lead):
+                    # A direction glyph is coloured and hidden from screen readers (the word follows it).
+                    at = ('class="g d-%s" aria-hidden="true"' % r["dir"]) if r.get("sw") == "dir" else 'class="lb"'
+                    row.append('<tspan %s>%s</tspan>%s' % (at, esc(lead), esc(line[len(lead):])))
+                elif i == 0:
+                    row.append(esc(line))
+                else:
+                    row.append('<tspan x="%d" dy="%d">%s</tspan>' % (tx, LG_LINE, esc(line)))
+            row.append("</text>")
+            out.append(('<g class="js-only">%s</g>' if r.get("js") else "%s") % "".join(row))
+        out.append("</g>")
+    out.append("</g>")
     return "".join(out)
 
 
@@ -436,24 +550,28 @@ def toolbar(M):
     dc = Counter(it["dir"] for it in items)
     lens = ""
     if key == "network":
-        lens = ('<div class="seg lens" role="group" aria-label="Lens"><span class="lbl" aria-hidden="true">Lens</span>'
+        lens = ('<div class="seg lens" role="group" aria-label="Lens">'
                 '<button type="button" data-lens="all" aria-pressed="true">All</button>'
                 '<button type="button" data-lens="direct" aria-pressed="false">Direct</button>'
                 '<button type="button" data-lens="via" aria-pressed="false">Via conditions</button>'
                 '<button type="button" data-lens="inter" aria-pressed="false">Interactions</button></div>')
     chips = "".join('<button type="button" class="fchip" data-dir="%s" aria-pressed="true">%s %s <span class="n">%d</span></button>' % (
         d, glyph(d), esc(DIR[d][1]), dc[d]) for d in DIR_ORDER)
-    certs = "".join('<option value="%d">%s or higher</option>' % (CERT[c][0], CERT[c][1]) for c in reversed(CERT_ORDER[:-1]))
+    # The labels "Search" and "Certainty" are for screen readers only: the placeholder and the
+    # option text already say what the control does. "/" focuses the search (aria-keyshortcuts).
+    certs = "".join('<option value="%d">%s certainty%s</option>' % (CERT[c][0], CERT[c][1], "" if c == "high" else " or higher")
+                    for c in reversed(CERT_ORDER[:-1]))
     return (
         '<div class="toolbar js-only">'
-        '<div class="srch"><label for="q-%s">Search</label><input type="search" id="q-%s" placeholder="Labels, claims, quotes, papers" autocomplete="off" aria-describedby="qh-%s">'
-        '<span class="hint" id="qh-%s">Press / to search, Esc to clear</span><div class="sres" id="sr-%s" hidden></div></div>'
+        '<div class="srch"><label class="vh" for="q-%s">Search</label><input type="search" id="q-%s" placeholder="Search labels, quotes, papers" autocomplete="off" aria-keyshortcuts="/">'
+        '<div class="sres" id="sr-%s" hidden></div></div>'
         '%s'
-        '<div class="filters" role="group" aria-label="Filters"><span class="lbl" aria-hidden="true">Direction</span>%s'
-        '<label class="sel">Certainty <select data-min><option value="0">Any</option>%s</select></label>'
-        '<label class="cb"><input type="checkbox" data-gaps checked> Show gaps</label></div>'
-        '<p class="count" aria-live="polite"></p></div>'
-    ) % (key, key, key, key, key, lens, chips, certs)
+        '<div class="filters" role="group" aria-label="Filters">%s'
+        '<label class="sel"><span class="vh">Certainty</span><select data-min><option value="0">Any certainty</option>%s</select></label>'
+        # The count sits in the filter group, so it shares a row with the last filters.
+        '<label class="cb"><input type="checkbox" data-gaps checked> Show gaps</label>'
+        '<p class="count" aria-live="polite"></p></div></div>'
+    ) % (key, key, key, lens, chips, certs)
 
 
 def legend(M):
@@ -477,6 +595,8 @@ def legend(M):
                      '<span class="sh s-cb">Combination: dashed, shows members</span></li>')
     else:
         other.append('<li class="shapes"><span class="sh">Factor</span> <span class="sh s-ou">Outcome: double border</span></li>')
+    other.append('<li class="js-only"><svg width="34" height="14" aria-hidden="true"><path class="lfnt" d="M2 7H32"/></svg>'
+                 'Faded line: an edge that is not selected. Select a node or an edge to show it at full strength.</li>')
     other.append('<li class="js-only"><svg width="34" height="14" aria-hidden="true"><path class="lfar" d="M2 7H32"/></svg>'
                  'After a click on a node: full lines are one step from it, lighter lines are further steps. '
                  'A path is not one tested effect.</li>')
@@ -609,44 +729,61 @@ def panel_html(M, geo):
     page = M["claims_page"]
     limit = ""
     if key == "network":
-        limit = '<p class="limit" id="pathnote-network"><b>Paths through a condition:</b> %s</p>' % esc(src["limitations"][0])
-    ptable, n_docs = papers_table(M)
-    inter = interactions_a(M) if key == "findings" else interactions_b(M)
-    inter_title = ("Interactions (%d)" % len(src["interactions"])) if key == "findings" else \
-        "Interactions &amp; set aside (%d combination, %d moderation, %d set aside)" % (
-            sum(1 for n in M["nodes"] if n.get("members")), sum(1 for i in M["items"] if i["kind"] == "moderation"), len(src["set_aside"]))
-    lims = "".join("<li>%s</li>" % esc(l) for l in src["limitations"])
+        # The visible path note moved into the in-graph legend (svg_graph). This hidden copy stays
+        # only because explore.js reads #pathnote-network for the footer of the expanded view.
+        limit = '<p id="pathnote-network" hidden>%s</p>' % esc(src["limitations"][0])
+        # limit = '<p class="limit" id="pathnote-network"><b>Paths through a condition:</b> %s</p>' % esc(src["limitations"][0])
+    # Everything after the graph is switched off (v5): legend, tables, limitations. To restore it,
+    # uncomment these lines, the matching lines of the format string and its keys below, the
+    # "tables" code in app.js and the "tables" rules in style.css.
+    # ptable, n_docs = papers_table(M)
+    # inter = interactions_a(M) if key == "findings" else interactions_b(M)
+    # inter_title = ("Interactions (%d)" % len(src["interactions"])) if key == "findings" else \
+    #     "Interactions &amp; set aside (%d combination, %d moderation, %d set aside)" % (
+    #         sum(1 for n in M["nodes"] if n.get("members")), sum(1 for i in M["items"] if i["kind"] == "moderation"), len(src["set_aside"]))
+    # lims = "".join("<li>%s</li>" % esc(l) for l in src["limitations"])
     return (
         '<section class="panel" id="panel-%(k)s" data-panel="%(k)s" aria-labelledby="h-%(k)s">'
-        '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="muted">From <code>answers/%(file)s</code></p></div>'
-        '%(glance)s%(toolbar)s'
+        # With JS the heading row is for screen readers only (the tab names the panel).
+        # Without JS the drawer is not there, so the row links to the claims page (every quote).
+        '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="nojs"><a href="%(page)s">All claims and quotes</a></p></div>'
+        # '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="muted">From <code>answers/%(file)s</code></p></div>'
+        # '%(glance)s'
+        '%(toolbar)s'
         '<div class="stage"><div class="viz"><h3 id="gh-%(k)s" class="vh-h">Graph of the %(name_l)s</h3>'
         '<div class="vbar"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
         '<button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div>'
-        '<a class="vat" href="#tbl-%(k)s">View as table</a></div>'
-        '<div class="selbar js-only" id="st-%(k)s" role="status" aria-live="polite"></div>'
+        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button>'
+        # Copy image (snap.js) and export of the highlighted data (export.js). app.js loads each module on first click.
+        '<button type="button" class="tbtn js-only" data-act="copy">Copy image</button>'
+        '<div class="seg xp js-only" role="group" aria-label="Download the highlighted data">'
+        '<button type="button" class="tbtn" data-act="csv">CSV</button>'
+        '<button type="button" class="tbtn" data-act="xlsx">XLSX</button></div>'
+        '<div class="selbar js-only" id="st-%(k)s" role="status" aria-live="polite"></div></div>'
+        # '<a class="vat" href="#tbl-%(k)s">View as table</a></div>'
         '<div class="gbox">%(svg)s</div><div class="mbox js-only"></div>%(limit)s</div>'
         '<div class="dcol js-only"><section class="drawer" id="dr-%(k)s" aria-labelledby="drh-%(k)s"><div class="dr-head"><h3 id="drh-%(k)s" tabindex="-1">Details</h3>'
         '<button type="button" class="x" aria-label="Close details">×</button></div>'
         '<div class="dr-body"><p class="muted">%(empty)s</p></div></section></div></div>'
-        '%(legend)s'
-        '<h3 class="th">Tables</h3>'
-        '<details class="tb" open><summary>%(Words)s (%(n)d)</summary>%(items)s<button type="button" class="more js-only" hidden></button></details>'
-        '<details class="tb"><summary>Gaps (%(ng)d)</summary>%(gaps)s</details>'
-        '<details class="tb"><summary>%(inter_title)s</summary>%(inter)s</details>'
-        '<details class="tb papers"><summary>Papers (%(nd)d)</summary>%(papers)s</details>'
-        '<details class="tb claims"><summary>Claims (%(nc)d)</summary><p>All claims with their quotes, grouped by %(w0)s and paper: '
-        '<a href="%(page)s">open the claims page</a>.</p><div class="cl-host js-only"></div></details>'
-        '<h3 class="th">Limitations</h3><ul class="lims">%(lims)s</ul>'
-        '<p class="muted">How this was built: see <a href="#built-%(k)s">the note at the top of this panel</a>.</p>'
+        # '%(legend)s'
+        # '<h3 class="th">Tables</h3>'
+        # '<details class="tb" open><summary>%(Words)s (%(n)d)</summary>%(items)s<button type="button" class="more js-only" hidden></button></details>'
+        # '<details class="tb"><summary>Gaps (%(ng)d)</summary>%(gaps)s</details>'
+        # '<details class="tb"><summary>%(inter_title)s</summary>%(inter)s</details>'
+        # '<details class="tb papers"><summary>Papers (%(nd)d)</summary>%(papers)s</details>'
+        # '<details class="tb claims"><summary>Claims (%(nc)d)</summary><p>All claims with their quotes, grouped by %(w0)s and paper: '
+        # '<a href="%(page)s">open the claims page</a>.</p><div class="cl-host js-only"></div></details>'
+        # '<h3 class="th">Limitations</h3><ul class="lims">%(lims)s</ul>'
+        # '<p class="muted">How this was built: see <a href="#built-%(k)s">the note at the top of this panel</a>.</p>'
         '</section>'
     ) % {
-        "k": key, "name": M["name"], "name_l": M["name"].lower(), "file": M["file"], "glance": glance(M),
+        "k": key, "name": M["name"], "name_l": M["name"].lower(), "page": page,
+        # "file": M["file"], "glance": glance(M),
         "toolbar": toolbar(M), "svg": svg_graph(M, geo), "limit": limit,
-        "legend": legend(M), "Words": word[1].capitalize(), "n": len(M["items"]), "items": items_table(M),
-        "ng": len(M["gaps"]), "gaps": gaps_table(M), "inter_title": inter_title, "inter": inter,
-        "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0], "page": page, "lims": lims,
-        "empty": DRAWER_EMPTY,
+        # "legend": legend(M), "Words": word[1].capitalize(), "n": len(M["items"]), "items": items_table(M),
+        # "ng": len(M["gaps"]), "gaps": gaps_table(M), "inter_title": inter_title, "inter": inter,
+        # "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0], "lims": lims,
+        "empty": DRAWER_EMPTY, "xicon": XICON,
     }
 
 
@@ -654,35 +791,37 @@ def index_html(MA, MB, ga, gb):
     A, B = MA["src"], MB["src"]
     a_docs = len(MA["papers"])
     b_docs = len(MB["papers"])
+    # Compact tabs: the name and one short counts line. The longer descriptions are switched off.
     cards = (
         '<a class="card" id="tab-findings" href="#panel-findings" data-tab="findings"><span class="cn">Findings</span>'
-        '<span class="cd">Each stock trait or site factor against survival and growth.</span>'
-        '<span class="cc">%s · %s</span><span class="cc">%s · %s</span></a>'
+        # '<span class="cd">Each stock trait or site factor against survival and growth.</span>'
+        '<span class="cc">%s · %s · %s</span></a>'
         '<a class="card" id="tab-network" href="#panel-network" data-tab="network"><span class="cn">Network</span>'
-        '<span class="cd">The same question as a graph, with the conditions in between.</span>'
-        '<span class="cc">%s · %s · %s</span><span class="cc">%s · %s</span></a>'
-    ) % (plural(len(MA["items"]), "finding", "findings"), plural(len(MA["gaps"]), "gap", "gaps"),
+        # '<span class="cd">The same question as a graph, with the conditions in between.</span>'
+        '<span class="cc">%s · %s · %s</span></a>'
+    ) % (plural(len(MA["items"]), "finding", "findings"),
          plural(len(A["evidence"]), "claim", "claims"), plural(a_docs, "paper", "papers"),
-         plural(len(MB["nodes"]), "node", "nodes"), plural(len(MB["items"]), "edge", "edges"),
-         plural(len(MB["gaps"]), "gap", "gaps"),
+         plural(len(MB["items"]), "edge", "edges"),
          plural(len(B["evidence"]), "claim", "claims"), plural(b_docs, "paper", "papers"))
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>Q1 · Tree planting evidence</title>'
         '<meta name="description" content="Evidence on how planting-stock traits and site treatments affect seedling survival and growth in Canadian forest restoration: findings, certainty, gaps and source quotes.">'
-        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":"");%s</script>'
+        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":"");%s%s</script>'
         '<link rel="stylesheet" href="style.css">'
         '<script src="app.js" defer></script></head><body>'
         '<a class="skip" href="#main">Skip to content</a>'
-        '<header class="top"><div class="bar"><p class="eyebrow">Evidence Jam 2026 · Lane 3 · Question 1</p>%s</div>'
-        '<h1>Tree planting in Canadian forest restoration</h1><p class="q">%s</p>'
+        # '<header class="top"><div class="bar"><p class="eyebrow">Evidence Jam 2026 · Lane 3 · Question 1</p>%s</div>'
+        # '<h1>Tree planting in Canadian forest restoration</h1><p class="q">%s</p>'
+        '<header class="top"><div class="hrow"><h1>Tree planting in Canadian forest restoration</h1>%s</div><p class="q">%s</p>'
         '<nav aria-label="Panels"><div class="cards">%s</div></nav></header>'
         '<main id="main">%s%s</main>'
-        '<footer><p>Built from <code>answers/q1_tree_planting.json</code> and <code>answers/q1_tree_planting_graph.json</code>. '
-        'Certainty rule <code>%s</code>. No text on this page is generated by a language model.</p></footer>'
+        # '<footer><p>Built from <code>answers/q1_tree_planting.json</code> and <code>answers/q1_tree_planting_graph.json</code>. '
+        # 'Certainty rule <code>%s</code>. No text on this page is generated by a language model.</p></footer>'
         '</body></html>\n'
-    ) % (THEME_JS, THEME_BTN, esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb), esc(A["rule"]))
+    ) % (THEME_JS, DOCK_JS, THEME_BTN, esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb))
+    # ) % (THEME_JS, THEME_BTN, esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb), esc(A["rule"]))
 
 
 # ---------------------------------------------------------------------------
@@ -738,7 +877,11 @@ def claims_page(M):
         for i in src["interactions"]:
             e = ev[i["edge_id"]]
             title, year, doi = M["papers"][e["document_id"]]
-            lis.append(claim_li(i["edge_id"], e).replace("</blockquote></li>", "</blockquote><p class=\"pm\">Listed direction: %s · %s · %s</p></li>" % (
+            # Machine-check attributes: the interactions table on index.html is switched off,
+            # so this list carries data-interaction-id and data-direction (values from the JSON).
+            li = claim_li(i["edge_id"], e).replace("<li ", '<li data-interaction-id="%s" data-direction="%s" ' % (
+                esc(i["edge_id"]), esc(i["direction"])), 1)
+            lis.append(li.replace("</blockquote></li>", "</blockquote><p class=\"pm\">Listed direction: %s · %s · %s</p></li>" % (
                 dir_html(i["direction"]), paper_line(title, year), doi_html(e["document_id"], doi))))
         body.append('<section class="cg" id="interactions"><h2>Interactions</h2><p>Each is one claim, not a pooled finding.</p><ol class="claims">%s</ol></section>' % "".join(lis))
     else:
@@ -812,6 +955,11 @@ def data_json(M):
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"))
 
 
+def src_text(*names):
+    """Read one or more files from src/ and join them in order."""
+    return "\n".join((HERE / "src" / n).read_text(encoding="utf-8") for n in names)
+
+
 def main():
     out = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else HERE / "site"
     A = json.loads((ANSWERS / "q1_tree_planting.json").read_text(encoding="utf-8"))
@@ -831,8 +979,14 @@ def main():
         "claims-network.html": claims_page(MB),
         "data/findings.json": data_json(MA),
         "data/network.json": data_json(MB),
-        "style.css": mini((HERE / "src" / "style.css").read_text(encoding="utf-8")),
-        "app.js": mini((HERE / "src" / "app.js").read_text(encoding="utf-8")),
+        # graph.css (in-graph legend, chip column title) is part of the first-view stylesheet.
+        "style.css": mini(src_text("style.css", "graph.css")),
+        "app.js": mini(src_text("app.js")),
+        # Loaded on first use only (see need() in app.js).
+        "explore.js": mini(src_text("explore.js")),
+        "explore.css": mini(src_text("explore.css")),
+        "snap.js": mini(src_text("snap.js")),
+        "export.js": mini(src_text("export.js")),
     }
     for rel, text in files.items():
         (out / rel).write_text(text, encoding="utf-8")

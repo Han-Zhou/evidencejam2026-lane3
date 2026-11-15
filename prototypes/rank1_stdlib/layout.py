@@ -7,8 +7,12 @@ same input always gives the same picture: no randomness, no force layout.
 
 Steps: build items and routes -> order each layer (barycenter sweeps, ties by
 first-seen order) -> place items vertically (isotonic regression keeps the
-order and the spacing) -> spread ports on node sides -> draw cubic curves.
+order and the spacing) -> spread ports on node sides -> draw cubic curves ->
+add a legend band under the graph -> check that no text, node, chip or line
+overlaps another.
 """
+
+import re
 
 CHIP_W, CHIP_H = 60, 24
 GAP_W, GAP_H = 96, 24
@@ -17,6 +21,25 @@ ARROW = 9
 LABEL_PX = 14
 SUB_PX = 12
 TOP = 16
+TITLE_PX = 15
+
+# Legend band under the graph (all sizes in viewBox units).
+LG_PX = 12      # legend text size
+LG_ROW = 18     # one legend row
+LG_LINE = 15    # each wrapped line after the first one in a row
+LG_HEAD = 22    # column head, above the first row
+LG_SW = 30      # swatch width
+LG_SG = 9       # swatch to text
+LG_GUT = 24     # between two columns
+LG_VGAP = 14    # between two rows of columns
+LG_RULE = 18    # graph bottom to the rule
+LG_TOP = 20     # rule to the legend text
+LG_BOT = 14     # legend to the bottom of the viewBox
+BOLD = 1.08     # semibold text is a little wider
+# text_w() is tuned to SF Pro / Helvetica. A wider sans (DejaVu Sans on Linux, or a
+# fallback font in a copied PNG) is up to about 15% wider, so every legend width is
+# estimated at LG_FIT times text_w(). The bounds check uses the same factor.
+LG_FIT = 1.18
 
 
 def stroke_w(studies):
@@ -57,6 +80,116 @@ def wrap(s, px, maxw):
     if cur:
         lines.append(cur)
     return lines
+
+
+def _row_text(r):
+    return ("%s %s" % (r["lead"], r["text"])) if r.get("lead") else r["text"]
+
+
+def _line_w(line, r, first):
+    """Estimated width of one legend line, with the LG_FIT margin; a bold lead is a little wider."""
+    w = text_w(line, LG_PX)
+    if first and r.get("lead") and r.get("bold", True):
+        w += text_w(r["lead"], LG_PX) * (BOLD - 1)
+    return w * LG_FIT
+
+
+def _head_w(head):
+    return text_w(head, LG_PX) * BOLD * LG_FIT if head else 0.0
+
+
+def _wrap_fit(r, tw):
+    """Wrap a legend row so that every line, with the LG_FIT margin and its bold lead,
+    is at most tw wide. A single word wider than tw stays as it is; the bounds check
+    in layout() then stops the build."""
+    mw = tw / LG_FIT
+    while True:
+        lines = wrap(_row_text(r), LG_PX, mw)
+        if mw < 40 or all(_line_w(l, r, i == 0) <= tw for i, l in enumerate(lines)):
+            return lines
+        mw *= 0.96
+
+
+def legend_place(lg, width):
+    """Place the legend columns from left to right. A column that does not fit
+    starts a new row. A 'fill' column takes the rest of its row, or the full
+    width on a new row when the rest is narrower than its 'min'. Positions are
+    relative to the top left of the legend. Every value is computed, so the
+    result is deterministic."""
+    cols, x, y, row_h = [], 0.0, 0.0, 0.0
+    for c in lg["cols"]:
+        if c.get("fill"):
+            rest = width - x
+            if x > 0 and rest < c.get("min", 240):
+                x, y, row_h, rest = 0.0, y + row_h + LG_VGAP, 0.0, width
+            tw = rest - LG_SW - LG_SG
+        else:
+            tw = c.get("tw", 200)
+        head_h = LG_HEAD if c.get("head") else 0
+        w = _head_w(c.get("head"))
+        rows, ry = [], head_h
+        for r in c["rows"]:
+            lines = _wrap_fit(r, tw)
+            w = max([w] + [LG_SW + LG_SG + _line_w(l, r, i == 0) for i, l in enumerate(lines)])
+            rows.append(dict(r, lines=lines, y=ry))
+            ry += LG_ROW + LG_LINE * (len(lines) - 1)
+        if c.get("fill"):
+            w = tw + LG_SW + LG_SG
+        elif x > 0 and x + w > width:
+            x, y, row_h = 0.0, y + row_h + LG_VGAP, 0.0
+        cols.append({"x": x, "y": y, "w": w, "h": ry, "head": c.get("head") or "", "rows": rows})
+        x += w + LG_GUT
+        row_h = max(row_h, ry)
+    return {"cols": cols, "h": y + row_h}
+
+
+def path_points(d, step=8.0):
+    """Sample points along a path made of M, L, C and Z commands, about every
+    `step` units. Used by the overlap check for lines, arrowheads and diamonds."""
+    tok = re.findall(r"[MLCZ]|-?\d+(?:\.\d+)?", d)
+    pts, cur, start, i, cmd = [], (0.0, 0.0), (0.0, 0.0), 0, "M"
+    while i < len(tok):
+        t = tok[i]
+        if t in "MLCZ":
+            cmd = t
+            i += 1
+            if t == "Z":
+                pts.append(start)
+                cur = start
+            continue
+        if cmd == "M":
+            cur = start = (float(tok[i]), float(tok[i + 1]))
+            pts.append(cur)
+            i += 2
+            cmd = "L"
+        elif cmd == "L":
+            p = (float(tok[i]), float(tok[i + 1]))
+            n = max(1, int(max(abs(p[0] - cur[0]), abs(p[1] - cur[1])) / step))
+            pts += [(cur[0] + (p[0] - cur[0]) * k / n, cur[1] + (p[1] - cur[1]) * k / n) for k in range(1, n + 1)]
+            cur = p
+            i += 2
+        else:
+            c1 = (float(tok[i]), float(tok[i + 1]))
+            c2 = (float(tok[i + 2]), float(tok[i + 3]))
+            p = (float(tok[i + 4]), float(tok[i + 5]))
+            span = abs(c1[0] - cur[0]) + abs(c2[0] - c1[0]) + abs(p[0] - c2[0]) + \
+                abs(c1[1] - cur[1]) + abs(c2[1] - c1[1]) + abs(p[1] - c2[1])
+            n = max(4, int(span / step))
+            for k in range(1, n + 1):
+                s = k / n
+                u = 1 - s
+                pts.append((u * u * u * cur[0] + 3 * u * u * s * c1[0] + 3 * u * s * s * c2[0] + s * s * s * p[0],
+                            u * u * u * cur[1] + 3 * u * u * s * c1[1] + 3 * u * s * s * c2[1] + s * s * s * p[1]))
+            cur = p
+            i += 6
+    return pts
+
+
+def title_box(t):
+    """Estimated box of a lane title, group header or chip column title with its subtitle lines."""
+    w = max([text_w(t["title"], TITLE_PX) * 1.12] + [text_w(s, SUB_PX) for s in t["sub"]])
+    x0 = t["x"] - w / 2 if t.get("anchor") == "middle" else t["x"]
+    return (x0, t["y"], x0 + w, t["y"] + 20 + 15 * len(t["sub"]))
 
 
 class Item:
@@ -108,6 +241,10 @@ def layout(spec):
     edges: list of {'ref', 'kind' (effect|moderation|gap), 'source', 'target',
                     'target_edge', 'studies'}
     cg: distance from a lane edge to the next chip column centre
+    chip_title (opt): {'title', 'parts'} drawn above each chip column; the parts
+                      share one subtitle line when they fit, else one line each
+    legend (opt): {'cols': [{'head', 'rows', 'tw' | 'fill' + 'min'}]} for legend_place();
+                  each row is {'sw', 'lead', 'text', ...}, kept as given plus 'lines' and 'y'
     """
     cg = spec.get("cg", 95)
     margin_l = spec.get("margin_l", 44)
@@ -268,14 +405,22 @@ def layout(spec):
             sort_layer(k, +1)
 
     # --- titles ----------------------------------------------------------------
+    # Lane titles, and the same title above each chip column between two lanes
+    # (centred on the column). In x order, so a screen reader reads them left to right.
     titles = []
     band = TOP
+    ct = spec.get("chip_title")
     for i, lane in enumerate(spec["lanes"]):
-        if not lane:
-            continue
-        sub = wrap(lane.get("subtitle") or "", SUB_PX, NODE_W)
-        titles.append({"x": lane_left(i), "y": TOP, "title": lane["title"], "sub": sub})
-        band = max(band, TOP + 18 + 15 * len(sub) + 12)
+        if lane:
+            sub = wrap(lane.get("subtitle") or "", SUB_PX, NODE_W)
+            titles.append({"x": lane_left(i), "y": TOP, "title": lane["title"], "sub": sub})
+            band = max(band, TOP + 18 + 15 * len(sub) + 12)
+        if ct and i < n_lanes - 1:
+            one = " · ".join(ct["parts"])
+            sub = [one] if text_w(one, SUB_PX) <= 2 * cg - 30 else list(ct["parts"])
+            titles.append({"x": col_x(2 * i + 1), "y": TOP, "title": ct["title"], "sub": sub,
+                           "anchor": "middle"})
+            band = max(band, TOP + 18 + 15 * len(sub) + 12)
 
     # lane 0 is a fixed stack: group header, then its nodes
     y = TOP
@@ -490,20 +635,72 @@ def layout(spec):
         for it in layer:
             bottom = max(bottom, it.y + it.h / 2 + it.xb)
     width = lane_left(n_lanes - 1) + NODE_W + 24
+    height = bottom + 24
 
-    # overlap self-check: chips, gap labels and nodes must not overlap
+    # legend: a band under the graph, from the left lane edge to the right one,
+    # with a thin rule on top. The viewBox grows down, so the graph keeps its scale.
+    legend = None
+    if spec.get("legend"):
+        x0, x1 = margin_l, width - 24
+        rule = bottom + LG_RULE
+        legend = legend_place(spec["legend"], x1 - x0)
+        legend.update({"x": x0, "y": rule + LG_TOP, "rule": (x0, rule, x1)})
+        height = legend["y"] + legend["h"] + LG_BOT
+
+    # overlap self-check: nodes, chips, gap labels, titles and legend blocks must
+    # not overlap each other, and no line, arrowhead or diamond may cross a text block.
     boxes = []
     for nid, g in nodes.items():
         boxes.append(("node:" + nid, g["x"], g["y"], g["x"] + g["w"], g["y"] + g["h"]))
     for ref, it in chip_of.items():
         w = GAP_W if it.typ == "gap" else CHIP_W
         boxes.append(("chip:" + ref, it.x - w / 2, it.y - it.h / 2, it.x + w / 2, it.y + it.h / 2))
+    texts = []
+    for t in titles:
+        texts.append(("title:" + t["title"] + "@" + str(int(t["x"])),) + title_box(t))
+    if legend:
+        x0, y0 = legend["x"], legend["y"]
+        for k, c in enumerate(legend["cols"]):
+            texts.append(("legend:%d:%s" % (k, c["head"]), x0 + c["x"], y0 + c["y"],
+                          x0 + c["x"] + c["w"], y0 + c["y"] + c["h"]))
+        r = legend["rule"]
+        texts.append(("legend:rule", r[0], r[1] - 1, r[2], r[1] + 1))
     overlaps = []
-    for i in range(len(boxes)):
-        for j in range(i + 1, len(boxes)):
-            a, b = boxes[i], boxes[j]
+    allb = boxes + texts
+    for i in range(len(allb)):
+        for j in range(i + 1, len(allb)):
+            a, b = allb[i], allb[j]
             if a[1] < b[3] and b[1] < a[3] and a[2] < b[4] and b[2] < a[4]:
                 overlaps.append((a[0], b[0]))
+    marks = []
+    for e in edges:
+        g = out_edges[e["ref"]]
+        hw = e["sw"] / 2 + 1
+        for d in (g["d"], g.get("arrow"), g.get("diamond")):
+            if d:
+                marks.append(("line:" + e["ref"], hw, path_points(d)))
+    for m in members:
+        marks.append(("member:%s>%s" % (m["member"], m["combo"]), 1.7, path_points(m["d"])))
+    for name, hw, pts in marks:
+        for t in texts:
+            if any(t[1] - hw < px < t[3] + hw and t[2] - hw < py < t[4] + hw for px, py in pts):
+                overlaps.append((name, t[0]))
+    # bounds: every title and every legend line (estimated with the LG_FIT margin)
+    # must lie inside the viewBox; legend lines must end at the rule's right end.
+    for t in texts:
+        if t[1] < 0 or t[3] > width:
+            overlaps.append((t[0], "viewBox edge (x %d..%d, width %d)" % (t[1], t[3], width)))
+    if legend:
+        x1 = legend["rule"][2]
+        for c in legend["cols"]:
+            cx = legend["x"] + c["x"]
+            ends = [("head", cx + _head_w(c["head"]))]
+            for r in c["rows"]:
+                for i, l in enumerate(r["lines"]):
+                    ends.append((l, cx + LG_SW + LG_SG + _line_w(l, r, i == 0)))
+            for l, right in ends:
+                if right > x1:
+                    overlaps.append(("legend line %r" % l[:40], "right edge (ends at %d, limit %d)" % (right, x1)))
 
-    return {"width": width, "height": bottom + 24, "nodes": nodes, "edges": out_edges,
-            "members": members, "titles": titles, "overlaps": overlaps}
+    return {"width": width, "height": height, "nodes": nodes, "edges": out_edges,
+            "members": members, "titles": titles, "legend": legend, "overlaps": overlaps}

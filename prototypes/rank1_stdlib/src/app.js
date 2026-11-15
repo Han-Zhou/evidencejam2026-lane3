@@ -1,7 +1,9 @@
 // Q1 prototype, rank 1. Vanilla JS, no framework, no external requests.
 // The page works without this file. It adds tabs, click highlighting of
-// pathways, the drawer, search, lenses, filters, the matrix toggle, sorting,
-// paging and the theme toggle. Nothing in the graph reacts to hover.
+// pathways, the drawer, search, lenses, filters, the matrix toggle, the theme
+// toggle and the toolbar dock. Nothing in the graph reacts to hover.
+// v5: the tables under the graph are switched off. Their code (sorting, paging,
+// the Papers and Claims tables) is in comments marked "tables (switched off)".
 (function () {
 'use strict';
 var doc = document, root = doc.documentElement;
@@ -13,7 +15,9 @@ var AR = ' → ';
 var P = {}, cur = 'findings';
 var GAPN = 'No study in this corpus tested this pairing. This is a gap, not a negative result.';
 var PATHN = 'Edges beyond the first step are separate bodies of evidence. A path is not one tested effect.';
-var HINT = 'Click a node to show its pathways. Click an edge or its chip to read its claims.';
+var HINT = 'Click a node to highlight its pathways. Click an edge or its chip to read its claims.';
+// Same text as DRAWER_EMPTY in build.py.
+var EMPTY = 'Select a node or an edge. Its details, claims and quotes show here.';
 var wide = matchMedia('(min-width: 900px)');
 
 function $(s, el) { return (el || doc).querySelector(s); }
@@ -114,7 +118,7 @@ function route() {
 // combination membership. Nothing is added or multiplied along a path.
 function related(p, ref) {
   var t = kindOf(ref), id = ref.slice(t.length + 1);
-  var R = {keep: {}, far: {}, mem: {}, direct: 0, further: 0, gaps: 0, hid: 0, node: t === 'node'};
+  var R = {keep: {}, far: {}, hop: {}, mem: {}, direct: 0, further: 0, gaps: 0, hid: 0, node: t === 'node'};
   var keep = R.keep;
   function ends(r) { var g = p.g[r]; keep['node:' + g.s] = 1; if (g.t) keep['node:' + g.t] = 1; }
   function add(r) { keep[r] = 1; ends(r); var te = p.g[r].te; if (te) { keep[te] = 1; ends(te); } }
@@ -152,6 +156,7 @@ function related(p, ref) {
     Object.keys(hop).forEach(function (r) {
       add(r);
       if (hop[r] > 1) R.far[r] = 1;
+      R.hop[r] = hop[r];
       if (!passes(p, r)) R.hid++;
       else if (kindOf(r) === 'gap') R.gaps++;
       else if (hop[r] > 1) R.further++;
@@ -172,6 +177,7 @@ function related(p, ref) {
 function highlight(p, ref) {
   var R = ref ? related(p, ref) : null;
   p.svg.classList.toggle('sel', !!R);
+  if (p.xsvg) p.xsvg.classList.toggle('sel', !!R);
   p.gEls.forEach(function (n) {
     var r = refOf(n);
     n.classList.toggle('on', !!R && !!R.keep[r]);
@@ -312,6 +318,8 @@ function apply(p) { status(p, highlight(p, p.pin)); }
 // On wide screens the stage comes into view, so the graph highlight and the drawer show together.
 function toDrawer(p, target) {
   $('h3', p.drawer).focus({preventScroll: true});
+  // In the expanded view the drawer is its own column: never scroll the page behind it.
+  if (p.xopen) { if (target) target.scrollIntoView({block: 'center'}); return; }
   (target || (wide.matches ? $('.stage', p.el) : p.drawer)).scrollIntoView({block: target ? 'center' : 'start'});
 }
 // Select an item: highlight it in the graph, show it in the drawer, record it in the hash.
@@ -350,7 +358,7 @@ function clear(p, refocus, fromHash) {
   p.pin = null; apply(p);
   p.drawer.classList.remove('open');
   $('h3', p.drawer).textContent = 'Details';
-  $('.dr-body', p.drawer).innerHTML = '<p class="muted">Select a node, an edge or a table row. Its details, claims and quotes appear here.</p>';
+  $('.dr-body', p.drawer).innerHTML = '<p class="muted">' + EMPTY + '</p>';
   if (!fromHash) setHash(p.k);
   if (!refocus) return;
   var o = p.opener;
@@ -386,7 +394,9 @@ function refresh(p) {
       if (n.closest('svg') || n.closest('.mx')) {
         n.classList.toggle('off', !ok); n.classList.toggle('lo', !inl); n.classList.toggle('miss', !hit);
         if (n.hasAttribute('tabindex')) n.setAttribute('tabindex', ok ? '0' : '-1');
-      } else if (n.tagName === 'TR') n.classList.toggle('fx', !(ok && hit));
+      }
+      // tables (switched off): hide table rows that the filters or the search remove.
+      // else if (n.tagName === 'TR') n.classList.toggle('fx', !(ok && hit));
     });
   });
   p.nodes.forEach(function (n) {
@@ -394,15 +404,18 @@ function refresh(p) {
     n.classList.toggle('lo', p.lens !== 'all' && !lensN[id]);
     n.classList.toggle('miss', !!p.hits && !p.hits['node:' + id] && !hitN[id]);
   });
+  /* tables (switched off): Papers table rows
   if (p.docRefs) $$('tr[data-doc]', p.el).forEach(function (tr) {
     var d = tr.getAttribute('data-doc');
     var ok = (p.docRefs[d] || []).some(function (r) { return kindOf(r) === 'inter' || passes(p, r); });
     tr.classList.toggle('fx', !(ok && (!p.hits || p.docHit[d])));
   });
+  */
   p.count.textContent = 'Showing ' + shown + ' of ' + total + ' ' + (p.k === 'findings' ? 'findings' : 'edges') +
     (p.f.gaps ? '' : ', gaps hidden') + (p.lens !== 'all' ? ', lens: ' + $('[data-lens="' + p.lens + '"]', p.el).textContent : '');
-  pageTables(p);
-  if (p.claimsOpen) renderClaims(p);
+  // tables (switched off): paging and the Claims table
+  // pageTables(p);
+  // if (p.claimsOpen) renderClaims(p);
   apply(p);
 }
 function search(p, q) {
@@ -444,6 +457,7 @@ function search(p, q) {
     refresh(p);
   }, function () {});
 }
+/* tables (switched off): the Claims and Papers tables, sorting and "Show all" buttons.
 function renderClaims(p) {
   var host = $('.cl-host', p.el), D = p.data;
   if (!D) return;
@@ -497,6 +511,7 @@ function moreBtn(p, b) {
     pageTables(p);
   });
 }
+*/
 function renderMatrix(p) {
   var D = p.data, box = $('.mbox', p.el);
   if (box.firstChild) return;
@@ -532,6 +547,7 @@ function renderMatrix(p) {
   index(p, $$('[data-go]', box));
   refresh(p);
 }
+/* tables (switched off): paging (25 rows, then "Show all") and column sorting.
 function pageTables(p) {
   $$('.more', p.el).forEach(function (b) {
     var t = b.previousElementSibling, all = t.getAttribute('data-all') === '1';
@@ -556,6 +572,7 @@ function sortBy(p, t, b) {
   rows.forEach(function (r) { tb.appendChild(r); });
   pageTables(p);
 }
+*/
 
 // ---------- setup ----------
 function setup(el) {
@@ -574,6 +591,21 @@ function setup(el) {
   $$('.chip', p.svg).forEach(function (n) { p.attr[refOf(n)] = {dir: n.getAttribute('data-direction'), cert: n.getAttribute('data-certainty')}; });
   $$('.gapl', p.svg).forEach(function (n) { p.attr[refOf(n)] = {gap: 1}; });
   setupGraph(p);
+
+  var xb = $('.xbtn', el);
+  if (xb) xb.addEventListener('click', function () { explore(p, xb); });
+  // Copy image and data export: each module loads on its first click (see need()).
+  $$('[data-act]', el).forEach(function (b) {
+    // Load snap.js before the first click, so Safari keeps the clipboard write inside that click.
+    if (b.getAttribute('data-act') === 'copy') ['pointerenter', 'focus'].forEach(function (t) {
+      b.addEventListener(t, function () { need('snap').catch(function () {}); });
+    });
+    b.addEventListener('click', function () {
+      var a = b.getAttribute('data-act');
+      if (a === 'copy') need('snap').then(function () { window.Q1Snap.copy(p, b); }, function () {});
+      else need('export').then(function () { window.Q1Export.run(p, a, b); }, function () {});
+    });
+  });
 
   var tb = $('.toolbar', el);
   p.count = $('.count', tb); p.sres = $('.sres', tb); p.qi = $('input[type=search]', tb);
@@ -617,10 +649,13 @@ function setup(el) {
     var a = t.closest('a[data-ref], [data-go]');
     if (a) { e.preventDefault(); pin(p, refOf(a), a); return; }
     if (t.closest('.x')) { clear(p, true); return; }
+    /* tables (switched off): "Show all" in the Claims table, and a click on a table row selects its item.
     if (t.closest('.more2')) { var h = $('.cl-host', el); h.setAttribute('data-all', h.getAttribute('data-all') === '1' ? '' : '1'); renderClaims(p); return; }
     var tr = t.closest('tr'), r = tr && (tr.getAttribute('data-doc') ? 'paper:' + tr.getAttribute('data-doc') : refOf(tr));
     if (r && !t.closest('a[href^="https:"], button, summary')) { e.preventDefault(); pin(p, r, $('a', tr) || tr); }
+    */
   });
+  /* tables (switched off): sorting, "Show all" and the Claims and Papers sections that build on open.
   $$('table.sortable', el).forEach(function (t) { sortable(p, t); });
   $$('.more', el).forEach(function (b) { moreBtn(p, b); });
   var cd = $('details.claims', el), pd = $('details.papers', el);
@@ -629,8 +664,30 @@ function setup(el) {
     if (cd.open) load(p).then(function () { renderClaims(p); }, function () {});
   });
   pd.addEventListener('toggle', function () { if (pd.open) load(p).then(function () { renderPapers(p); }, function () {}); });
+  */
   refresh(p);
 }
+
+// ---------- modules loaded on first use ----------
+// need('snap') loads snap.js once; need('explore', true) loads explore.js and explore.css together.
+var loaded = {};
+function need(name, css) {
+  if (!loaded[name]) loaded[name] = Promise.all([['script', 'src', name + '.js']].concat(css ? [['link', 'href', name + '.css']] : []).map(function (f) {
+    return new Promise(function (ok, no) {
+      var e = doc.createElement(f[0]);
+      if (f[0] === 'link') e.rel = 'stylesheet';
+      e[f[1]] = f[2];
+      e.onload = ok; e.onerror = no;
+      doc.head.appendChild(e);
+    });
+  })).catch(function (e) { loaded[name] = null; throw e; });
+  return loaded[name];
+}
+// ---------- expanded view (explore.js) ----------
+function explore(p, btn) { need('explore', true).then(function () { window.Q1X.open(p, btn); }, function () {}); }
+// Shared with the modules that load later (explore.js, snap.js, export.js).
+window.Q1 = {pin: pin, clear: clear, refresh: refresh, index: index, refOf: refOf, DIR: DIR, CERT: CERT, DORD: DORD, wide: wide,
+  P: P, load: load, related: related, passes: passes, inLens: inLens, kindOf: kindOf, lab: lab, nameOf: nameOf};
 
 $$('[data-panel]').forEach(setup);
 var tl = $('.cards');
@@ -658,6 +715,100 @@ doc.addEventListener('keydown', function (e) {
     else if (p.pin) clear(p, true);
   }
 });
+
+// ---------- toolbar dock (experiment) ----------
+// The toolbar stays in view while the panel scrolls (CSS section "toolbar dock").
+// This block adds a switch to each toolbar: top, bottom, left or right. The choice is
+// <html data-dock> (DOCK_JS in build.py sets it before the first paint) and
+// localStorage "q1-dock". Left and right need 1100 px; below that the CSS shows the
+// toolbar at the top and the switch hides those two buttons. The search results use
+// fixed positioning, and place() puts them beside the search box (or beside the column).
+// To remove the experiment: delete this block, DOCK_JS and the CSS section.
+(function () {
+  var DK = [['top', 'Toolbar at the top', 'x="4" y="4" width="8" height="2.6"'],
+    ['bottom', 'Toolbar at the bottom', 'x="4" y="9.4" width="8" height="2.6"'],
+    ['left', 'Toolbar on the left', 'x="4" y="4" width="2.6" height="8"'],
+    ['right', 'Toolbar on the right', 'x="9.4" y="4" width="2.6" height="8"']];
+  var side = matchMedia('(min-width: 1100px)');
+  function stored() { var d = root.getAttribute('data-dock'); return /^(top|bottom|left|right)$/.test(d) ? d : 'top'; }
+  function eff() { var d = stored(); return (d === 'left' || d === 'right') && !side.matches ? 'top' : d; }
+  var bars = $$('.toolbar'), lists = $$('.toolbar .sres');
+  bars.forEach(function (tb) {
+    var g = doc.createElement('div');
+    g.className = 'seg dock';
+    g.setAttribute('role', 'group');
+    g.innerHTML = DK.map(function (d) {
+      return '<button type="button" data-dock="' + d[0] + '" aria-pressed="false" aria-label="' + d[1] + '" title="' + d[1] + '">' +
+        '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="2.5"/><rect class="f" ' + d[2] + ' rx=".6"/></svg></button>';
+    }).join('');
+    g.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      root.setAttribute('data-dock', b.getAttribute('data-dock'));
+      try { localStorage.setItem('q1-dock', b.getAttribute('data-dock')); } catch (x) {}
+      sync();
+    });
+    // First row, at the right end: after the search box (and the lens), before the filters.
+    tb.insertBefore(g, $('.filters', tb));
+  });
+  function sync() {
+    var e = eff();
+    $$('.dock').forEach(function (g) {
+      g.setAttribute('aria-label', 'Toolbar position: ' + e);
+      $$('button', g).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-dock') === e ? 'true' : 'false'); });
+    });
+    measure();
+    lists.forEach(place);
+  }
+  // --dockh: the height of the visible top or bottom bar (0 for a side column), for scroll-margin.
+  function measure() {
+    var h = 0, e = eff();
+    if (e === 'top' || e === 'bottom') bars.forEach(function (tb) { h = Math.max(h, tb.offsetHeight); });
+    root.style.setProperty('--dockh', h + 'px');
+  }
+  // Keyboard focus is never hidden under a top or bottom bar: scroll by the overlap.
+  doc.addEventListener('focusin', function (ev) {
+    var n = ev.target, e = eff(), tb = $('.toolbar', P[cur].el), fv = true;
+    try { fv = n.matches(':focus-visible'); } catch (x) {}
+    if ((e !== 'top' && e !== 'bottom') || !tb || tb.contains(n) || !fv || root.classList.contains('xvopen')) return;
+    setTimeout(function () {
+      var r = n.getBoundingClientRect(), t = tb.getBoundingClientRect();
+      if (r.bottom <= t.top || r.top >= t.bottom) return;
+      scrollBy(0, e === 'top' ? r.top - t.bottom - 16 : r.bottom - t.top + 16);
+    }, 0);
+  });
+  // Put the open results list under or over the search box, or beside a side column, inside the viewport.
+  function place(s) {
+    if (s.hidden) return;
+    var tb = s.closest('.toolbar'), r = $('input', tb).getBoundingClientRect(), t = tb.getBoundingClientRect();
+    var W = root.clientWidth, H = innerHeight, m = 8, w = Math.min(560, W - 2 * m), st = s.style, h;
+    st.top = st.bottom = 'auto';
+    if (getComputedStyle(tb).flexDirection === 'column') {
+      var lft = t.left < W / 2;
+      w = Math.min(w, (lft ? W - t.right : t.left) - 2 * m);
+      st.left = (lft ? t.right + m : t.left - m - w) + 'px';
+      var y = Math.max(m, Math.min(r.top, H - m - 360));
+      st.top = y + 'px'; h = H - y - m;
+    } else {
+      st.left = Math.max(m, Math.min(r.left, W - m - w)) + 'px';
+      var below = H - r.bottom - m - 6, above = r.top - m - 6;
+      if (below >= 260 || below >= above) { st.top = (r.bottom + 6) + 'px'; h = below; }
+      else { st.bottom = (H - r.top + 6) + 'px'; h = above; }
+    }
+    st.width = w + 'px';
+    st.maxHeight = Math.max(140, Math.min(h, H * 0.7)) + 'px';
+  }
+  if (window.MutationObserver) lists.forEach(function (s) {
+    new MutationObserver(function () { place(s); }).observe(s, {attributes: true, attributeFilter: ['hidden'], childList: true});
+  });
+  if (window.ResizeObserver) { var ro = new ResizeObserver(measure); bars.forEach(function (tb) { ro.observe(tb); }); }
+  function again() { lists.forEach(place); }
+  addEventListener('scroll', again, {passive: true, capture: true});
+  addEventListener('resize', function () { measure(); again(); });
+  if (side.addEventListener) side.addEventListener('change', sync);
+  sync();
+})();
+
 addEventListener('hashchange', route);
 route();
 })();

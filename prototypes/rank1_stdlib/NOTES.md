@@ -18,8 +18,9 @@ Two builds of the same input give byte-identical output.
   `pathlib`, `collections`.
 - No pip packages, no npm, no lock file. Nothing to install.
 - No native binary. Nothing is specific to an architecture, so it runs on aarch64 Linux.
-- The browser side is one vanilla JS file (`src/app.js`) and one CSS file (`src/style.css`).
-  The build strips comments and indentation from them. No framework, no CDN, no web fonts.
+- The browser side is vanilla JS and CSS: `src/app.js` and `src/style.css` + `src/graph.css` on
+  the first view; `src/explore.*`, `src/snap.js` and `src/export.js` load on first use. The build
+  strips comments and indentation from them. No framework, no CDN, no web fonts.
 
 ## Build time
 
@@ -28,20 +29,209 @@ There is no install step.
 
 ## Files shipped (bytes)
 
-| File | Bytes | Before v2 | When it loads |
+| File | v5 bytes | v4 bytes | When it loads |
 | --- | ---: | ---: | --- |
-| `index.html` | 114,193 | 112,763 | first view |
-| `style.css` | 21,970 | 19,221 | first view |
-| `app.js` | 32,449 | 31,409 | first view |
-| `data/findings.json` | 119,781 | 119,781 | on the first click, search, matrix or table opening in Findings |
+| `index.html` | 64,886 | 115,807 | first view |
+| `style.css` | 22,434 | 23,375 | first view (`src/style.css` + `src/graph.css`) |
+| `app.js` | 32,147 | 33,274 | first view |
+| `explore.js` | 21,117 | 21,117 | on the first click on "Expand" |
+| `explore.css` | 6,519 | 6,519 | the same |
+| `snap.js` | 5,042 | – | on the first hover, focus or click on "Copy image" |
+| `export.js` | 10,458 | – | on the first click on "CSV" or "XLSX" |
+| `data/findings.json` | 119,781 | 119,781 | on the first click, search or matrix in Findings |
 | `data/network.json` | 171,473 | 171,473 | the same, in Network |
-| `claims-findings.html` | 181,620 | 181,432 | only when a reader follows a link (the no-JS road to every quote) |
-| `claims-network.html` | 259,241 | 259,053 | the same |
-| **Total** | 900,727 | 895,132 | |
-| **First view** | **168,612** | **163,393** | `index.html` + `style.css` + `app.js` (not gzipped; `http.server` does not compress) |
+| `claims-findings.html` | 181,974 | 181,620 | only when a reader follows a link (the no-JS road to every quote) |
+| `claims-network.html` | 259,241 | 259,241 | the same |
+| **Total** | 895,072 | 932,207 | |
+| **First view** | **119,467** | **172,456** | `index.html` + `style.css` + `app.js` (not gzipped; `http.server` does not compress) |
+
+v5 cuts the first view by 52,989 bytes, because the tables, the glance strip and the HTML legend
+are commented out. The in-graph legend adds about 6.6 KB back.
 
 The first view grew by 5,219 bytes: the two theme token sets, the toggle, the status line and
 the pathway code. The hover-card code that was removed was smaller than what was added.
+v3 adds 1,590 bytes more (the faint-line rules, the compact strips and one legend line).
+v4 adds 2,254 bytes more (the two Expand buttons, `data-label` on each node, the loader).
+The expanded view itself (27,636 bytes) loads only when a reader opens it.
+
+## Changes in v5
+
+Seven requests drove this version. Four agents did the work in parallel, each in its own files.
+
+**1. Minimal text above the graph.** Above the graph there is now only the `h1` with the theme
+toggle, the question, two compact tabs (name and one counts line), the toolbar and the view
+bar. The eyebrow, the "At a glance" strip, the tab descriptions, the search hint, the visible
+"Search / Lens / Direction / Certainty" labels and "View as table" are gone. The panel `h2` and
+the "Search" and "Certainty" labels stay for screen readers only. Certainty options say
+"Any certainty", "Low certainty or higher" and so on.
+
+**2. Everything after the graph is commented out, not deleted.**
+- `build.py`: in `panel_html()` the HTML legend, the "Tables" heading and all `<details>`
+  sections, Limitations, the how-built link, `.vat` and the glance strip; in `index_html()` the
+  footer.
+- `app.js` (block marked "tables (switched off)"): `renderClaims`, `renderPapers`, `sortable`,
+  `moreBtn`, `pageTables`, `sortBy`, the details toggles and the table parts of `refresh()`.
+- `style.css`: the rules that styled only those parts.
+- The drawer stays. It is beside the graph and it is the route to every quote.
+- The 5 Panel A interactions now carry `data-interaction-id` and `data-direction` in
+  `claims-findings.html`, so `check_site.py` still passes without the interactions table.
+- A hidden `#pathnote-network` stays, because `explore.js` reads it for its footer.
+- A no-JS link "All claims and quotes" sits in the heading row (hidden when JS runs).
+
+**3. Sticky toolbar with a position switch (experimental).** Four icon buttons in the toolbar
+set the position: top, bottom, left or right (`aria-pressed`; the group label names the
+position). `localStorage` key `q1-dock`; `DOCK_JS` in the head script applies it before first
+paint. Top: sticky. Bottom: the panel is a flex column and the toolbar uses `order`, so it sticks
+to the bottom. Left / right: a 256 px column that scrolls inside itself. Search results use fixed
+positioning and open below, above or beside the bar. `scroll-margin` keeps focused items out
+from under the bar. Left and right fall back to top below 1100 px (the graph column gets too
+narrow), and those two buttons hide there. Below 701 px the bar is one row that scrolls
+sideways. The code is one CSS section and one JS block, so it is easy to remove.
+
+**4. Copy image (`src/snap.js`).** "Copy image" puts a PNG of the panel graph, as it shows now
+(theme, highlight, filters, lens, search), on the clipboard. It clones the SVG and writes the
+computed styles inline, so `var()` is resolved. Scale is at least 2 (Network about
+2032 × 2059 px). If the Clipboard API is missing or refuses, it downloads
+`q1-<panel>-graph.png`. A hidden polite live region announces the result. `app.js` loads
+`snap.js` on the first hover or focus of the button, so Safari keeps the write inside the first
+click.
+
+**5. CSV / XLSX export of the highlighted data (`src/export.js`).**
+- Rows: with a selection, the items `related()` lights (filtered-out items are left out, so the
+  count matches the status line); with no selection, every visible edge (filters, lens, search).
+- Columns: panel, edge id, kind, from, to, from id, to id, step (exact, from the new `R.hop` in
+  `related()`), step note, direction, direction label, certainty, certainty label,
+  certainty_rationale, studies, claims, study directions, claim directions, searched_for, claim
+  ids, document ids. A gap's direction is its pack `status` (`no_evidence`).
+- CSV: RFC 4180, CRLF, UTF-8 with BOM. A text cell that starts with `=`, `+`, `-`, `@`, tab or
+  CR gets a leading `'` (formula guard). No pack value triggers it today.
+- XLSX: a plain-JS Office Open XML writer (ZIP store method, CRC-32), sheets "Edges" and
+  "Claims" (one row per claim with quote, paper, year, DOI), bold frozen header, inline strings.
+  Checked with Python `zipfile` and `xml.etree`, and macOS Quick Look. Not opened in Excel.
+- File names: `q1-<panel>-<selection or all/visible>[-lens-…][-search-…][-no-…].csv|xlsx`.
+
+**6. Chip column titles.** "Effect · certainty" with "arrow: direction · dots: certainty" sits
+above the Findings chip column and above each chip column between lanes in Network. The Network
+layout is unchanged (the user chose this). The legend explains the chips that sit in the
+Conditions lane: they are edges that go straight from a stock or treatment to an outcome.
+
+**7. Legend inside the graph.** A band under each graph, inside the SVG, below a thin rule
+(`layout.legend_place()`, `build.py` `legend_spec` / `svg_legend`, styles in `src/graph.css`).
+The viewBox grows downward; the graph scale does not change. Content: direction, certainty
+dots, line width, "No evidence" with `GAP_NOTE`, the JS-only faded-line row; Network also has
+moderation, member link, node kinds, the lane-chip note and `limitations[0]` word for word.
+It uses only its own classes under `.glg`, no hook attributes, so it never fades, is not
+focusable and does not leak into Expand. `role="group" aria-label="Legend"`. The copied PNG
+includes it. Text widths are estimated at 1.18 × the SF Pro estimate, so wider Linux fonts still
+fit. The build now also stops when a title or legend line can pass the viewBox, or when legend
+text overlaps a node, chip, label or line.
+
+**Checks.** `check_site.py` PASS. Two builds are byte-identical. One headless Chrome run with all
+features: no page errors (only a `favicon.ico` 404, as before); node click: "12 edges
+(5 direct, 7 further)"; edge click: 4 quotes; CSV 12 rows with steps 1 and 2; XLSX downloads;
+"Copy image" puts the PNG on the clipboard; all four dock positions; no horizontal scroll at
+390 px. Lighthouse and axe-core were not run.
+
+## Changes in v4
+
+Two requests drove this version.
+
+**1. The faded parts keep their colour.**
+
+- With JS on, every line, arrowhead and moderation diamond draws in its own direction colour at
+  `--fade` opacity (`.3` light, `.4` dark), not in grey. Chip outlines are at 45%; chip glyphs
+  and dots keep full colour and contrast. Membership connectors are at 50%.
+- Active items (the `.on` class) go to full opacity. Further-step lines keep the 42% opacity.
+  The `--faint` token is gone.
+- The hint now says "Click a node to highlight its pathways." The legend line says "Faded line:
+  an edge that is not selected. Select a node or an edge to show it at full strength."
+
+**2. An expanded view in a note-graph style, with zoom and node search.**
+
+- An "Expand" button sits beside Graph | Matrix in both panels. It opens a full-screen dialog
+  (`role="dialog"`, `aria-modal`). The page behind it is `inert` while it is open.
+- `src/explore.js` and `src/explore.css` hold all of it. `app.js` loads both on the first click
+  only, so the first view does not carry them.
+- Look: a plain white or `#1E1E1E` canvas, round grey nodes sized by number of edges, straight
+  lines, labels under the nodes, and a purple accent for the selected node and search matches.
+  Node kinds differ by shape: filled circle (planting stock, factor), filled square (site
+  treatment), hollow ring (condition), circle with an outer ring (outcome), dashed ring
+  (combination). Every text pair passes AA (lowest 4.70, dark `--text-3` on `#262626`).
+- Same content as the panel: the view reads nodes, edges, gaps, membership links, directions,
+  grades, line widths and `aria-label`s from the panel's own SVG (plus a new `data-label` on
+  each node). Every edge keeps its chip (glyph + dots), arrowhead and line width. A gap is a
+  dashed line with a "No evidence" chip. A moderation line ends in a diamond on the border of
+  its target edge's chip. A combination node's label names its members, and thin dotted
+  lines join it to them.
+- Layout: a small force simulation (many-body repulsion, link springs, a pull towards the
+  node's lane and a pull to the middle row). It starts from the panel layout, so it is
+  deterministic. It runs 320 steps before the first paint. The settings came from a grid
+  search for a wide shape with few chip overlaps. After each frame, chips slide along their
+  own lines until they are off nodes, labels and other chips.
+- Zoom: wheel or trackpad pinch (at the pointer), two-finger pinch on touch, the − / + / Fit
+  buttons, and the keys + − 0 when the canvas has focus. Range 20% to 500%. Chips and labels
+  keep a readable size when zoomed out. Pan: drag the canvas, or arrow keys.
+- Drag a node to move it. The layout reacts while you drag and settles when you let go, as in
+  note-graph apps. Under `prefers-reduced-motion` there is no animation and the node stays
+  where you drop it.
+- Node search: a search box at the top left. Matches get a purple ring and everything else
+  dims. A list shows the matches (arrow keys move through it). Enter or a click centres and
+  zooms on the node and selects it.
+- Shared state: the view's elements join the panel's index, so selection, pathway highlight,
+  the drawer, the hash and the toolbar filters and lens all act on both graphs. While the
+  dialog is open, the drawer column and the status line move into it (the drawer is a side
+  column, under the canvas below 900 px). The footer has a short legend, the controls and the
+  path note. A click on empty canvas clears the selection. Esc clears the search first, then
+  closes. Closing puts the drawer and status line back and returns focus to "Expand".
+- Tested in headless Chrome: open, keyboard select of a node and an edge (8 pathway edges lit
+  in both graphs, 4 quotes in the drawer), + zoom (91% → 114%), Esc close (no `inert` left,
+  drawer and status line back, focus on Expand), node drag, wheel zoom, search and the narrow
+  layout. Animation frames do not run in headless virtual time, so a timer also sets the
+  final view of each zoom animation.
+
+## Changes in v3
+
+Three requests drove this version.
+
+**1. The graph has more weight on the page.**
+
+- The page is wider: `max-width` 1320 px → 1560 px. The drawer column is 340 px (was 360 px),
+  so the graph column gets the rest.
+- The SVG can grow to 1.2 times its layout width (`max-width` on the `<svg>`), so it fills a
+  wide column. The Findings layout is wider (`cg` 120 → 160), so its curves are gentler.
+- Less chrome above the graph. The panel cards show the name and the description on one line
+  and all counts on a second line. "At a glance" is one strip: heading, counts and the
+  "How this was built" toggle share two rows (it opens to full width). The toolbar, panel and
+  header spacing is tighter. The status line now sits in the view bar, between
+  Graph | Matrix and "View as table", not in a row of its own.
+- At 1440 × 900 the Network graph starts at about 665 px from the top (was about 1020 px).
+
+**2. Blue is now green.**
+
+- `--inc` (Increase) is `#0B6E4F` light and `#48D5A6` dark. Contrast: 5.10 or more on every
+  background (light), 8.38 or more (dark); `--pill-text` on it is 6.25 (light) and 9.93 (dark).
+  Of the greens tested, these keep the most distance from `--dec` red under simulated
+  deuteranopia and protanopia. The glyphs (↑ ↓ ↕ = ?) still carry direction without colour.
+- `--focus` was also blue. It is now the text colour (`#1A1A1A` light, `#DADCDE` dark), not
+  green, because green now means Increase. A green outline on a red chip would mislead. The
+  focus ring and the selected outline match the black (white in dark) pills. Contrast: 14.2
+  or more (light), 11.29 or more (dark).
+- The "Show gaps" checkbox uses `accent-color: var(--pill)`, so it is not system blue.
+
+**3. Connections are faint until they are active.**
+
+- With JS on, every line, arrowhead, moderation diamond and membership connector draws in
+  `--faint` (`#C5C9CE` light, `#3A444E` dark). Chips draw with a `--line-strong` outline and a
+  `--text-2` glyph and dots, so direction and certainty stay readable with no colour.
+- An item is active when it is on the pathway of the selected node, or it is the selected edge,
+  gap or paper's edge (the `.on` class that `highlight()` already sets). Active lines,
+  arrowheads, diamonds and chips take their direction colour. Further-step lines keep the 42%
+  opacity. An active gap line goes back to `--text-3` dashes. The rest still fades to 12%.
+- Without JS nothing can be selected, so the graph keeps its full colours.
+- The hint says "Click a node to colour its pathways." The legend has a new line: "Grey line:
+  an edge that is not selected. Select a node or an edge to show its direction colour."
+- The faint lines are about 1.6:1 against the canvas. This is on purpose (the user asked for a
+  faint shade). The information is in the chips, which keep full text contrast.
 
 ## Changes in v2 (SPEC sections 0, 2, 3.3 to 3.7 and 4)
 
@@ -189,6 +379,14 @@ the graph is still there.
 - **Paper selection lights its citing edges.** This is an addition, not in the spec.
 - **Selected and focused look alike.** Both use `--focus`; the selected outline is thicker
   (3.5 px against 2.5 px).
+- **v4 expanded view.** SPEC 0 says nothing floats over the graph. The expanded view is a
+  full-screen dialog that covers the page on purpose; inside it, nothing covers the canvas
+  except the search list while it is open. Its layout is a force layout, not the layered one,
+  so it trades some order for the free look the user asked for. The panel graph is unchanged.
+- **v3 token changes.** `--inc` is green and `--focus` is the text colour, not the SPEC 4.1
+  blues. Lines are faded until active (v3: grey; v4: faded colour), which SPEC 3.3 does not describe (it asks for direction
+  colour on every line). "At a glance" is still at the top of the panel (SPEC 0, L1), but as a
+  compact strip.
 - **Papers and Claims tables are built from the JSON in the browser** when their section
   opens. Without JS, the section links to `claims-*.html`, which has every claim and quote.
 - **The matrix is built in the browser** on the first click on "Matrix". Without JS there is
