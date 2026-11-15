@@ -43,6 +43,15 @@ Q1Tour.add('marshes', {
         'The <b>Lags</b> labels name attributes that are below the natural reference.'
     },
     {
+      // The coverage bar at the top of the panel. The ages of one finding are in the
+      // "When was it measured?" fold-out under its row.
+      target: '.q2-cov',
+      title: 'Evidence by marsh age',
+      text: 'This bar counts the findings that studies measured at each marsh age. Darker means more findings. ' +
+        'Hatched means no finding: a gap, not a negative result. Open <b>When was it measured?</b> under a row to see its ages.',
+      limit: 'A comparison at one age tells you nothing about the marsh at later ages.'
+    },
+    {
       target: '.q2-filters',
       title: 'Make the list shorter',
       text: 'Pick one attribute or one certainty level. The board and the timeline then show only the matching rows. ' +
@@ -61,13 +70,6 @@ Q1Tour.add('marshes', {
       title: 'A gap is not a result',
       text: 'These rows are gaps: no study tested that attribute. They have a hatched meter and no grade. ' +
         'A gap is not a negative result. A <b>mixed</b>, <b>comparable</b> or <b>no change</b> result is a real finding.'
-    },
-    {
-      target: '.q2-tl',
-      title: 'When was it measured?',
-      text: 'Each mark is a marsh age at which a study measured the attribute. The marks do not show when a marsh matches the reference. ' +
-        'The top rows compare with the reference. The lower rows show change with age.',
-      limit: 'A comparison at one age tells you nothing about the marsh at later ages.'
     },
     {
       target: '.q2-foot',

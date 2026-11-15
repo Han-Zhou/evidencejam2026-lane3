@@ -79,7 +79,7 @@ Q1Tour.add('gapmap', {
       before: undemo
     },
     {
-      target: '.q3k',
+      target: '.q3bar',
       title: 'Sort and filter',
       text: 'Sort the rows and the columns. Choose the outcomes and interventions to show. ' +
         'Set a minimum density, or hide empty rows and columns. Faded cells are below the minimum. They are not gaps.',
@@ -109,7 +109,7 @@ Q1Tour.add('gapmap', {
         return out;
       },
       title: 'Certainty and rationale',
-      text: 'The details under the map show the certainty grade and the direction of the finding. ' +
+      text: 'The details panel shows the certainty grade and the direction of the finding. ' +
         'The rationale tells you why it has that grade. For a gap, the details show what was searched for.',
       before: demo
     },
