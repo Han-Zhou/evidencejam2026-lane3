@@ -498,12 +498,13 @@ html[data-dock="bottom"] .toolbar { order: 1; top: auto; bottom: 8px; margin: 16
    on the pathway of the selected node, or the selected edge (highlight() in app.js).
    visibility: hidden takes them out of view, out of the tab order and out of the
    accessibility tree. Nothing moves, so the edges show in place.
-   "Show all edges" (html.ea, block "variant B" in app.js) gives the v6 look back.
+   "Show all edges" (.panel.ea, block "variant B" in app.js) gives the v6 look back. Each panel
+   has its own setting; EDGES_ALL in build.py sets the start state (Findings on, Network off).
    Without JS (no .js) every edge shows. The expanded view (.xg) is not changed.
-   To remove the variant: delete this section, that block in app.js, the .eab button and the
-   "Edges:" legend row in build.py. */
-html.js:not(.ea) .graph .ln:not(.on), html.js:not(.ea) .graph .chip:not(.on), html.js:not(.ea) .graph .gapl:not(.on),
-html.js:not(.ea) .graph .dia:not(.on), html.js:not(.ea) .graph .mem:not(.on) { visibility: hidden; }
+   To remove the variant: delete this section, that block in app.js, the .eab button, the
+   "Edges:" legend row and EDGES_ALL in build.py. */
+html.js .panel:not(.ea) .graph .ln:not(.on), html.js .panel:not(.ea) .graph .chip:not(.on), html.js .panel:not(.ea) .graph .gapl:not(.on),
+html.js .panel:not(.ea) .graph .dia:not(.on), html.js .panel:not(.ea) .graph .mem:not(.on) { visibility: hidden; }
 /* .hit has pointer-events: stroke, which ignores visibility. This keeps a hidden line from taking a click. */
 html.js .graph .ln .hit { pointer-events: visibleStroke; }
 .eab[aria-pressed="true"] { background: var(--pill); color: var(--pill-text); border-color: var(--pill); }

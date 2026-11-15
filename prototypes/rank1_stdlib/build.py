@@ -45,6 +45,9 @@ KIND_TITLE = {
 }
 KIND_LANE = {"planting_stock": 0, "site_treatment": 0, "combination": 0, "condition": 1, "outcome": 2}
 LANE0_GROUPS = ["planting_stock", "site_treatment", "combination"]
+# Variant B: the start state of "Show all edges" in each panel. True: every edge shows (the v6
+# look). False: with JS the graph shows nodes only until a selection.
+EDGES_ALL = {"findings": True, "network": False}
 
 GAP_NOTE = "No study in this corpus tested this pairing. This is a gap, not a negative result."
 DRAWER_EMPTY = "Select a node or an edge. Its details, claims and quotes show here."
@@ -303,9 +306,12 @@ def legend_spec(M):
     gap = {"sw": "gap", "lead": "No evidence:", "text": GAP_NOTE}
     fade = {"sw": "fade", "lead": "Faded line:", "js": True,
             "text": "not selected. Click a node or an edge to show it at full strength."}
-    # Variant B: with JS the edges are hidden until a selection (style.css "variant B").
+    # Variant B: with JS the edges are hidden until a selection (style.css "variant B"),
+    # unless "Show all edges" is on. EDGES_ALL sets its start state for each panel.
     hid = {"sw": None, "lead": "Edges:", "js": True,
-           "text": "hidden until you select a node or an edge, or use “Show all edges”."}
+           "text": "all show at the start. Turn off “Show all edges” to see only the edges of the node or edge you select."
+           if EDGES_ALL[M["key"]] else
+           "hidden until you select a node or an edge, or use “Show all edges”."}
     if M["key"] == "findings":
         cols.append({"head": "Other marks", "fill": True, "min": 200, "rows": [gap, fade, hid]})
         return {"cols": cols}
@@ -740,7 +746,7 @@ def panel_html(M, geo):
     #         sum(1 for n in M["nodes"] if n.get("members")), sum(1 for i in M["items"] if i["kind"] == "moderation"), len(src["set_aside"]))
     # lims = "".join("<li>%s</li>" % esc(l) for l in src["limitations"])
     return (
-        '<section class="panel" id="panel-%(k)s" data-panel="%(k)s" aria-labelledby="h-%(k)s">'
+        '<section class="panel%(ea)s" id="panel-%(k)s" data-panel="%(k)s" aria-labelledby="h-%(k)s">'
         # With JS the heading row is for screen readers only (the tab names the panel).
         # Without JS the drawer is not there, so the row links to the claims page (every quote).
         '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="nojs"><a href="%(page)s">All claims and quotes</a></p></div>'
@@ -752,8 +758,9 @@ def panel_html(M, geo):
         '<div class="vbar"><div class="vtools"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
         '<button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div>'
         '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button>'
-        # Variant B: the graph shows nodes only until a selection; this toggle shows every edge (app.js).
-        '<button type="button" class="tbtn eab js-only" aria-pressed="false">Show all edges</button></div>'
+        # Variant B: when this toggle is off, the graph shows nodes only until a selection (app.js).
+        # Its start state comes from EDGES_ALL, together with the panel's "ea" class.
+        '<button type="button" class="tbtn eab js-only" aria-pressed="%(eap)s">Show all edges</button></div>'
         # Status line: the buttons float at the right; only the text after them is the live region.
         '<div class="selbar js-only" id="st-%(k)s"><div class="acts" hidden><button type="button" class="tod">Details below</button>'
         '<button type="button" class="clr">Clear</button></div><div class="sd" role="status" aria-live="polite"></div></div></div>'
@@ -787,6 +794,7 @@ def panel_html(M, geo):
         # "ng": len(M["gaps"]), "gaps": gaps_table(M), "inter_title": inter_title, "inter": inter,
         # "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0], "lims": lims,
         "empty": DRAWER_EMPTY, "xicon": XICON,
+        "ea": " ea" if EDGES_ALL[key] else "", "eap": "true" if EDGES_ALL[key] else "false",
     }
 
 

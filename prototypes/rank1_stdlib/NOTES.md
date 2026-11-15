@@ -59,7 +59,22 @@ The expanded view itself (27,636 bytes) loads only when a reader opens it.
 
 ## Variant B: edges hidden until selected
 
-This is one design variant of the graph, for comparison. It is on its own branch.
+Variant B is merged into main. Variants A (grey edges until selected) and C (non-planar graph,
+faded Conditions lane) were not kept.
+
+**Start state for each panel (after the merge).** "Show all edges" now has one setting for each
+panel. `EDGES_ALL` in `build.py` sets the start state: Findings starts with every edge shown (the
+button is pressed), and Network starts with the nodes only. The build writes the start state into
+the HTML (class `ea` on `.panel`, and `aria-pressed` on its `.eab` button), so the first paint is
+correct and no JS has to run first. The CSS rules are under `html.js .panel:not(.ea)`, not
+`html.js:not(.ea)`. The status-line hint and the "Edges:" legend row follow the panel: Findings
+says "Edges: all show at the start. Turn off “Show all edges” to see only the edges of the node or
+edge you select." A click on the button changes only its own panel and writes the hint again. The
+paragraphs below describe the variant as it was built. Where they say "both panels" or "one
+setting", read them with this change. The README conflict below now applies only to Network.
+Checks after the change: two builds byte-identical, `check_site.py` PASS, and headless Chrome
+(Findings 14 of 14 lines at the start, 0 after the toggle; Network 0 of 30 at the start, 30 after
+its toggle; the other panel does not change; no page errors).
 
 **Default state.** With JS, both panel graphs (Findings and Network) show the nodes only. Effect
 lines, arrowheads, chips, gap lines and "No evidence" labels, moderation lines and diamonds and
