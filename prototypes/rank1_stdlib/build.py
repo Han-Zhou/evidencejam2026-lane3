@@ -1269,13 +1269,26 @@ def q2_ages_txt(f):
     return ", ".join(f["time_points"])
 
 
+# Warning sign (yellow triangle, dark "!"). Its colours are in q2.css (.q2-wt, .q2-wm).
+WICON = ('<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="q2-wt" d="M12 2.8 22.6 21H1.4Z"/>'
+         '<path class="q2-wm" d="M12 9.2v5.6M12 17.6v.1"/></svg>')
+
+
+def q2_warn(t):
+    """Warning label next to "Time to reference: unknown". Only when the JSON value is null.
+    The icon is decoration; the word "Warning" gives the meaning, so it is not colour alone. No digits."""
+    if t is not None:
+        return ""
+    return '<p class="q2-warn">%s<span><strong>Warning:</strong> no answer in the evidence</span></p>' % WICON
+
+
 def q2_clock(Q):
     sa = Q["short_answer"]
     t = sa["time_to_reference"]
     lags = "".join('<li class="q2-lag">Lags: %s</li>' % esc(l) for l in sa["lagging_attributes"])
-    return ('<div class="q2-clock"><p class="q2-null">Time to reference: <em>%s</em></p><p class="q2-cnote">%s</p>'
-            '<ul class="q2-lags" aria-label="Lagging attributes">%s</ul></div>') % (
-        "unknown" if t is None else esc(t), esc(sa["time_to_reference_note"]), lags)
+    return ('<div class="q2-clock"><div class="q2-chead"><p class="q2-null">Time to reference: <em>%s</em></p>%s</div>'
+            '<p class="q2-cnote">%s</p><ul class="q2-lags" aria-label="Lagging attributes">%s</ul></div>') % (
+        "unknown" if t is None else esc(t), q2_warn(t), esc(sa["time_to_reference_note"]), lags)
 
 
 def q2_filters(Q):
@@ -1442,8 +1455,8 @@ def q2_claims_page(Q):
     sa = Q["short_answer"]
     toc, body = [], []
     t = sa["time_to_reference"]
-    body.append('<section class="cg" id="time"><h2>Time to reference: %s</h2><p>%s</p><p class="rat">Lagging attributes: %s</p></section>' % (
-        "unknown" if t is None else esc(t), esc(sa["time_to_reference_note"]), esc(", ".join(sa["lagging_attributes"]))))
+    body.append('<section class="cg" id="time"><h2>Time to reference: %s</h2>%s<p>%s</p><p class="rat">Lagging attributes: %s</p></section>' % (
+        "unknown" if t is None else esc(t), q2_warn(t), esc(sa["time_to_reference_note"]), esc(", ".join(sa["lagging_attributes"]))))
     for f, kind in q2_sort(q2_all(Q)):
         sid = "f-" + slug(f["id"])
         name = "%s (%s)" % (f["outcome"]["label"], Q2KIND[kind][1].lower())

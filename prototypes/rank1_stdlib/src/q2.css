@@ -35,6 +35,18 @@ html:not(.js) .q2 { margin-top: 56px; border-top: 1px solid var(--line-strong); 
 .q2-covx .q2-ticks { flex: 1 1 100%; }
 .q2-cov .q2-note { margin-top: 4px; font-size: .92rem; }
 .q2-null { margin: 0; font: 500 1.6rem/1.25 var(--serif); }
+/* Warning label next to "Time to reference: unknown". Pale yellow tag, not the amber of "mixed",
+   so it does not read as a finding. Square-ish corners, so it does not look like a pill button.
+   Text contrast: 15.7 (light) and 10.4 (dark) to 1; border 3.6 and 6.6 to 1 on the card.
+   claims-marshes.html uses it too. */
+.q2-chead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.q2-warn { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 4px 12px 4px 8px;
+  border: 1.5px solid #A87A00; border-radius: 8px; background: #FFF4C2; color: #1A1A1A; font: .88rem/1.3 var(--sans); }
+:root[data-theme="dark"] .q2-warn { border-color: #C99A0A; background: #33290A; color: var(--text); }
+.q2-warn svg { flex: none; width: 20px; height: 20px; }
+.q2-wt { fill: #F7C600; stroke: #1A1A1A; stroke-width: 1.5; stroke-linejoin: round; }
+.q2-wm { fill: none; stroke: #1A1A1A; stroke-width: 2.4; stroke-linecap: round; }
+.cg .q2-warn { margin-top: 10px; }
 .q2-lags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
 .q2-lag, .q2-kind, .q2-lagb { padding: 1px 10px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: .8rem; white-space: nowrap; background: var(--raised); }
 .q2-lagb { margin-left: 6px; padding: 0 7px; border-color: currentColor; color: var(--dec); }
