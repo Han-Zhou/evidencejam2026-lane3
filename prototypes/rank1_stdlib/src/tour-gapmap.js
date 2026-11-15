@@ -65,10 +65,9 @@ Q1Tour.add('gapmap', {
   end: undemo,
   steps: [
     {
-      target: '.q3sum, .q3dense',
+      target: '.q3sum',
       title: 'What this map shows',
-      text: 'The map shows how much grassland restoration evidence there is for each pair of intervention and outcome. ' +
-        'Open the list of the densest cells to go to one of them.',
+      text: 'The map shows how much grassland restoration evidence there is for each pair of intervention and outcome.',
       limit: 'The map misses grassland claims that have a different ecosystem tag or that fit no group.',
       before: undemo
     },

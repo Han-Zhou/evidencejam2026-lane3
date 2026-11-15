@@ -12,13 +12,7 @@
 .k-dense { --tc: var(--t3); --tf: var(--t3-fg); }
 .k-densest { --tc: var(--t4); --tf: var(--t4-fg); }
 .q3host { margin-top: 6px; }
-.q3sum { margin: 0 0 4px; max-width: 90ch; color: var(--text-2); font-size: .98rem; }
-.q3dense { margin: 0 0 14px; font-size: .9rem; color: var(--text-2); }
-.q3dense summary { cursor: pointer; color: var(--text); font-weight: 500; width: max-content; max-width: 100%; }
-.q3dense ol { margin: 8px 0 0; padding-left: 1.8em; columns: 2 380px; column-gap: 32px; }
-.q3dense li { margin: 2px 0; break-inside: avoid; }
-.q3dense button { font: inherit; color: var(--text); background: none; border: 0; padding: 1px 0; text-align: left; cursor: pointer;
-  text-decoration: underline 1px var(--line-strong); text-underline-offset: 3px; }
+.q3sum { margin: 0 0 14px; max-width: 90ch; color: var(--text-2); font-size: .98rem; }
 
 /* top row: the legend at the left, the exports at the right */
 .q3top { display: flex; align-items: center; justify-content: space-between; gap: 10px 20px; padding: 10px 16px;
@@ -85,9 +79,10 @@
 .q3pa { display: flex; gap: 6px; margin-bottom: 6px; }
 .q3pop label { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; font-size: .85rem; color: var(--text); }
 .q3pop input { margin-top: 3px; accent-color: var(--pill); }
-/* column labels read from the bottom up and wrap onto a second line */
+/* column labels read from the bottom up and wrap onto a second line. inline-size: max-content sets
+   the label length: without it, Safari breaks the label after every word and the labels overlap. */
 .q3t thead th { width: var(--cw); padding: 0 0 8px; vertical-align: bottom; text-align: center; }
-.q3t thead th span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); max-inline-size: 11.5rem; text-align: start; line-height: 1.15; }
+.q3t thead th span { display: inline-block; writing-mode: vertical-rl; transform: rotate(180deg); inline-size: max-content; max-inline-size: 11.5rem; text-align: start; line-height: 1.15; }
 /* row labels stay in view while the map scrolls sideways */
 .q3t tbody th { position: sticky; left: 0; z-index: 1; padding: 0 12px 0 0; text-align: left; background: var(--surface); box-shadow: -24px 0 0 var(--surface); }
 .q3t tbody td { height: 34px; padding: 0; border-radius: 7px; }

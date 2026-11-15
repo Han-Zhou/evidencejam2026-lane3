@@ -130,10 +130,6 @@ function cellHtml(x) {
 function skeleton(D) {
   var n = {};
   S.F.forEach(function (f) { n[f.k] = (n[f.k] || 0) + 1; });
-  var dense = D.densest.map(function (id) {
-    var x = S.byId[id];
-    return x ? '<li><button type="button" data-go="' + esc(id) + '">' + esc(lab(x)) + '</button> <span class="muted">' + pl(x.st, 'study', 'studies') + '</span></li>' : '';
-  }).join('');
   var legend = '<div class="q3leg" role="group" aria-label="Legend"><span class="q3lt">Density</span>' +
     KT.map(function (k) {
       // "Thin · 1 study (72)": the tier, what it means, then how many cells have it.
@@ -152,7 +148,6 @@ function skeleton(D) {
       }).join('') + '</tr>';
     }).join('') + '</tbody></table>';
   return bar() + '<p class="q3sum">' + esc(D.summary) + '</p>' +
-    '<details class="q3dense"><summary>The ten densest cells (most studies)</summary><ol>' + dense + '</ol></details>' +
     '<div class="q3top">' + legend + '<div class="seg xp" role="group" aria-label="Export the map as shown">' +
     '<button type="button" class="tbtn" data-gm="csv">Export CSV</button><button type="button" class="tbtn" data-gm="xlsx">Export XLSX</button>' +
     '<button type="button" class="tbtn" data-gm="copy">Copy image</button></div></div>' +
@@ -279,10 +274,10 @@ function detail(x) {
   // Density first (the cell's fill), then the pack's certainty, direction and rationale.
   var k = kl(x.k), st = pl(x.st, 'study', 'studies');
   h = '<p class="q3kd">' + swatch(x.k) + ' Density: <b>' + esc(k[0]) + '</b> (' + esc(k[1]) + ')' + (k[1] === st ? '' : ' · ' + st) + '</p>';
-  // The pack's densest list stops at ten, so a cell can tie with the last one and still be "dense".
+  // The pack names only ten densest cells, so a cell can tie with the last one and still be "dense".
   if (x.k === 'dense' && x.st >= S.topMin) {
     h += '<p>It has ' + (x.st > S.topMin ? 'more studies than' : 'as many studies as') +
-      ' a cell in the ten densest list, but the pack\'s list stops at ten.</p>';
+      ' a Densest cell, but the pack names only ten densest cells.</p>';
   }
   h += '<p class="big">' + Q.certH(x.cert) + ' certainty · ' + Q.dirH(x.dir) + '</p><p class="rat">' + esc(x.rat) + '</p>';
   h += '<p>' + st + ' · ' + pl(x.n, 'claim', 'claims') + ' · pack density: ' + esc(DEN[x.den] || x.den) + '</p>' + Q.sdBar(x.sd);
@@ -529,12 +524,6 @@ function wire() {
     }
     if ((b = t.closest('button.q3c'))) { select(S.byId[b.getAttribute('data-q3-finding-id')], b); return; }
     if ((b = t.closest('td.q3g'))) { select(S.byId[b.getAttribute('data-q3-gap-id')], b); return; }
-    if ((b = t.closest('[data-go]'))) {
-      var x = S.byId[b.getAttribute('data-go')];
-      select(x, b);
-      if (S.pin === x) { x.el.scrollIntoView({block: 'center', inline: 'center'}); x.el.focus({preventScroll: true}); }
-      return;
-    }
     if (t.closest('.clr') || t.closest('.x')) { clear(true); return; }
     if (t.closest('.tod')) {
       // Beside the map the sticky details are already in view: scroll only when they are under the map.
