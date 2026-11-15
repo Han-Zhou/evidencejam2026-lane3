@@ -7,6 +7,19 @@ cd prototypes/rank1_stdlib
 python3 -m http.server 8102 --directory site      # serves it on port 8102
 ```
 
+To see the prototype of every worktree on one page, run this from the main checkout:
+```bash
+python3 prototypes/preview.py serve               # builds every worktree, serves http://127.0.0.1:8899/
+python3 prototypes/preview.py serve 9000          # same, on a different port
+python3 prototypes/preview.py                     # builds only, prints a summary table
+python3 prototypes/preview.py note <slug> "Idea"  # sets the one-line idea note of a worktree
+```
+- Each worktree is at `http://127.0.0.1:8899/<slug>/`. The gallery shows the slugs.
+- To see new changes, click **Rebuild all** on the gallery page. You do not have to restart the server.
+- Use **Compare** to see two worktrees side by side.
+- An agent can set its own note from inside its worktree:
+  `git config branch."$(git branch --show-current)".description "Idea"`
+
 # Questions
 
 - LLM summaries for sections?

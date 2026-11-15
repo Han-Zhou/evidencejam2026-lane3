@@ -112,7 +112,8 @@ html:not(.js) .js-only { display: none !important; }
 .hint { font-size: .76rem; color: var(--text-3); }
 */
 .srch input { font: inherit; font-size: .92rem; width: min(300px, 70vw); padding: 6px 14px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--raised); color: var(--text); }
-.sres { position: absolute; top: calc(100% + 6px); left: 0; z-index: 25; width: min(560px, 90vw); max-height: 60vh; overflow: auto; background: var(--raised); border: 1px solid var(--line-strong); border-radius: 16px; padding: 10px 16px; font-size: .9rem; }
+/* Fixed, so the toolbar that scrolls sideways on a phone does not clip it. app.js place() sets top, left and width. */
+.sres { position: fixed; z-index: 25; width: min(560px, 90vw); max-height: 60vh; overflow: auto; background: var(--raised); border: 1px solid var(--line-strong); border-radius: 16px; padding: 10px 16px; font-size: .9rem; }
 .sres h4 { margin: .6em 0 .2em; }
 .sres ul { list-style: none; margin: 0; padding: 0; }
 .sres .rc { margin: 0; color: var(--text-3); }
@@ -137,7 +138,7 @@ html:not(.js) .js-only { display: none !important; }
 html:not(.js) .stage { display: block; }
 .viz { min-width: 0; }
 /* view bar: Graph | Matrix, Expand, then the status line, in one row.
-   It sticks under the toolbar while the graph scrolls (see "toolbar dock").
+   It sticks under the toolbar while the graph scrolls (see "sticky toolbar").
    The status line takes a row of its own when less than 440 px is left. */
 .vbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 10px; min-height: 30px; }
 html:not(.js) .vbar { display: none; }
@@ -165,10 +166,19 @@ html:not(.js) .vbar { display: none; }
 .clr:hover { color: var(--pill-text); border-color: var(--pill); text-decoration: underline; }
 .tod { display: none; }
 .pathn { margin: 1px 0 0; font-size: .8rem; line-height: 1.35; color: var(--text-2); }
-/* graph card: the graph (or the matrix) and, at its bottom right, the actions row */
+/* graph card: the graph (or the matrix), then the footer: the actions row and the limitations */
 .gcard { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); padding: 12px 16px; }
 .gbox, .mbox { overflow-x: auto; }
-.gact { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 10px; }
+/* Footer, in source order: actions, Limitations heading, list. row-reverse puts the actions at the
+   right of the heading. When the two do not fit in one row, the actions stay on top at the right. */
+.gfoot { display: flex; flex-flow: row-reverse wrap; align-items: flex-start; column-gap: 16px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.gact { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; margin-bottom: 6px; }
+/* Limitations: the panel file's own strings, word for word (build.py limits_html). */
+.limh { flex: 1 1 26rem; min-width: 0; }
+.limh h4 { margin: 4px 0 0; font: 500 1.02rem/1.3 var(--serif); color: var(--text); letter-spacing: -.01em; }
+.lsrc { margin: 2px 0 0; font-size: .78rem; color: var(--text-3); }
+.liml { flex: 1 1 100%; margin: 6px 0 2px; padding-left: 1.2em; font: .92rem/1.5 var(--serif); color: var(--text-2); }
+.liml li { max-width: 96ch; margin: 3px 0; }
 .js .mbox { display: none; }
 /* Graph | Matrix. At start-up app.js puts .gbox and .mbox in a .vstack (see stack()). They
    share one grid cell, so the cell is as tall as the graph and the matrix fills the same box.
@@ -399,7 +409,6 @@ html.xvopen { overflow: hidden; }
   .selbar .acts button { min-height: 26px; padding: 2px 10px; font-size: .8rem; }
   .selbar .sd { padding-top: 5px; }
   .pathn { font-size: .74rem; }
-  .toolbar { padding-left: 16px; padding-right: 16px; }
   /* .stats > div { display: block; } */
   /* .glance, .legend { padding-left: 16px; padding-right: 16px; } */
   /* tables (switched off): one card per row on a phone.
@@ -427,70 +436,33 @@ html.xvopen { overflow: hidden; }
   */
 }
 
-/* ---------- toolbar dock (experiment) ----------
-   The toolbar stays in view while the panel scrolls, and the view bar (status line) under it.
-   <html data-dock> holds the toolbar's place:
-   top, bottom, left or right. DOCK_JS in build.py sets it before the first paint; the
-   "toolbar dock" block in app.js adds the switch and stores the choice ("q1-dock").
-   Below 1100 px, left and right fall back to top (the graph needs the width).
-   Below 701 px the docked toolbar is one row that scrolls sideways, so it covers little.
-   The search results use fixed positioning (app.js places them), so a toolbar that
-   scrolls inside itself does not clip them.
-   To remove the experiment: delete this section, that block in app.js and DOCK_JS. */
-html[data-dock] .toolbar { position: sticky; top: 8px; z-index: 20; box-shadow: 0 0 0 8px var(--bg); }
-html[data-dock] .sres { position: fixed; top: auto; left: auto; }
-/* The view bar (Graph | Matrix, Expand, status line) sticks too, while its graph column is in view:
-   directly under a top toolbar, else at the top of the window. It stays in the graph column, so it
-   never covers the drawer. The page-colour band hides the graph that scrolls under it.
-   It sits under the toolbar (z-index 19), so the search results stay on top. */
-html[data-dock] .vbar { position: sticky; top: calc(var(--dockh, 0px) + 16px); z-index: 19; background: var(--bg); box-shadow: 0 0 0 8px var(--bg); }
-html[data-dock="bottom"] .vbar { top: 8px; }
+/* ---------- sticky toolbar ----------
+   The toolbar stays at the top while the panel scrolls. The view bar (Graph | Matrix, Expand,
+   status line) sticks directly under it while its graph column is in view. It stays in the graph
+   column, so it never covers the drawer. The page-colour band hides the graph that scrolls under
+   it. It sits under the toolbar (z-index 19), so the search results stay on top.
+   --tbh is the toolbar height (app.js "sticky toolbar" measures it).
+   Below 701 px the toolbar is one row that scrolls sideways, so it covers little. */
+.toolbar { position: sticky; top: 8px; z-index: 20; box-shadow: 0 0 0 8px var(--bg); }
+.vbar { position: sticky; top: calc(var(--tbh, 0px) + 16px); z-index: 19; background: var(--bg); box-shadow: 0 0 0 8px var(--bg); }
 /* Below 1100 px the status line takes a row of its own, and only it sticks. The Graph | Matrix
    and Expand row scrolls away, so the pinned part stays short. (.vbar > .selbar: not in Expand.) */
 @media (max-width: 1099px) {
-  html[data-dock] .vbar { display: contents; }
-  html[data-dock] .vtools { margin-bottom: 8px; }
-  html[data-dock] .vbar > .selbar { position: sticky; top: calc(var(--dockh, 0px) + 16px); z-index: 19; margin-bottom: 10px; box-shadow: 0 0 0 8px var(--bg); }
-  html[data-dock="bottom"] .vbar > .selbar { top: 8px; }
+  .vbar { display: contents; }
+  .vtools { margin-bottom: 8px; }
+  .vbar > .selbar { position: sticky; top: calc(var(--tbh, 0px) + 16px); z-index: 19; margin-bottom: 10px; box-shadow: 0 0 0 8px var(--bg); }
 }
-/* scrollIntoView() stops clear of the bar. --dockh is the bar height (app.js; 0 for a side column).
+/* scrollIntoView() stops clear of the bar.
    Not scroll-padding on <html>: that made a focus inside the stuck bar scroll the page back up. */
-html[data-dock] .stage, html[data-dock] .drawer, html[data-dock] ol.claims li { scroll-margin-top: calc(var(--dockh, 0px) + 24px); }
-html[data-dock="bottom"] .stage, html[data-dock="bottom"] .drawer, html[data-dock="bottom"] ol.claims li { scroll-margin-top: 0; scroll-margin-bottom: calc(var(--dockh, 0px) + 24px); }
-.dock { flex-wrap: nowrap; gap: 3px; margin-left: auto; }
-.seg.dock button { display: inline-flex; align-items: center; justify-content: center; padding: 4px 7px; }
-.dock svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; }
-.dock svg .f { fill: currentColor; stroke: none; }
-/* bottom: the toolbar moves after the stage and sticks to the bottom of the viewport */
-html[data-dock="bottom"] .panel { display: flex; flex-direction: column; }
-html[data-dock="bottom"] .toolbar { order: 1; top: auto; bottom: 8px; margin: 16px 0 8px; }
-/* left and right: a narrow column beside the stage that scrolls inside itself when tall */
-@media (min-width: 1100px) {
-  html[data-dock="left"] .panel, html[data-dock="right"] .panel { display: grid; grid-template-columns: 256px minmax(0, 1fr); column-gap: 18px; align-items: start; }
-  html[data-dock="right"] .panel { grid-template-columns: minmax(0, 1fr) 256px; }
-  html[data-dock="left"] .toolbar, html[data-dock="right"] .toolbar { grid-row: 1; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 14px; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; margin: 18px 0 0; padding: 14px; box-shadow: none; }
-  html[data-dock="left"] .toolbar, html[data-dock="right"] .stage { grid-column: 1; }
-  html[data-dock="right"] .toolbar, html[data-dock="left"] .stage { grid-column: 2; }
-  html[data-dock="left"] .stage, html[data-dock="right"] .stage { grid-row: 1; }
-  html[data-dock="left"] .srch input, html[data-dock="right"] .srch input, html[data-dock="left"] .sel select, html[data-dock="right"] .sel select { width: 100%; }
-  html[data-dock="left"] .srch input, html[data-dock="right"] .srch input { font-size: .86rem; padding: 6px 10px 6px 12px; }
-  html[data-dock="left"] .sel, html[data-dock="right"] .sel { display: flex; }
-  html[data-dock="left"] .fchip, html[data-dock="right"] .fchip { display: flex; align-items: baseline; gap: 6px; width: 100%; padding: 4px 12px; font-size: .82rem; text-align: left; border-radius: 14px; }
-  html[data-dock="left"] .fchip .n, html[data-dock="right"] .fchip .n { margin-left: auto; }
-  html[data-dock="left"] .dock, html[data-dock="right"] .dock, html[data-dock="left"] .count, html[data-dock="right"] .count { margin-left: 0; }
-  html[data-dock="left"] .vbar, html[data-dock="right"] .vbar { top: 8px; }
-}
-@media (max-width: 1099px) {
-  .seg.dock [data-dock="left"], .seg.dock [data-dock="right"] { display: none; }
-}
+.stage, .drawer, ol.claims li { scroll-margin-top: calc(var(--tbh, 0px) + 24px); }
 @media (max-width: 700px) {
-  html[data-dock] .toolbar { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; gap: 8px 14px; padding: 8px 12px; }
-  html[data-dock] .toolbar > *, html[data-dock] .filters > * { flex: none; }
-  html[data-dock] .filters, html[data-dock] .seg.lens { flex-wrap: nowrap; }
-  html[data-dock] .toolbar .seg button, html[data-dock] .fchip, html[data-dock] .count { white-space: nowrap; }
-  html[data-dock] .srch input { width: 246px; }
+  .toolbar { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; gap: 8px 14px; padding: 8px 12px; }
+  .toolbar > *, .filters > * { flex: none; }
+  .filters, .seg.lens { flex-wrap: nowrap; }
+  .toolbar .seg button, .fchip, .count { white-space: nowrap; }
+  .srch input { width: 246px; }
 }
-/* ---------- end of toolbar dock ---------- */
+/* ---------- end of sticky toolbar ---------- */
 
 /* ---------- variant B: edges hidden until selected ----------
    With JS, the panel graphs show the nodes only. Lines, arrowheads, chips, gap lines and
@@ -500,11 +472,15 @@ html[data-dock="bottom"] .toolbar { order: 1; top: auto; bottom: 8px; margin: 16
    accessibility tree. Nothing moves, so the edges show in place.
    "Show all edges" (.panel.ea, block "variant B" in app.js) gives the v6 look back. Each panel
    has its own setting; EDGES_ALL in build.py sets the start state (Findings on, Network off).
-   Without JS (no .js) every edge shows. The expanded view (.xg) is not changed.
+   Without JS (no .js) every edge shows.
+   The expanded view (v7) moves this same SVG into a dialog inside the panel, and the
+   "Show all edges" button stays outside it. So the rule stops while html.xvopen is set:
+   Expand always shows every edge, and its status line keeps the v6 hint (hint() in app.js).
    To remove the variant: delete this section, that block in app.js, the .eab button, the
    "Edges:" legend row and EDGES_ALL in build.py. */
-html.js .panel:not(.ea) .graph .ln:not(.on), html.js .panel:not(.ea) .graph .chip:not(.on), html.js .panel:not(.ea) .graph .gapl:not(.on),
-html.js .panel:not(.ea) .graph .dia:not(.on), html.js .panel:not(.ea) .graph .mem:not(.on) { visibility: hidden; }
+html.js:not(.xvopen) .panel:not(.ea) .graph .ln:not(.on), html.js:not(.xvopen) .panel:not(.ea) .graph .chip:not(.on),
+html.js:not(.xvopen) .panel:not(.ea) .graph .gapl:not(.on), html.js:not(.xvopen) .panel:not(.ea) .graph .dia:not(.on),
+html.js:not(.xvopen) .panel:not(.ea) .graph .mem:not(.on) { visibility: hidden; }
 /* .hit has pointer-events: stroke, which ignores visibility. This keeps a hidden line from taking a click. */
 html.js .graph .ln .hit { pointer-events: visibleStroke; }
 .eab[aria-pressed="true"] { background: var(--pill); color: var(--pill-text); border-color: var(--pill); }

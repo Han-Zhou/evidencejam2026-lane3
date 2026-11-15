@@ -7,11 +7,13 @@ same input always gives the same picture: no randomness, no force layout.
 
 Steps: build items and routes -> order each layer (barycenter sweeps, ties by
 first-seen order) -> place items vertically (isotonic regression keeps the
-order and the spacing) -> spread ports on node sides -> draw cubic curves ->
-add a legend band under the graph -> check that no text, node, chip or line
+order and the spacing) -> spread ports on node sides -> draw lines (straight
+runs through chips and pass-through slots, flat cubic curves between them) ->
+add a legend band above the graph -> check that no text, node, chip or line
 overlaps another.
 """
 
+import math
 import re
 
 CHIP_W, CHIP_H = 60, 24
@@ -23,8 +25,12 @@ SUB_PX = 12
 TOP = 16
 TITLE_PX = 15
 
-# Legend band under the graph (all sizes in viewBox units).
+# Legend band above the graph (all sizes in viewBox units). The graph keeps its
+# coordinates: the legend sits at negative y, above a rule at RULE_Y, and the viewBox
+# starts above the legend. The lane titles start TOP under the rule.
 LG_PX = 12      # legend text size
+LG_TITLE_PX = 14  # the heading of the legend ("How to read this graph")
+LG_TITLE = 26   # heading line, above the columns
 LG_ROW = 18     # one legend row
 LG_LINE = 15    # each wrapped line after the first one in a row
 LG_HEAD = 22    # column head, above the first row
@@ -32,9 +38,9 @@ LG_SW = 30      # swatch width
 LG_SG = 9       # swatch to text
 LG_GUT = 24     # between two columns
 LG_VGAP = 14    # between two rows of columns
-LG_RULE = 18    # graph bottom to the rule
-LG_TOP = 20     # rule to the legend text
-LG_BOT = 14     # legend to the bottom of the viewBox
+RULE_Y = 0      # the rule between the legend and the graph
+LG_TOP = 14     # top of the viewBox to the legend heading
+LG_BOT = 18     # legend text to the rule
 BOLD = 1.08     # semibold text is a little wider
 # text_w() is tuned to SF Pro / Helvetica. A wider sans (DejaVu Sans on Linux, or a
 # fallback font in a copied PNG) is up to about 15% wider, so every legend width is
@@ -111,14 +117,23 @@ def _wrap_fit(r, tw):
         mw *= 0.96
 
 
+def legend_title_w(title):
+    """Estimated width of the legend heading (serif, like title_box()), with the LG_FIT margin."""
+    return text_w(title, LG_TITLE_PX) * 1.12 * LG_FIT if title else 0.0
+
+
 def legend_place(lg, width):
-    """Place the legend columns from left to right. A column that does not fit
-    starts a new row. A 'fill' column takes the rest of its row, or the full
-    width on a new row when the rest is narrower than its 'min'. Positions are
-    relative to the top left of the legend. Every value is computed, so the
-    result is deterministic."""
-    cols, x, y, row_h = [], 0.0, 0.0, 0.0
+    """Place the legend columns from left to right, under the optional heading
+    lg['title']. A column that does not fit starts a new row. A 'fill' column
+    takes the rest of its row, or the full width on a new row when the rest is
+    narrower than its 'min'. A column with no head and no rows is left out.
+    Positions are relative to the top left of the legend. Every value is
+    computed, so the result is deterministic."""
+    title = lg.get("title") or ""
+    cols, x, y, row_h = [], 0.0, (LG_TITLE if title else 0.0), 0.0
     for c in lg["cols"]:
+        if not c.get("head") and not c["rows"]:
+            continue
         if c.get("fill"):
             rest = width - x
             if x > 0 and rest < c.get("min", 240):
@@ -141,7 +156,7 @@ def legend_place(lg, width):
         cols.append({"x": x, "y": y, "w": w, "h": ry, "head": c.get("head") or "", "rows": rows})
         x += w + LG_GUT
         row_h = max(row_h, ry)
-    return {"cols": cols, "h": y + row_h}
+    return {"title": title, "cols": cols, "h": y + row_h}
 
 
 def path_points(d, step=8.0):
@@ -295,13 +310,17 @@ def layout(spec):
             b.segs.append(s)
             segs.append(s)
 
+    # Every chip and gap label sits in a chip column (odd layer), never in a lane.
+    # An edge that skips a lane has its chip in the column next to its target
+    # lane, so each column holds the chips of the edges that end in the lane on
+    # its right (and the in-lane arcs of the lane on its left).
     edges = spec["edges"]
     for e in edges:
         if e["kind"] == "moderation":
             continue
         a, b = nitem[e["source"]], nitem[e["target"]]
         e["sw"] = LINE_W[e["kind"]]
-        if b.layer == a.layer:  # inside one lane: arc on the right side, chip in its own slot
+        if b.layer == a.layer:  # inside one lane: arc on the right side, chip in the next column
             c = new_item("chip:" + e["ref"], a.layer + 1, "arc", CHIP_H, edge=e, w=CHIP_W)
             route = [a, c, b]
             chip_of[e["ref"]] = c
@@ -309,11 +328,7 @@ def layout(spec):
             link(route, e, arc=True)
         else:
             assert b.layer > a.layer, "edges must point to a later lane"
-            mid = (a.layer + b.layer) // 2
-            if (b.layer - a.layer) % 4 == 0:  # chip on the middle lane, not its edge
-                mid = (a.layer + b.layer) // 2
-            elif mid % 2 == 0:
-                mid -= 1
+            mid = b.layer - 1
             route = [a]
             for L in range(a.layer + 1, b.layer):
                 if L == mid:
@@ -389,14 +404,21 @@ def layout(spec):
               if (s.other(it).layer < it.layer if side < 0 else s.other(it).layer > it.layer)]
         return sum(ps) / len(ps) if ps else float(pos[it])
 
+    def linked(it, side):
+        return any((s.other(it).layer < it.layer) if side < 0 else (s.other(it).layer > it.layer)
+                   for s in it.segs)
+
     def sort_layer(k, side):
         # Sort by the barycenter on the swept side; break ties by the other side,
-        # then by first-seen order in the JSON.
+        # then by first-seen order in the JSON. An item with no line on the swept
+        # side (an in-lane arc chip, on its way up) keeps its slot.
         layer = layers[k]
         if k == 0:
-            layer.sort(key=lambda it: (it.group, bary(it, side), bary(it, -side), it.first))
+            key = lambda it: (it.group, bary(it, side), bary(it, -side), it.first)
         else:
-            layer.sort(key=lambda it: (bary(it, side), bary(it, -side), it.first))
+            key = lambda it: (bary(it, side), bary(it, -side), it.first)
+        free = iter(sorted([it for it in layer if linked(it, side)], key=key))
+        layer[:] = [next(free) if linked(it, side) else it for it in layer]
         for i, it in enumerate(layer):
             pos[it] = i
 
@@ -407,7 +429,7 @@ def layout(spec):
             sort_layer(k, +1)
 
     # --- titles ----------------------------------------------------------------
-    # Lane titles, and the same title above each chip column between two lanes
+    # Lane titles, and the same title above each chip column that holds chips
     # (centred on the column). In x order, so a screen reader reads them left to right.
     titles = []
     band = TOP
@@ -417,7 +439,7 @@ def layout(spec):
             sub = wrap(lane.get("subtitle") or "", SUB_PX, NODE_W)
             titles.append({"x": lane_left(i), "y": TOP, "title": lane["title"], "sub": sub})
             band = max(band, TOP + 18 + 15 * len(sub) + 12)
-        if ct and i < n_lanes - 1:
+        if ct and i < n_lanes - 1 and any(it.typ != "pass" for it in layers[2 * i + 1]):
             one = " · ".join(ct["parts"])
             sub = [one] if text_w(one, SUB_PX) <= 2 * cg - 30 else list(ct["parts"])
             titles.append({"x": col_x(2 * i + 1), "y": TOP, "title": ct["title"], "sub": sub,
@@ -454,7 +476,9 @@ def layout(spec):
         return other.y
 
     def place(k, use_pred, use_succ):
-        layer = [it for it in layers[k] if it.typ != "arc"]
+        # An arc chip is stacked with the other chips of its column; it is pulled
+        # halfway between its two ports. Its nodes are not pulled towards it.
+        layer = layers[k]
         if not layer:
             return
         des, wts = [], []
@@ -496,12 +520,6 @@ def layout(spec):
                     t = thick(s, it)
                     port[(it, s)] = yy + t / 2
                     yy += t
-        # an arc chip sits halfway between its two ports, beside the lane
-        for layer in layers:
-            for it in layer:
-                if it.typ == "arc":
-                    a, b = it.segs[0].a, it.segs[1].b
-                    it.y = (port.get((a, it.segs[0]), a.y) + port.get((b, it.segs[1]), b.y)) / 2
 
     for i, e in enumerate(edges):
         e["_i"] = i
@@ -525,19 +543,23 @@ def layout(spec):
         it.x = lane_left(it.layer // 2)
     for layer in layers:
         for it in layer:
-            if it.typ == "arc":
-                it.x = lane_left((it.layer - 1) // 2) + NODE_W + 32
-            elif it.typ != "node":
+            if it.typ != "node":
                 it.x = col_x(it.layer)
 
     def f(v):
         return str(int(round(v)))
 
-    def bez(p0, m0, p1, m1, k=0.45):
+    def bez(p0, p1, k=0.45):
+        """Cubic curve that is flat at both ends."""
         dx = p1[0] - p0[0]
-        c1 = (p0[0] + dx * k, p0[1] + dx * k * m0)
-        c2 = (p1[0] - dx * k, p1[1] - dx * k * m1)
-        return "C%s %s %s %s %s %s" % (f(c1[0]), f(c1[1]), f(c2[0]), f(c2[1]), f(p1[0]), f(p1[1]))
+        return "C%s %s %s %s %s %s" % (f(p0[0] + dx * k), f(p0[1]), f(p1[0] - dx * k), f(p1[1]), f(p1[0]), f(p1[1]))
+
+    def run(it):
+        """Half the length of the straight run of a line through one of its route
+        items: the lane width in a lane, the chip (or gap label) width in a column."""
+        if it.layer % 2 == 0:
+            return NODE_W / 2
+        return (GAP_W if it.typ == "gap" else CHIP_W) / 2
 
     out_edges = {}
     for e in edges:
@@ -548,34 +570,33 @@ def layout(spec):
         start = (a.x + NODE_W, port[(a, s0)])
         geo = {"chip": None, "arrow": None, "diamond": None}
         if e.get("arc"):
+            # Hairpin: out of the source's right side to the chip's left edge, and back
+            # from the same edge to the target's right side. The two legs meet the
+            # chip 10 units apart, so they do not cross.
             c, b = route[1], route[2]
             s1 = [s for s in b.segs if s.b is b and s.edge is e][0]
             py = port[(b, s1)]
             tip = (b.x + NODE_W, py)
             end = (tip[0] + ARROW, py)
-            sgn = 1 if py > start[1] else -1
-            kx = (c.x - start[0]) * 0.6
-            ky1 = abs(c.y - start[1]) * 0.6
-            ky2 = abs(py - c.y) * 0.6
-            d = "M%s %s C%s %s %s %s %s %s C%s %s %s %s %s %s" % (
-                f(start[0]), f(start[1]), f(start[0] + kx), f(start[1]), f(c.x), f(c.y - sgn * ky1),
-                f(c.x), f(c.y), f(c.x), f(c.y + sgn * ky2), f(end[0] + kx * 0.8), f(py), f(end[0]), f(py))
+            sgn = 1 if start[1] > py else -1
+            x0 = c.x - CHIP_W / 2
+            yi, yo = c.y + sgn * 5, c.y - sgn * 5
+            d = "M%s %s%sL%s %sL%s %sL%s %s%s" % (
+                f(start[0]), f(start[1]), bez(start, (x0, yi)), f(c.x), f(yi), f(c.x), f(yo),
+                f(x0), f(yo), bez((x0, yo), end))
             ah = ARROW_HW
             geo["arrow"] = "M%s %sL%s %sL%s %sZ" % (f(tip[0]), f(py), f(end[0]), f(py - ah), f(end[0]), f(py + ah))
             geo["chip"] = (c.x, c.y)
             geo["d"] = d
             out_edges[ref] = geo
             continue
-        pts = [(start, 0.0)]
-        for it in route[1:-1]:
-            pts.append(((it.x, it.y), None))
         b = route[-1]
         mod_side = 0
         if e["kind"] == "moderation":
             # The diamond sits on the top (or bottom) border of the target edge's chip,
             # left of centre; the line reaches it diagonally through the free space.
-            prev = pts[-1][0]
-            mod_side = -1 if prev[1] <= b.y else 1
+            prev = route[-2]
+            mod_side = -1 if prev.y <= b.y else 1
             end = (b.x - 12, b.y + mod_side * CHIP_H / 2)
             geo["diamond"] = "M%s %sL%s %sL%s %sL%s %sZ" % (
                 f(end[0]), f(end[1] - 6.5), f(end[0] + 6.5), f(end[1]),
@@ -589,29 +610,44 @@ def layout(spec):
                 end = (b.x - ARROW, py)
                 ah = ARROW_HW
                 geo["arrow"] = "M%s %sL%s %sL%s %sZ" % (f(b.x), f(py), f(end[0]), f(py - ah), f(end[0]), f(py + ah))
-        # tangents: flat at ends and chips, slope at pass-throughs
-        full = [p for p, _ in pts] + [end]
-        ms = []
-        for i, p in enumerate(full):
-            it = route[i] if i < len(route) else None
-            if i == 0 or i == len(full) - 1 or (it is not None and it.typ != "pass"):
-                ms.append(0.0)
-            else:
-                ms.append((full[i + 1][1] - full[i - 1][1]) / (full[i + 1][0] - full[i - 1][0]))
-        d = "M%s %s" % (f(full[0][0]), f(full[0][1]))
-        for i in range(len(full) - 1):
-            if e["kind"] == "moderation" and i == len(full) - 2:
-                p0, p1 = full[i], full[i + 1]
-                dx = p1[0] - p0[0]
-                d += "C%s %s %s %s %s %s" % (f(p0[0] + dx * 0.5), f(p0[1] + dx * 0.5 * ms[i]),
-                                             f(p1[0] - 22), f(p1[1] + mod_side * 22), f(p1[0]), f(p1[1]))
-            else:
-                d += bez(full[i], ms[i], full[i + 1], ms[i + 1])
+        # The line runs straight and flat through each of its route items: across
+        # the full lane in a lane, across the full chip in a column (under the chip,
+        # if it is its own). Curves join the runs. Thus a line never cuts a node box,
+        # and it never runs under another edge's chip or gap label.
+        d = "M%s %s" % (f(start[0]), f(start[1]))
+        p = start
+        for it in route[1:-1]:
+            hw = run(it)
+            d += bez(p, (it.x - hw, it.y)) + "L%s %s" % (f(it.x + hw), f(it.y))
+            p = (it.x + hw, it.y)
+        if e["kind"] == "moderation":
+            dx = end[0] - p[0]
+            d += "C%s %s %s %s %s %s" % (f(p[0] + dx * 0.5), f(p[1]),
+                                         f(end[0] - 22), f(end[1] + mod_side * 22), f(end[0]), f(end[1]))
+        else:
+            d += bez(p, end)
         geo["d"] = d
         c = chip_of.get(ref)
         if c is not None:
             geo["chip"] = (c.x, c.y)
         out_edges[ref] = geo
+
+    # Line check: no line may cut a node box other than its own two nodes, or run
+    # under a chip or gap label other than its own (or, for a moderation, its
+    # target's). Every chip must sit in a chip column (odd layer), never in a lane.
+    cuts = []
+    bx = [("node:" + k, it.x, it.y - it.h / 2, it.x + NODE_W, it.y + it.h / 2) for k, it in nitem.items()]
+    for ref, it in chip_of.items():
+        bx.append(("chip:" + ref, it.x - run(it), it.y - it.h / 2, it.x + run(it), it.y + it.h / 2))
+        if it.layer % 2 == 0:
+            cuts.append(("chip:" + ref, "a lane (chips go in a chip column)"))
+    for e in edges:
+        pts = path_points(out_edges[e["ref"]]["d"], 3.0)
+        own = {"node:" + e["source"], "node:" + (e["target"] or ""), "chip:" + e["ref"],
+               "chip:" + (e.get("target_edge") or "")}
+        for name, x0, y0, x1, y1 in bx:
+            if name not in own and any(x0 + 1 < px < x1 - 1 and y0 + 1 < py < y1 - 1 for px, py in pts):
+                cuts.append(("line:" + e["ref"], name))
 
     # membership connectors: dotted arcs on the left side of lane 0
     members = []
@@ -639,15 +675,16 @@ def layout(spec):
     width = lane_left(n_lanes - 1) + NODE_W + 24
     height = bottom + 24
 
-    # legend: a band under the graph, from the left lane edge to the right one,
-    # with a thin rule on top. The viewBox grows down, so the graph keeps its scale.
-    legend = None
+    # legend: a band above the graph, from the left lane edge to the right one,
+    # with a thin rule under it at RULE_Y. The graph keeps its coordinates and its
+    # scale: the legend sits at negative y and the viewBox starts at 'top' (< 0).
+    legend, top = None, 0
     if spec.get("legend"):
         x0, x1 = margin_l, width - 24
-        rule = bottom + LG_RULE
         legend = legend_place(spec["legend"], x1 - x0)
-        legend.update({"x": x0, "y": rule + LG_TOP, "rule": (x0, rule, x1)})
-        height = legend["y"] + legend["h"] + LG_BOT
+        legend.update({"x": x0, "y": RULE_Y - LG_BOT - legend["h"], "rule": (x0, RULE_Y, x1)})
+        top = math.floor(legend["y"] - LG_TOP)
+        height -= top
 
     # overlap self-check: nodes, chips, gap labels, titles and legend blocks must
     # not overlap each other, and no line, arrowhead or diamond may cross a text block.
@@ -662,12 +699,14 @@ def layout(spec):
         texts.append(("title:" + t["title"] + "@" + str(int(t["x"])),) + title_box(t))
     if legend:
         x0, y0 = legend["x"], legend["y"]
+        if legend["title"]:
+            texts.append(("legend:title", x0, y0, x0 + legend_title_w(legend["title"]), y0 + LG_TITLE - 6))
         for k, c in enumerate(legend["cols"]):
             texts.append(("legend:%d:%s" % (k, c["head"]), x0 + c["x"], y0 + c["y"],
                           x0 + c["x"] + c["w"], y0 + c["y"] + c["h"]))
         r = legend["rule"]
         texts.append(("legend:rule", r[0], r[1] - 1, r[2], r[1] + 1))
-    overlaps = []
+    overlaps = cuts
     allb = boxes + texts
     for i in range(len(allb)):
         for j in range(i + 1, len(allb)):
@@ -690,10 +729,20 @@ def layout(spec):
     # bounds: every title and every legend line (estimated with the LG_FIT margin)
     # must lie inside the viewBox; legend lines must end at the rule's right end.
     for t in texts:
-        if t[1] < 0 or t[3] > width:
-            overlaps.append((t[0], "viewBox edge (x %d..%d, width %d)" % (t[1], t[3], width)))
+        if t[1] < 0 or t[3] > width or t[2] < top or t[4] > top + height:
+            overlaps.append((t[0], "viewBox edge (box x %d..%d y %d..%d, viewBox x 0..%d y %d..%d)" % (
+                t[1], t[3], t[2], t[4], width, top, top + height)))
     if legend:
+        # The graph stays under the rule: no node, chip, title or line goes up into the legend.
+        for b in boxes + [t for t in texts if not t[0].startswith("legend:")]:
+            if b[2] <= RULE_Y + 1:
+                overlaps.append((b[0], "above the legend rule (top %d, rule %d)" % (b[2], RULE_Y)))
+        for name, hw, pts in marks:
+            if any(py - hw <= RULE_Y + 1 for px, py in pts):
+                overlaps.append((name, "above the legend rule (rule %d)" % RULE_Y))
         x1 = legend["rule"][2]
+        if legend["x"] + legend_title_w(legend["title"]) > x1:
+            overlaps.append(("legend title", "right edge (limit %d)" % x1))
         for c in legend["cols"]:
             cx = legend["x"] + c["x"]
             ends = [("head", cx + _head_w(c["head"]))]
@@ -704,5 +753,5 @@ def layout(spec):
                 if right > x1:
                     overlaps.append(("legend line %r" % l[:40], "right edge (ends at %d, limit %d)" % (right, x1)))
 
-    return {"width": width, "height": height, "nodes": nodes, "edges": out_edges,
+    return {"top": top, "width": width, "height": height, "nodes": nodes, "edges": out_edges,
             "members": members, "titles": titles, "legend": legend, "overlaps": overlaps}
