@@ -1,10 +1,11 @@
 /* In-graph legend and chip column title (graph agent). Joined to the end of style.css at build time.
-   The legend is a band under each graph, inside the SVG (svg_legend in build.py).
+   The legend is a band at the top of each graph, inside the SVG, above a thin rule (svg_legend in build.py).
    It uses only its own classes (.glg and the classes below), no hook attributes and none
    of .ln .nd .chip .mem .gapl .dia .it, so the selection fade (.sel, .on, .off, .lo, .miss)
    never reaches it and explore.js never reads it. Colours are the theme tokens of style.css,
    so the light theme and the dark theme both apply. */
 .glg text { font-size: 12px; fill: var(--text-2); }
+.glg .lhd { font: 500 14px var(--serif); fill: var(--text); letter-spacing: -.01em; }
 .glg .lh, .glg .lb { font-weight: 600; fill: var(--text); }
 .glg .g { font-weight: 700; fill: var(--c); }
 .glg path, .glg rect { fill: none; }

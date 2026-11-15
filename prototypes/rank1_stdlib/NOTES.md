@@ -29,21 +29,25 @@ There is no install step.
 
 ## Files shipped (bytes)
 
-| File | v6 bytes | v5 bytes | When it loads |
+| File | v7 bytes | v6 bytes | When it loads |
 | --- | ---: | ---: | --- |
-| `index.html` | 63,815 | 64,886 | first view |
-| `style.css` | 24,199 | 22,434 | first view (`src/style.css` + `src/graph.css`) |
-| `app.js` | 33,848 | 32,147 | first view |
-| `explore.js` | 20,973 | 21,117 | on the first click on "Expand" |
-| `explore.css` | 6,326 | 6,519 | the same |
+| `index.html` | 66,569 | 63,815 | first view |
+| `style.css` | 21,838 | 24,199 | first view (`src/style.css` + `src/graph.css`) |
+| `app.js` | 31,497 | 33,848 | first view |
+| `explore.js` | 8,010 | 20,973 | on the first click on "Expand" |
+| `explore.css` | 2,106 | 6,326 | the same |
 | `snap.js` | 5,042 | 5,042 | on the first hover, focus or click on "Copy image" |
 | `export.js` | 10,458 | 10,458 | on the first click on "Export CSV" or "Export XLSX" |
 | `data/findings.json` | 119,781 | 119,781 | on the first click, search or matrix in Findings |
 | `data/network.json` | 171,473 | 171,473 | the same, in Network |
 | `claims-findings.html` | 181,974 | 181,974 | only when a reader follows a link (the no-JS road to every quote) |
 | `claims-network.html` | 259,241 | 259,241 | the same |
-| **Total** | 897,130 | 895,072 | |
-| **First view** | **121,862** | **119,467** | `index.html` + `style.css` + `app.js` (not gzipped; `http.server` does not compress) |
+| **Total** | 877,989 | 897,130 | |
+| **First view** | **119,904** | **121,862** | `index.html` + `style.css` + `app.js` (not gzipped; `http.server` does not compress) |
+
+v7 cuts the first view by 1,958 bytes. The dock code that was removed is larger than the
+Limitations lists and the legend heading that were added. The expanded view is 17,183 bytes
+smaller, because the force layout is gone.
 
 v6 adds 2,395 bytes to the first view: the status-line descriptions, the pinned view bar, the
 action row and the matrix stack. The line-width and system-theme code that was removed was smaller.
@@ -57,7 +61,7 @@ v3 adds 1,590 bytes more (the faint-line rules, the compact strips and one legen
 v4 adds 2,254 bytes more (the two Expand buttons, `data-label` on each node, the loader).
 The expanded view itself (27,636 bytes) loads only when a reader opens it.
 
-## Q3 gap map panel (after v6)
+## Q3 gap map panel (after v7)
 
 A third tab, **Gap map**, shows Q3 (`answers/q3_grassland_gaps.json`) as one matrix. It has
 no graph view. When the tab is open, the page heading and question switch to Q3.
@@ -103,6 +107,166 @@ lightest tint is very low and full indigo is high. In dark mode, dim indigo is v
 bright indigo is high. The tokens are `--t1` to `--t4` in `style.css`, with `--t1-fg` to
 `--t4-fg` for the text on them, and the `.t-*` classes set them on an element. Every text pair
 passes AA in both themes (lowest: 6.0 to 1).
+
+## Variant B: edges hidden until selected
+
+Variant B is merged into main. Variants A (grey edges until selected) and C (non-planar graph,
+faded Conditions lane) were not kept.
+
+**Start state for each panel (after the merge).** "Show all edges" now has one setting for each
+panel. `EDGES_ALL` in `build.py` sets the start state: Findings starts with every edge shown (the
+button is pressed), and Network starts with the nodes only. The build writes the start state into
+the HTML (class `ea` on `.panel`, and `aria-pressed` on its `.eab` button), so the first paint is
+correct and no JS has to run first. The CSS rules are under `html.js .panel:not(.ea)`, not
+`html.js:not(.ea)`. The status-line hint and the "Edges:" legend row follow the panel: Findings
+says "Edges: all show at the start. Turn off “Show all edges” to see only the edges of the node or
+edge you select." A click on the button changes only its own panel and writes the hint again. The
+paragraphs below describe the variant as it was built. Where they say "both panels" or "one
+setting", read them with this change. The README conflict below now applies only to Network.
+Checks after the change: two builds byte-identical, `check_site.py` PASS, and headless Chrome
+(Findings 14 of 14 lines at the start, 0 after the toggle; Network 0 of 30 at the start, 30 after
+its toggle; the other panel does not change; no page errors).
+
+**Merge with v7.** The v7 Expand moves the panel's own SVG into a dialog inside `.panel`, and the
+"Show all edges" button stays outside the dialog. So the hiding rule now stops while
+`html.xvopen` is set: Expand always shows every edge (30 of 30 in Network) and keeps the v6 hint.
+When Expand closes, Network hides its edges again. The legend is part of the same SVG, so in
+Expand the "Edges: hidden until…" row still shows. The "Edges:" row sits in the v7 legend at the
+top of the graph, after "No evidence" and before v7's "Chips in the right column" row.
+
+**Default state.** With JS, both panel graphs (Findings and Network) show the nodes only. Effect
+lines, arrowheads, chips, gap lines and "No evidence" labels, moderation lines and diamonds and
+membership lines are hidden. The layout does not change, so nothing moves when edges show. The
+lane titles and the "Effect · certainty" chip column titles stay. The status line says "Click a
+node to show its edges. Or use “Show all edges”."
+
+**Selected state.** A node selection (click, Enter or Space, search, the hash, the drawer) shows
+its pathway: the items that `related()` marks `.on`, in their direction colour, with their chips.
+Further-step lines keep the 42% opacity. An edge selection (a chip, the drawer, search, the matrix,
+the hash) shows that edge and its end nodes. A paper shows the edges that cite it. Esc, Clear,
+the drawer's ×, a second click and a click on empty canvas hide the edges again.
+
+**"Show all edges".** A toggle button (`.eab`, `aria-pressed`) sits in the view bar after Expand.
+When it is on, `<html>` has the class `ea` and the graph looks and acts as in v6. One setting
+applies to both panels. It is not stored.
+
+**How it works.**
+- `src/style.css`, section "variant B": under `html.js:not(.ea)`, every `.ln`, `.chip`, `.gapl`,
+  `.dia` and `.mem` that is not `.on` has `visibility: hidden`. Thus a hidden chip is not in the
+  tab order or the accessibility tree, and it cannot take a click. The `.hit` path of a line used
+  `pointer-events: stroke`, which ignores visibility. With JS it is now `visibleStroke`.
+- `src/app.js`, block "variant B": the toggle, the hint text and `keepFocus()`. When a focused chip
+  hides (a second Enter on it), the focus goes to the source node of its edge. `clear()` does the
+  same when the item that opened the selection is now hidden. A `MutationObserver` on the class of
+  `<html>` writes the hint again when `ea` or `xvopen` changes.
+- `build.py`: the `.eab` button in `panel_html()`, and one JS-only legend row in both panels:
+  "Edges: hidden until you select a node or an edge, or use “Show all edges”." The legend
+  overlap and bounds check still passes.
+- Without JS, every edge shows, as before, and the toggle and the legend row are not shown.
+- The expanded view (`.xg`) is not changed. It shows all its edges, and its status line keeps the
+  v6 hint.
+- Below 701 px the view buttons wrap, so the row is not wider than the screen.
+
+**Size.** First view 124,014 bytes (v6: 121,862): `index.html` +520, `style.css` +572,
+`app.js` +1,060.
+
+**Conflict with the README.** The README asks the graph to "show every node and edge, with
+direction and certainty readable without hovering". In its default state this variant does not do
+that: the edges are hidden until a selection. This is on purpose. Every edge is one click away
+("Show all edges"), and every edge is also in the matrix and in the drawer of its end nodes. A
+judge who opens the page sees nodes only. If the variant is kept, "Show all edges" could be on by
+default.
+
+**Other effects.**
+- "Copy image" copies what is on the screen, so in the default state the PNG has nodes only.
+- "Export CSV / XLSX" with no selection still exports every edge that the filters leave, not the
+  (empty) set of edges on the screen.
+- The view bar has one more button, so the status line is about 130 px narrower at 1440 px. A
+  long selection description wraps to two lines a little more often.
+- No node cue was added (for example a count of edges on each node). The node `aria-label`
+  already gives the edges in and out.
+
+**Checks.** Two builds are byte-identical. `check_site.py` PASS. Headless Chrome at 1440 × 900,
+light and dark theme, both panels: in the default state 0 of 30 lines and 0 of 29 chips show in
+Network (0 of 14 and 0 of 13 in Findings), and all nodes show. Site preparation shows 12 lines and
+12 chips (with the moderation diamond and one membership line). Seedling survival (Findings) shows
+6 findings and the gap. "Show all edges" shows all items. A click on empty canvas, Esc and a
+second Enter hide them again. Edge selection from the hash, search, the drawer and a matrix cell
+shows one line and one chip. A paper from search shows 3 edges. Tab in the default state reaches
+nodes only; with a node selected it reaches the 12 shown chips and never a hidden one. After a
+second Enter on a chip, the focus is on the source node. A click on the place of a hidden chip
+selects nothing. Expand shows 30 of 30 edges. Without JS all 44 lines show. No horizontal scroll
+at 390 px. No page errors (only a `favicon.ico` 404). Lighthouse and axe-core were not run.
+
+## Changes in v7
+
+Five requests drove this version. Four agents did the work in parallel, each in its own git
+worktree: A (items 1 and 2), B (item 3), C (item 5) and D (item 4). The four branches were then
+merged into main.
+
+**1. The toolbar stays at the top.** The switch for the toolbar position (top, bottom, left,
+right) is removed: `DOCK_JS`, the `q1-dock` key, the four icon buttons and the bottom, left and
+right CSS. The toolbar always sticks at the top, and the view bar stays pinned under it.
+`app.js` measures the toolbar height into `--tbh` (was `--dockh`); the view bar and
+`scroll-margin` use it. Below 1100 px only the status line pins. Below 701 px the toolbar is one
+row that scrolls sideways. A stored `q1-dock` value has no effect.
+
+**2. Limitations under the graph.** Each graph card has a "Limitations" block at the bottom
+(`limits_html()` in `build.py`, in a new `.gfoot` that also holds Copy image and Export). It lists
+every string of the panel's own file, word for word, read at build time:
+- Findings: `limitations` in `answers/q1_tree_planting.json` (4 strings).
+- Network: `limitations` in `answers/q1_tree_planting_graph.json` (4 strings).
+A source line under the heading names the file and the field. The block is HTML, so it shows
+without JS and in Matrix view. The hidden `#pathnote-network` element is removed (nothing reads
+it now). `limitations[0]` of the graph file shows twice in Network on purpose: as the
+"Paths through a condition" row of the legend (a reading rule) and in the full list.
+
+**3. The legend is at the top of each graph.** The order inside the SVG is: the heading
+"How to read this graph", the legend columns and notes, a thin rule, then the lane titles and
+the graph. The graph keeps its coordinates and scale: the legend sits at negative y, and the
+viewBox starts above it (`layout()` returns `top`; Findings starts at y -170, Network at -253).
+The legend is first in DOM order, so a screen reader meets it before the graph. It keeps `.glg`,
+has no hook attributes and is not focusable. A legend column with no head and no rows is left
+out. The build also stops when a text box passes the top or bottom of the viewBox, or when a
+node, chip, title or line goes above the rule. The copied PNG has the legend at the top. At
+1440 × 900 the first node is about 200 to 250 px lower than in v6.
+
+**4. Expand shows the same graph, large.** The force-directed note-graph view is removed: the
+simulation, node drag, round nodes, chip sliding, node search and the footer legend.
+`explore.js` now moves the panel's live SVG into a full-screen dialog and puts it back on close.
+A blank SVG with the same viewBox and size holds the panel box, so the matrix in the same cell
+keeps its size. No id is duplicated, and the handlers of `app.js` do the selection. Zoom and pan
+change only the viewBox, so the graph stays sharp; Fit reads the full viewBox (also its negative
+y) and is the view on each open. Range 20% to 500%. Wheel, pinch, − / + / Fit, the keys + − 0
+and the arrows, and drag (also from a node) work. A drag is not a click. The drawer and the
+status line move into the dialog; filters, lens and search stay. Esc closes and returns focus to
+Expand. On a phone, Fit is small (Network about 36%); the reader pinches to zoom in.
+
+**5. Two chip columns in Network.** Before, Network chips sat in three places: between the
+stock and treatment lane and Conditions, inside the Conditions lane (edges that go straight
+from a stock or treatment to an outcome) and between Conditions and Outcomes. Now an edge that
+skips the Conditions lane has its chip in the column next to its target lane. So:
+- Left column: 10 stock or treatment → condition chips and the moderation chip.
+- Right column: 19 chips: 5 condition → outcome, 11 direct, the combination chip, the arc chip
+  and the "No evidence" label.
+Two is the minimum while each chip stays on its own line: an edge into a condition and an edge
+out of one never cross the same vertical line. One column would need each condition drawn
+twice. A line now runs straight through its own slot in a lane and through its own chip, with
+flat curves between, so no line cuts a node or runs under another chip (v6 had 13). The arc
+(Competing vegetation → Seedling nutrient status) is a hairpin to its chip in the right column.
+"Effect · certainty" shows only above columns that hold chips. The legend row is now "Chips in
+the right column: some are for edges from a stock or treatment straight to an outcome." The build
+stops if a chip is in a lane or a line cuts a node or a chip. Network viewBox height 1015 → 990.
+Findings is unchanged (one column).
+
+**Checks.** `check_site.py` PASS. Two builds are byte-identical. Headless Chrome on the merged
+site, both panels, light and dark, 1440 × 900 and 390 px: no page errors (only the old
+`favicon.ico` 404), no horizontal scroll, no `data-dock` left, legend above the first node,
+4 limitations with their source line under each graph, Network chips at exactly two x
+positions, toolbar at 8 px and status line at 116 px (71 px at 390) after a scroll, Expand opens
+with the graph and its legend, a chip click in the dialog shows 5 claims in the drawer, Esc
+leaves no `inert` and puts the SVG back. Each agent also tested its own part. Lighthouse and
+axe-core were not run.
 
 ## Changes in v6
 
@@ -430,10 +594,11 @@ the graph is still there.
   minimum spacing and pulls each item towards the mean of its neighbours.
 - Ports spread along each node side, so lines do not merge. (Before v6 the spread followed the
   line width.)
-- Curves are cubic Béziers. Edges that skip the condition lane pass through their own slot
+- Lines run straight through their own slot in a lane and through their own chip, with flat
+  cubic Béziers between (v7). Edges that skip the condition lane pass through their own slot
   in that lane, not through a node label.
-- The in-lane edge (Competing vegetation → Seedling nutrient status) is an arc on the lane's
-  right side. Its chip sits in a free slot beside the lane.
+- The in-lane edge (Competing vegetation → Seedling nutrient status) is a hairpin to its chip,
+  which is stacked with the other chips in the right column (v7).
 - The build stops with an error if any chip, gap label or node box overlaps another.
 
 ## How the spec items were met
@@ -461,7 +626,8 @@ the graph is still there.
 - **Gaps.** A dashed, hollow link in `--text-3` with no arrowhead and a "No evidence" label. A
   click opens the drawer with the gap note and `searched_for`. In the matrix, a gap is a hatched
   cell. An empty matrix cell is blank, with the title "No claims in this corpus link these two".
-- **Path honesty.** The first `limitations` string of the graph file sits under the graph. The
+- **Path honesty.** The first `limitations` string of the graph file is a row of the legend at
+  the top of the graph, and all `limitations` strings are listed under the graph (v7). The
   condition drawer repeats it. The pathway status line says that further steps are separate
   bodies of evidence. No path is drawn or scored as one effect.
 - **Focus and context (SPEC 3.6).** Click selection with active pathways, lenses, filters,
@@ -501,10 +667,9 @@ the graph is still there.
 - **Paper selection lights its citing edges.** This is an addition, not in the spec.
 - **Selected and focused look alike.** Both use `--focus`; the selected outline is thicker
   (3.5 px against 2.5 px).
-- **v4 expanded view.** SPEC 0 says nothing floats over the graph. The expanded view is a
-  full-screen dialog that covers the page on purpose; inside it, nothing covers the canvas
-  except the search list while it is open. Its layout is a force layout, not the layered one,
-  so it trades some order for the free look the user asked for. The panel graph is unchanged.
+- **Expanded view.** SPEC 0 says nothing floats over the graph. The expanded view is a
+  full-screen dialog that covers the page on purpose. Since v7 it shows the panel's own layered
+  graph (v4 to v6 used a force layout).
 - **v3 token changes.** `--inc` is green and `--focus` is the text colour, not the SPEC 4.1
   blues. Lines are faded until active (v3: grey; v4: faded colour), which SPEC 3.3 does not describe (it asks for direction
   colour on every line). "At a glance" is still at the top of the panel (SPEC 0, L1), but as a

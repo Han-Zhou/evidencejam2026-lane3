@@ -1,7 +1,7 @@
 // Q1 prototype, rank 1. Vanilla JS, no framework, no external requests.
 // The page works without this file. It adds tabs, click highlighting of
 // pathways, the drawer, search, lenses, filters, the matrix toggle, the theme
-// toggle and the toolbar dock. Nothing in the graph reacts to hover.
+// toggle and the sticky toolbar. Nothing in the graph reacts to hover.
 // v5: the tables under the graph are switched off. Their code (sorting, paging,
 // the Papers and Claims tables) is in comments marked "tables (switched off)".
 (function () {
@@ -186,7 +186,6 @@ function related(p, ref) {
 function highlight(p, ref) {
   var R = ref ? related(p, ref) : null;
   p.svg.classList.toggle('sel', !!R);
-  if (p.xsvg) p.xsvg.classList.toggle('sel', !!R);
   p.gEls.forEach(function (n) {
     var r = refOf(n);
     n.classList.toggle('on', !!R && !!R.keep[r]);
@@ -209,7 +208,7 @@ function nameOf(p, ref) {
 // after the data file loads, and the live region speaks once per selection.
 function status(p, R) {
   var ref = p.pin, h, note = '', D = p.data;
-  if (!ref) return put(p, HINT);
+  if (!ref) return put(p, hint(p));
   var t = kindOf(ref), g = p.g[ref], a = p.attr[ref], it = D && D.items[ref];
   var w = p.k === 'findings' ? ['finding', 'findings'] : ['edge', 'edges'];
   // A unit (a count and its word, a direction, a grade) never breaks across two lines.
@@ -346,7 +345,7 @@ function drawerHtml(p, ref) {
   }
   return {title: title, html: h};
 }
-function apply(p) { status(p, highlight(p, p.pin)); }
+function apply(p) { status(p, highlight(p, p.pin)); keepFocus(p); }
 // Move focus to the drawer and scroll so it (or the claim to show) starts at the top.
 // On wide screens the stage comes into view, so the graph highlight and the drawer show together.
 function toDrawer(p, target) {
@@ -394,10 +393,48 @@ function clear(p, refocus, fromHash) {
   $('.dr-body', p.drawer).innerHTML = '<p class="muted">' + EMPTY + '</p>';
   if (!fromHash) setHash(p.k);
   if (!refocus) return;
-  var o = p.opener;
-  if (o && o.isConnected && o.getClientRects().length) o.focus();
-  else if (ref && focusable(p, ref)) focusable(p, ref).focus();
+  var o = p.opener, f = ref && focusable(p, ref);
+  if (o && o.isConnected && o.getClientRects().length && shownEl(o)) o.focus();
+  else if (f && shownEl(f)) f.focus();
+  // Variant B: the chip of a cleared edge hides, so its source node takes the focus.
+  else if (ref && srcNode(p, ref)) srcNode(p, ref).focus();
 }
+
+// ---------- variant B: edges hidden until selected ----------
+// With JS the panel graphs show the nodes only (CSS section "variant B"). The pathway of the
+// selected node, or the selected edge, shows in place: it is the .on class of highlight().
+// "Show all edges" (.eab, aria-pressed) sets the class "ea" on its panel: every edge shows, as in v6.
+// Each panel has its own choice. The build sets the start state (EDGES_ALL in build.py:
+// Findings on, Network off). A change is not stored.
+// To remove the variant: delete this block, the calls to hint(), keepFocus(), shownEl() and
+// srcNode() above, the CSS section, and the .eab button and the "Edges:" legend row in build.py.
+// The expanded view (html.xvopen) always shows every edge, so it keeps the v6 hint.
+var HINT_B = 'Click a node to show its edges. Or use “Show all edges”.';
+function hint(p) { return p.el.classList.contains('ea') || root.classList.contains('xvopen') ? HINT : HINT_B; }
+function shownEl(n) { return getComputedStyle(n).visibility !== 'hidden'; }
+// The source node of an edge or a gap.
+function srcNode(p, ref) { var g = p.g[ref]; return g ? focusable(p, 'node:' + g.s) : null; }
+// A focused chip that hides (a second click on it, or Clear) gives the focus to its source node,
+// so keyboard focus is never on a hidden element.
+function keepFocus(p) {
+  var a = doc.activeElement, n;
+  if (!a || !p.svg.contains(a) || shownEl(a)) return;
+  n = srcNode(p, refOf(a));
+  if (n) n.focus({preventScroll: true});
+}
+$$('.eab').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var el = b.closest('.panel'), on = !el.classList.contains('ea');
+    el.classList.toggle('ea', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    apply(P[el.getAttribute('data-panel')]);
+  });
+});
+// When "xvopen" changes on <html>, write the hint again.
+if (window.MutationObserver) new MutationObserver(function () {
+  Object.keys(P).forEach(function (k) { apply(P[k]); });
+}).observe(root, {attributes: true, attributeFilter: ['class']});
+// ---------- end of variant B ----------
 
 // ---------- filters, lens, search ----------
 function passes(p, ref) {
@@ -744,9 +781,8 @@ function need(name, css) {
 }
 // ---------- expanded view (explore.js) ----------
 function explore(p, btn) { need('explore', true).then(function () { window.Q1X.open(p, btn); }, function () {}); }
-// Shared with the modules that load later (explore.js, snap.js, export.js).
-window.Q1 = {pin: pin, clear: clear, refresh: refresh, index: index, refOf: refOf, DIR: DIR, CERT: CERT, DORD: DORD, wide: wide,
-  P: P, load: load, related: related, passes: passes, inLens: inLens, kindOf: kindOf, lab: lab, nameOf: nameOf,
+// Shared with the modules that load later (snap.js, export.js). explore.js moves the panel's own SVG and needs none of it.
+window.Q1 = {DIR: DIR, CERT: CERT, DORD: DORD, P: P, load: load, related: related, passes: passes, inLens: inLens, kindOf: kindOf,
   // For the Q3 gap map (gapmap.js): module loader and the drawer pieces.
   need: need, esc: esc, pl: pl, dots: dots, dirH: dirH, certH: certH, sdBar: sdBar, byPaper: byPaper};
 
@@ -779,69 +815,30 @@ doc.addEventListener('keydown', function (e) {
   }
 });
 
-// ---------- toolbar dock (experiment) ----------
-// The toolbar stays in view while the panel scrolls (CSS section "toolbar dock").
-// The view bar with the status line sticks under it while the graph is in view.
-// This block adds a switch to each toolbar: top, bottom, left or right. The choice is
-// <html data-dock> (DOCK_JS in build.py sets it before the first paint) and
-// localStorage "q1-dock". Left and right need 1100 px; below that the CSS shows the
-// toolbar at the top and the switch hides those two buttons. The search results use
-// fixed positioning, and place() puts them beside the search box (or beside the column).
-// To remove the experiment: delete this block, DOCK_JS and the CSS section.
+// ---------- sticky toolbar ----------
+// The toolbar sticks at the top while the panel scrolls, and the view bar with the status
+// line sticks under it while the graph is in view (CSS section "sticky toolbar").
+// --tbh is the toolbar height: the view bar's top and the scroll-margin use it.
+// The search results use fixed positioning (a toolbar that scrolls sideways on a phone
+// would clip them), and place() puts them under or over the search box.
 (function () {
-  var DK = [['top', 'Toolbar at the top', 'x="4" y="4" width="8" height="2.6"'],
-    ['bottom', 'Toolbar at the bottom', 'x="4" y="9.4" width="8" height="2.6"'],
-    ['left', 'Toolbar on the left', 'x="4" y="4" width="2.6" height="8"'],
-    ['right', 'Toolbar on the right', 'x="9.4" y="4" width="2.6" height="8"']];
-  var side = matchMedia('(min-width: 1100px)');
-  function stored() { var d = root.getAttribute('data-dock'); return /^(top|bottom|left|right)$/.test(d) ? d : 'top'; }
-  function eff() { var d = stored(); return (d === 'left' || d === 'right') && !side.matches ? 'top' : d; }
   var bars = $$('.toolbar'), lists = $$('.toolbar .sres');
-  bars.forEach(function (tb) {
-    var g = doc.createElement('div');
-    g.className = 'seg dock';
-    g.setAttribute('role', 'group');
-    g.innerHTML = DK.map(function (d) {
-      return '<button type="button" data-dock="' + d[0] + '" aria-pressed="false" aria-label="' + d[1] + '" title="' + d[1] + '">' +
-        '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" rx="2.5"/><rect class="f" ' + d[2] + ' rx=".6"/></svg></button>';
-    }).join('');
-    g.addEventListener('click', function (e) {
-      var b = e.target.closest('button');
-      if (!b) return;
-      root.setAttribute('data-dock', b.getAttribute('data-dock'));
-      try { localStorage.setItem('q1-dock', b.getAttribute('data-dock')); } catch (x) {}
-      sync();
-    });
-    // First row, at the right end: after the search box (and the lens), before the filters.
-    tb.insertBefore(g, $('.filters', tb));
-  });
-  function sync() {
-    var e = eff();
-    $$('.dock').forEach(function (g) {
-      g.setAttribute('aria-label', 'Toolbar position: ' + e);
-      $$('button', g).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-dock') === e ? 'true' : 'false'); });
-    });
-    measure();
-    lists.forEach(place);
-  }
-  // --dockh: the height of the visible top or bottom bar (0 for a side column), for scroll-margin.
+  // The hidden panel's toolbar has no height, so the largest value is the visible one.
   function measure() {
-    var h = 0, e = eff();
-    if (e === 'top' || e === 'bottom') bars.forEach(function (tb) { h = Math.max(h, tb.offsetHeight); });
-    root.style.setProperty('--dockh', h + 'px');
+    var h = 0;
+    bars.forEach(function (tb) { h = Math.max(h, tb.offsetHeight); });
+    root.style.setProperty('--tbh', h + 'px');
   }
-  // Keyboard focus is never hidden under a top or bottom bar, or under the pinned view bar:
+  // Keyboard focus is never hidden under the toolbar or under the pinned view bar:
   // scroll by the overlap.
   doc.addEventListener('focusin', function (ev) {
     if (!P[cur]) return;
-    var n = ev.target, e = eff(), el = P[cur].el, tb = $('.toolbar', el), vb = $('.vbar', el), fv = true;
+    var n = ev.target, el = P[cur].el, tb = $('.toolbar', el), vb = $('.vbar', el), fv = true;
     try { fv = n.matches(':focus-visible'); } catch (x) {}
     if (!tb || tb.contains(n) || (vb && vb.contains(n)) || !fv || root.classList.contains('xvopen')) return;
     setTimeout(function () {
-      var r = n.getBoundingClientRect(), t = tb.getBoundingClientRect(), up = 0, hid = false;
-      var over = r.bottom > t.top && r.top < t.bottom;
-      if (e === 'bottom' && over) { scrollBy(0, r.bottom - t.top + 16); return; }
-      if (e === 'top') { up = t.bottom; hid = over; }
+      var r = n.getBoundingClientRect(), t = tb.getBoundingClientRect(), up = t.bottom;
+      var hid = r.bottom > t.top && r.top < t.bottom;
       // The view bar can cover only what comes after it in its own column (graph, matrix, actions).
       // Below 1100 px only its status line sticks (the bar itself has no box then).
       if (vb && vb.parentNode.contains(n)) {
@@ -851,24 +848,16 @@ doc.addEventListener('keydown', function (e) {
       if (hid) scrollBy(0, r.top - up - 16);
     }, 0);
   });
-  // Put the open results list under or over the search box, or beside a side column, inside the viewport.
+  // Put the open results list under the search box (over it when there is more room there), inside the viewport.
   function place(s) {
     if (s.hidden) return;
-    var tb = s.closest('.toolbar'), r = $('input', tb).getBoundingClientRect(), t = tb.getBoundingClientRect();
+    var r = $('input', s.closest('.toolbar')).getBoundingClientRect();
     var W = root.clientWidth, H = innerHeight, m = 8, w = Math.min(560, W - 2 * m), st = s.style, h;
+    var below = H - r.bottom - m - 6, above = r.top - m - 6;
     st.top = st.bottom = 'auto';
-    if (getComputedStyle(tb).flexDirection === 'column') {
-      var lft = t.left < W / 2;
-      w = Math.min(w, (lft ? W - t.right : t.left) - 2 * m);
-      st.left = (lft ? t.right + m : t.left - m - w) + 'px';
-      var y = Math.max(m, Math.min(r.top, H - m - 360));
-      st.top = y + 'px'; h = H - y - m;
-    } else {
-      st.left = Math.max(m, Math.min(r.left, W - m - w)) + 'px';
-      var below = H - r.bottom - m - 6, above = r.top - m - 6;
-      if (below >= 260 || below >= above) { st.top = (r.bottom + 6) + 'px'; h = below; }
-      else { st.bottom = (H - r.top + 6) + 'px'; h = above; }
-    }
+    st.left = Math.max(m, Math.min(r.left, W - m - w)) + 'px';
+    if (below >= 260 || below >= above) { st.top = (r.bottom + 6) + 'px'; h = below; }
+    else { st.bottom = (H - r.top + 6) + 'px'; h = above; }
     st.width = w + 'px';
     st.maxHeight = Math.max(140, Math.min(h, H * 0.7)) + 'px';
   }
@@ -879,8 +868,7 @@ doc.addEventListener('keydown', function (e) {
   function again() { lists.forEach(place); }
   addEventListener('scroll', again, {passive: true, capture: true});
   addEventListener('resize', function () { measure(); again(); });
-  if (side.addEventListener) side.addEventListener('change', sync);
-  sync();
+  measure();
 })();
 
 addEventListener('hashchange', route);

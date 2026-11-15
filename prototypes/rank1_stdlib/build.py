@@ -20,7 +20,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from layout import CHIP_H, CHIP_W, GAP_H, GAP_W, LG_LINE, LG_SG, LG_SW, layout
+from layout import CHIP_H, CHIP_W, GAP_H, GAP_W, LG_LINE, LG_SG, LG_SW, LG_TITLE_PX, layout
 
 HERE = Path(__file__).resolve().parent
 ANSWERS = HERE.parent.parent / "answers"
@@ -47,6 +47,9 @@ KIND_TITLE = {
 }
 KIND_LANE = {"planting_stock": 0, "site_treatment": 0, "combination": 0, "condition": 1, "outcome": 2}
 LANE0_GROUPS = ["planting_stock", "site_treatment", "combination"]
+# Variant B: the start state of "Show all edges" in each panel. True: every edge shows (the v6
+# look). False: with JS the graph shows nodes only until a selection.
+EDGES_ALL = {"findings": True, "network": False}
 
 GAP_NOTE = "No study in this corpus tested this pairing. This is a gap, not a negative result."
 DRAWER_EMPTY = "Select a node or an edge. Its details, claims and quotes show here."
@@ -54,11 +57,6 @@ DRAWER_EMPTY = "Select a node or an edge. Its details, claims and quotes show he
 # Applied in <head> before the stylesheet, so a stored theme shows with no flash (SPEC 4.2).
 THEME_JS = ('try{var t=localStorage.getItem("q1-theme");'
             'if(t=="dark"||t=="light")document.documentElement.setAttribute("data-theme",t)}catch(e){}')
-# Experiment: toolbar dock (top, bottom, left, right). Sets data-dock on <html> before the first paint.
-# To remove the experiment: delete this constant and its use in index_html(), the "toolbar dock"
-# block in app.js and the "toolbar dock" section in style.css.
-DOCK_JS = ('try{var d=localStorage.getItem("q1-dock")}catch(e){}'
-           'document.documentElement.setAttribute("data-dock",/^(top|bottom|left|right)$/.test(d)?d:"top");')
 THEME_BTN = (
     '<button type="button" class="theme" aria-pressed="false" aria-label="Switch to dark theme">'
     '<svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>'
@@ -319,7 +317,7 @@ def layout_spec(M):
         return {"lanes": [{"title": "Factor", "subtitle": ""},
                           {"title": "Outcome", "subtitle": ""}],
                 "nodes": M["nodes"], "edges": edges, "cg": 160,
-                "chip_title": CHIP_TITLE, "legend": legend_spec(M)}
+                "chip_title": CHIP_TITLE, "legend": dict(legend_spec(M), title=LEGEND_TITLE)}
     kinds = M["src"]["node_kinds"]
     groups = [{"key": k, "title": KIND_TITLE[k], "subtitle": kinds[k]} for k in LANE0_GROUPS
               if any(n["kind"] == k for n in M["nodes"])]
@@ -327,11 +325,13 @@ def layout_spec(M):
                       {"title": KIND_TITLE["condition"], "subtitle": kinds["condition"]},
                       {"title": KIND_TITLE["outcome"], "subtitle": kinds["outcome"]}],
             "groups": groups, "nodes": M["nodes"], "edges": edges, "cg": 94,
-            "chip_title": CHIP_TITLE, "legend": legend_spec(M)}
+            "chip_title": CHIP_TITLE, "legend": dict(legend_spec(M), title=LEGEND_TITLE)}
 
 
 # Title above each chip column (the pill on each edge). Fixed UI copy.
 CHIP_TITLE = {"title": "Effect · certainty", "parts": ["arrow: direction", "dots: certainty"]}
+# Heading of the legend band at the top of each graph. Fixed UI copy.
+LEGEND_TITLE = "How to read this graph"
 SHAPE_KEY = [("planting_stock", "Planting stock:", "round"),
              ("site_treatment", "Site treatment:", "square"),
              ("condition", "Condition:", "side bar"),
@@ -351,8 +351,14 @@ def legend_spec(M):
     gap = {"sw": "gap", "lead": "No evidence:", "text": GAP_NOTE}
     fade = {"sw": "fade", "lead": "Faded line:", "js": True,
             "text": "not selected. Click a node or an edge to show it at full strength."}
+    # Variant B: with JS the edges are hidden until a selection (style.css "variant B"),
+    # unless "Show all edges" is on. EDGES_ALL sets its start state for each panel.
+    hid = {"sw": None, "lead": "Edges:", "js": True,
+           "text": "all show at the start. Turn off “Show all edges” to see only the edges of the node or edge you select."
+           if EDGES_ALL[M["key"]] else
+           "hidden until you select a node or an edge, or use “Show all edges”."}
     if M["key"] == "findings":
-        cols.append({"head": "Other marks", "fill": True, "min": 200, "rows": [gap, fade]})
+        cols.append({"head": "Other marks", "fill": True, "min": 200, "rows": [gap, fade, hid]})
         return {"cols": cols}
     cols.append({"head": "Other lines", "tw": 190, "rows": [
         {"sw": "mod", "lead": "Moderation:", "text": "changes the effect of the edge at the ◆"},
@@ -362,9 +368,10 @@ def legend_spec(M):
         {"sw": "shape", "shape": k, "lead": lead, "text": text} for k, lead, text in SHAPE_KEY]})
     # Notes: always a full-width row under the columns.
     cols.append({"head": "", "fill": True, "min": 600, "rows": [
-        gap,
-        {"sw": "chip", "lead": "Chips in the Conditions lane:",
-         "text": "edges that go from a stock or treatment straight to an outcome. They do not pass through a condition."},
+        gap, hid,
+        {"sw": "chip", "lead": "Chips in the right column:",
+         "text": "some are for edges from a stock or treatment straight to an outcome. "
+                 "These lines go between the conditions."},
         {"sw": None, "lead": "Paths through a condition:", "text": M["src"]["limitations"][0]},
     ]})
     return {"cols": cols}
@@ -393,8 +400,12 @@ def svg_chip(key, it, x, y, attrs):
 def svg_graph(M, geo):
     key = M["key"]
     W, H = geo["width"], geo["height"]
-    out = ['<svg class="graph" id="svg-%s" viewBox="0 0 %d %d" width="%d" height="%d" role="group" '
-           'aria-labelledby="gh-%s" style="max-width:%dpx">' % (key, W, H, W, H, key, round(W * 1.2)), svg_defs(key)]
+    # The legend sits above the graph at negative y, so the viewBox starts at geo["top"] (<= 0).
+    out = ['<svg class="graph" id="svg-%s" viewBox="0 %s %d %d" width="%d" height="%d" role="group" '
+           'aria-labelledby="gh-%s" style="max-width:%dpx">' % (key, fmt(geo["top"]), W, H, W, H, key, round(W * 1.2)), svg_defs(key)]
+    # The legend comes first in the DOM, so a screen reader meets it before the graph.
+    if geo.get("legend"):
+        out.append(svg_legend(key, geo["legend"]))
     # lane titles, and the title above each chip column (centred on the column)
     out.append('<g class="lt">')
     for t in geo["titles"]:
@@ -490,8 +501,6 @@ def svg_graph(M, geo):
         g = geo["edges"][it["ref"]]
         if g["diamond"]:
             out.append('<path class="dia d-%s" data-ref="%s" d="%s"/>' % (it["dir"], esc(it["ref"]), g["diamond"]))
-    if geo.get("legend"):
-        out.append(svg_legend(key, geo["legend"]))
     out.append("</svg>")
     return "".join(out)
 
@@ -525,12 +534,15 @@ def legend_swatch(key, r, y):
 
 
 def svg_legend(key, L):
-    """The legend band under the graph, drawn in the SVG: labels are SVG <text>, so they
-    are DOM text and a copied image of the graph carries them. Not focusable, no hooks."""
+    """The legend band above the graph, drawn in the SVG: labels are SVG <text>, so they
+    are DOM text and a copied image of the graph carries them. Not focusable, no hooks.
+    Heading, columns, then the rule that separates the legend from the graph."""
     tx = LG_SW + LG_SG
     # font-size as an attribute too: a clone of the SVG without the style sheet keeps the size the layout assumed.
-    out = ['<g class="glg" role="group" aria-label="Legend" font-size="12">',
-           '<path class="lgr" d="M%s %sH%s"/>' % (fmt(L["rule"][0]), fmt(L["rule"][1]), fmt(L["rule"][2]))]
+    out = ['<g class="glg" role="group" aria-label="Legend" font-size="12">']
+    if L["title"]:
+        out.append('<text class="lhd" x="%s" y="%s" font-size="%d">%s</text>' % (
+            fmt(L["x"]), fmt(L["y"] + 15), LG_TITLE_PX, esc(L["title"])))
     for c in L["cols"]:
         out.append('<g transform="translate(%s %s)">' % (fmt(L["x"] + c["x"]), fmt(L["y"] + c["y"])))
         if c["head"]:
@@ -551,6 +563,7 @@ def svg_legend(key, L):
             row.append("</text>")
             out.append(('<g class="js-only">%s</g>' if r.get("js") else "%s") % "".join(row))
         out.append("</g>")
+    out.append('<path class="lgr" d="M%s %sH%s"/>' % (fmt(L["rule"][0]), fmt(L["rule"][1]), fmt(L["rule"][2])))
     out.append("</g>")
     return "".join(out)
 
@@ -764,18 +777,21 @@ def papers_table(M):
             '<div class="pp-host js-only"></div>' % (M["item_word"][1], page)), len(M["papers"])
 
 
+def limits_html(M):
+    """Limitations under the graph: every string of this panel's own file, word for word (v7).
+    HTML, not SVG, so it shows without JS and in both Graph and Matrix views."""
+    return ('<div class="limh"><h4>Limitations</h4>'
+            '<p class="lsrc">From the pack\'s answer file <code>%s</code> (field <code>limitations</code>).</p></div>'
+            '<ul class="liml">%s</ul>') % (esc(M["file"]), "".join("<li>%s</li>" % esc(l) for l in M["src"]["limitations"]))
+
+
 def panel_html(M, geo):
     key = M["key"]
     src = M["src"]
     word = M["item_word"]
     page = M["claims_page"]
-    limit = ""
-    if key == "network":
-        # The visible path note moved into the in-graph legend (svg_graph). This hidden copy stays
-        # only because explore.js reads #pathnote-network for the footer of the expanded view.
-        limit = '<p id="pathnote-network" hidden>%s</p>' % esc(src["limitations"][0])
-        # limit = '<p class="limit" id="pathnote-network"><b>Paths through a condition:</b> %s</p>' % esc(src["limitations"][0])
-    # Everything after the graph is switched off (v5): legend, tables, limitations. To restore it,
+    # Everything after the graph is switched off (v5): legend and tables. (v7: the limitations are
+    # back, inside the graph card: limits_html().) To restore the rest,
     # uncomment these lines, the matching lines of the format string and its keys below, the
     # "tables" code in app.js and the "tables" rules in style.css.
     # ptable, n_docs = papers_table(M)
@@ -783,9 +799,8 @@ def panel_html(M, geo):
     # inter_title = ("Interactions (%d)" % len(src["interactions"])) if key == "findings" else \
     #     "Interactions &amp; set aside (%d combination, %d moderation, %d set aside)" % (
     #         sum(1 for n in M["nodes"] if n.get("members")), sum(1 for i in M["items"] if i["kind"] == "moderation"), len(src["set_aside"]))
-    # lims = "".join("<li>%s</li>" % esc(l) for l in src["limitations"])
     return (
-        '<section class="panel" id="panel-%(k)s" data-panel="%(k)s" aria-labelledby="h-%(k)s">'
+        '<section class="panel%(ea)s" id="panel-%(k)s" data-panel="%(k)s" aria-labelledby="h-%(k)s">'
         # With JS the heading row is for screen readers only (the tab names the panel).
         # Without JS the drawer is not there, so the row links to the claims page (every quote).
         '<div class="phead"><h2 id="h-%(k)s">%(name)s</h2><p class="nojs"><a href="%(page)s">All claims and quotes</a></p></div>'
@@ -796,18 +811,22 @@ def panel_html(M, geo):
         # The view bar is one row: Graph | Matrix, Expand and the status line. It sticks under the toolbar.
         '<div class="vbar"><div class="vtools"><div class="seg vt js-only" role="group" aria-label="View"><button type="button" data-view="graph" aria-pressed="true">Graph</button>'
         '<button type="button" data-view="matrix" aria-pressed="false">Matrix</button></div>'
-        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button></div>'
+        '<button type="button" class="xbtn js-only" aria-haspopup="dialog">%(xicon)sExpand</button>'
+        # Variant B: when this toggle is off, the graph shows nodes only until a selection (app.js).
+        # Its start state comes from EDGES_ALL, together with the panel's "ea" class.
+        '<button type="button" class="tbtn eab js-only" aria-pressed="%(eap)s">Show all edges</button></div>'
         # Status line: the buttons float at the right; only the text after them is the live region.
         '<div class="selbar js-only" id="st-%(k)s"><div class="acts" hidden><button type="button" class="tod">Details below</button>'
         '<button type="button" class="clr">Clear</button></div><div class="sd" role="status" aria-live="polite"></div></div></div>'
         # '<a class="vat" href="#tbl-%(k)s">View as table</a></div>'
-        # The graph card holds the graph, the matrix and, at its bottom right, the actions row.
-        '<div class="gcard"><div class="gbox">%(svg)s</div><div class="mbox js-only"></div>'
+        # The graph card holds the graph, the matrix and, under them, the footer: the actions row
+        # at the right and the limitations of this panel's file.
+        '<div class="gcard"><div class="gbox">%(svg)s</div><div class="mbox js-only"></div><div class="gfoot">'
         # Copy image (snap.js) and export of the highlighted data (export.js). app.js loads each module on first use.
         '<div class="gact js-only"><button type="button" class="tbtn" data-act="copy">Copy image</button>'
         '<div class="seg xp" role="group" aria-label="Download the highlighted data">'
         '<button type="button" class="tbtn" data-act="csv">Export CSV</button>'
-        '<button type="button" class="tbtn" data-act="xlsx">Export XLSX</button></div></div></div>%(limit)s</div>'
+        '<button type="button" class="tbtn" data-act="xlsx">Export XLSX</button></div></div>%(lims)s</div></div></div>'
         '<div class="dcol js-only"><section class="drawer" id="dr-%(k)s" aria-labelledby="drh-%(k)s"><div class="dr-head"><h3 id="drh-%(k)s" tabindex="-1">Details</h3>'
         '<button type="button" class="x" aria-label="Close details">×</button></div>'
         '<div class="dr-body"><p class="muted">%(empty)s</p></div></section></div></div>'
@@ -819,17 +838,17 @@ def panel_html(M, geo):
         # '<details class="tb papers"><summary>Papers (%(nd)d)</summary>%(papers)s</details>'
         # '<details class="tb claims"><summary>Claims (%(nc)d)</summary><p>All claims with their quotes, grouped by %(w0)s and paper: '
         # '<a href="%(page)s">open the claims page</a>.</p><div class="cl-host js-only"></div></details>'
-        # '<h3 class="th">Limitations</h3><ul class="lims">%(lims)s</ul>'
         # '<p class="muted">How this was built: see <a href="#built-%(k)s">the note at the top of this panel</a>.</p>'
         '</section>'
     ) % {
         "k": key, "name": M["name"], "name_l": M["name"].lower(), "page": page,
         # "file": M["file"], "glance": glance(M),
-        "toolbar": toolbar(M), "svg": svg_graph(M, geo), "limit": limit,
+        "toolbar": toolbar(M), "svg": svg_graph(M, geo), "lims": limits_html(M),
         # "legend": legend(M), "Words": word[1].capitalize(), "n": len(M["items"]), "items": items_table(M),
         # "ng": len(M["gaps"]), "gaps": gaps_table(M), "inter_title": inter_title, "inter": inter,
-        # "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0], "lims": lims,
+        # "nd": n_docs, "papers": ptable, "nc": len(M["evidence"]), "w0": word[0],
         "empty": DRAWER_EMPTY, "xicon": XICON,
+        "ea": " ea" if EDGES_ALL[key] else "", "eap": "true" if EDGES_ALL[key] else "false",
     }
 
 
@@ -879,7 +898,7 @@ def index_html(MA, MB, ga, gb, M3):
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<title>Q1 · Tree planting evidence</title>'
         '<meta name="description" content="Evidence on how planting-stock traits and site treatments affect seedling survival and growth in Canadian forest restoration: findings, certainty, gaps and source quotes.">'
-        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":/^#(panel-)?gapmap/.test(location.hash)?" q3":"");%s%s</script>'
+        '<script>document.documentElement.className="js"+(/^#network/.test(location.hash)?" nw":/^#(panel-)?gapmap/.test(location.hash)?" q3":"");%s</script>'
         '<link rel="stylesheet" href="style.css">'
         '<script src="app.js" defer></script></head><body>'
         '<a class="skip" href="#main">Skip to content</a>'
@@ -891,7 +910,7 @@ def index_html(MA, MB, ga, gb, M3):
         # '<footer><p>Built from <code>answers/q1_tree_planting.json</code> and <code>answers/q1_tree_planting_graph.json</code>. '
         # 'Certainty rule <code>%s</code>. No text on this page is generated by a language model.</p></footer>'
         '</body></html>\n'
-    ) % (THEME_JS, DOCK_JS, head, cards, panel_html(MA, ga), panel_html(MB, gb), q3_panel_html(M3))
+    ) % (THEME_JS, head, cards, panel_html(MA, ga), panel_html(MB, gb), q3_panel_html(M3))
     # ) % (THEME_JS, THEME_BTN, esc(A["question"]), cards, panel_html(MA, ga), panel_html(MB, gb), esc(A["rule"]))
 
 
