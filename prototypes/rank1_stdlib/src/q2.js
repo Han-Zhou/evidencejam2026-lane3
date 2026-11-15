@@ -53,24 +53,21 @@ function load() {
 }
 
 // ---------- filters ----------
-// Attribute and certainty hide board rows, gap rows and timeline rows: each reads its own
-// data-attr and data-certainty. A gap has no certainty, so the gaps hide when a level is set.
-// An attribute option has no value attribute, so its value is its text (the rows' data-attr).
+// Attribute and certainty hide board rows, gap rows and the "When was it measured?" rows under
+// them: each reads its own data-attr and data-certainty. A gap has no certainty, so the gaps
+// hide when a level is set. An attribute option has no value attribute, so its value is its
+// text (the rows' data-attr).
 function filter() {
-  var a = S.fa ? S.fa.value : '', c = S.fc ? S.fc.value : '', nf = 0, tf = 0, ng = 0, head = null, any = false, vis = {};
-  function end() { if (head) head.hidden = !any; }
-  $$('tr.q2-row, tr.q2-gap, .q2-tls, .q2-tlr', S.el).forEach(function (n) {
+  var a = S.fa ? S.fa.value : '', c = S.fc ? S.fc.value : '', nf = 0, tf = 0, ng = 0, vis = {};
+  $$('tr.q2-row, tr.q2-gap, tr.q2-when', S.el).forEach(function (n) {
     var cl = n.classList, gap = cl.contains('q2-gap'), ok;
-    // A timeline section title hides when all its rows hide.
-    if (cl.contains('q2-tls')) { end(); head = n; any = false; return; }
     ok = (!a || n.getAttribute('data-attr') === a) && (gap ? !c : !c || n.getAttribute('data-certainty') === c);
     n.hidden = !ok;
     if (ok) vis[n.getAttribute('data-q2-ref')] = 1;
-    if (cl.contains('q2-tlr')) any = any || ok;
-    else if (gap) ng += ok ? 1 : 0;
+    if (cl.contains('q2-when')) return;
+    if (gap) ng += ok ? 1 : 0;
     else { tf++; nf += ok ? 1 : 0; }
   });
-  end();
   if (S.count) S.count.textContent = 'Showing ' + nf + ' of ' + pl(tf, 'finding', 'findings') + ' · ' + pl(ng, 'gap', 'gaps') +
     (c ? ' (a gap has no certainty)' : '');
   if (S.sel && !vis[S.sel]) clear(false);
@@ -92,17 +89,16 @@ function claimLi(id, C) {
     '<p class="cm">' + dirH(C.direction) + ' · grade ' + esc(certW(C.certainty_grade)) + ' · ' + esc((C.evidence_types || []).map(un).join(', ')) +
     ' · comparator: ' + esc(un(C.comparator)) + '</p><blockquote>' + esc(C.quote) + '</blockquote><p class="cid"><code>' + esc(id) + '</code></p></li>';
 }
-// Claims grouped by paper: the paper with most claims first, then in the order of edge_ids.
+// Claims grouped by paper and ranked by claim grade (app.js rankPapers: the same order as Q1 and Q3).
 function byPaper(ids) {
-  var E = S.data.evidence, g = {}, order = [], ix = {};
+  var E = S.data.evidence, Q = window.Q1, R;
   ids = ids.filter(function (c) { return E[c]; });
-  ids.forEach(function (c) { var d = E[c].document_id; if (!g[d]) { g[d] = []; order.push(d); } g[d].push(c); });
-  order.forEach(function (d, i) { ix[d] = i; });
-  order.sort(function (a, b) { return g[b].length - g[a].length || ix[a] - ix[b]; });
-  return '<h4>Claims by paper (' + pl(order.length, 'paper', 'papers') + ')</h4>' + order.map(function (d) {
-    var C = E[g[d][0]];
-    return '<section class="pp"><h5>' + esc(C.title) + (C.year != null ? ' (' + esc(C.year) + ')' : '') + '</h5><p class="pm">' + doiH(d, C.doi) + ' · ' +
-      pl(g[d].length, 'claim', 'claims') + '</p><ol class="claims">' + g[d].map(function (c) { return claimLi(c, E[c]); }).join('') + '</ol></section>';
+  R = Q.rankPapers(ids, function (c) { return E[c].document_id; }, function (c) { return E[c].certainty_grade; });
+  return '<h4>Claims by paper (' + pl(R.length, 'paper', 'papers') + ')</h4><p class="pm">' + esc(Q.RANKN) + '</p>' + R.map(function (x) {
+    var C = E[x.ids[0]];
+    return '<section class="pp"><h5>' + esc(C.title) + (C.year != null ? ' (' + esc(C.year) + ')' : '') + '</h5><p class="pm">' +
+      Q.gradesH(x.n, certW) + ' · ' + doiH(x.d, C.doi) + ' · ' + pl(x.ids.length, 'claim', 'claims') +
+      '</p><ol class="claims">' + x.ids.map(function (c) { return claimLi(c, E[c]); }).join('') + '</ol></section>';
   }).join('');
 }
 function drawerHtml(ref) {
@@ -184,7 +180,8 @@ function init() {
   $$('[data-q2-ref]', el).forEach(function (n) {
     var r = n.getAttribute('data-q2-ref');
     (S.refs[r] = S.refs[r] || []).push(n);
-    if (n.tagName === 'TR') S.rows[r] = n;
+    // The board row, not the "When was it measured?" row under it (same data-q2-ref).
+    if (n.matches('tr.q2-row, tr.q2-gap')) S.rows[r] = n;
   });
   el.addEventListener('click', function (e) {
     var t = e.target, n = t.closest('.q2-sel');

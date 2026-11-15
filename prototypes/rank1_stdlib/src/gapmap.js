@@ -24,7 +24,6 @@ var SORTS = [['pack', 'Pack order'], ['az', 'A to Z'], ['filled', 'Most filled c
 // The density filter: the lowest tier rank (KT index + 1) that stays in full colour.
 var MINS = [[0, 'Any'], [2, 'Some or denser'], [3, 'Dense or denser'], [4, 'Densest only']];
 var HINT = 'Select a cell to read its claims. A hatched cell is a gap: no study tested that pairing.';
-var EMPTY = 'Select a cell. Its density, certainty, rationale, claims and quotes show here.';
 var XT = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 // XLSX fills for the Matrix sheet: the light theme's tier colours (fill, text), thin first.
 var XFILL = [['F1E6FF', '1A1A1A'], ['D7B8FF', '1A1A1A'], ['B47AFF', '1A1A1A'], ['6F00FF', 'FFFFFF']];
@@ -71,7 +70,8 @@ function init(D) {
   S.host.innerHTML = skeleton(D);
   S.host.removeAttribute('aria-busy');
   S.table = $('.q3t', S.host); S.hr = $('thead tr', S.table); S.tb = S.table.tBodies[0];
-  S.st = $('.q3st', S.host); S.dr = $('.q3dr', S.host);
+  S.st = $('.q3st', S.host); S.dr = $('.q3dr', S.host); S.dc = $('.q3dcol', S.host); S.stage = $('.q3stage', S.host);
+  S.box = $('.q3box', S.host); S.scr = $('.q3scr', S.host); S.bar = $('.q3bar', S.host);
   S.th = {}; S.tr = {}; S.td = {};
   $$('th[data-c]', S.hr).forEach(function (n) { S.th[n.getAttribute('data-c')] = n; });
   $$('tr[data-r]', S.tb).forEach(function (tr) {
@@ -102,15 +102,24 @@ function pick(ax, items, what) {
       return '<label><input type="checkbox" data-ax="' + ax + '" value="' + esc(x.id) + '" checked> ' + esc(x.label) + '</label>';
     }).join('') + '</div></details>';
 }
+// The sort and filter bar at the top of the panel, like the Q1 toolbar. It sticks at the top while the page scrolls.
+// The count at its end (.q3n) says how much of the map shows.
+function bar() {
+  function grp(ax, name, items, what) {
+    return '<div class="q3grp" role="group" aria-label="' + name + '"><span class="q3gl" aria-hidden="true">' + name + '</span>' +
+      '<label class="sel">Sort<span class="vh"> ' + what + '</span> <select data-sort="' + ax + '">' + opts(SORTS, 'pack') + '</select></label>' +
+      pick(ax, items, what) + '</div>';
+  }
+  return '<div class="toolbar q3bar" role="group" aria-label="Sort and filter the map">' +
+    grp('r', 'Rows: outcomes', S.rows, 'outcomes') + grp('c', 'Columns: interventions', S.cols, 'interventions') +
+    '<div class="q3grp"><label class="sel">Density <select data-min>' + opts(MINS, 0) + '</select></label>' +
+    '<label class="cb"><input type="checkbox" data-empty> Hide empty rows and columns</label></div>' +
+    '<p class="count q3n" aria-live="polite"></p></div>';
+}
+// The top-left cell of the table names the two axes.
 function corner() {
-  return '<td class="q3k"><div class="q3ctl" role="group" aria-label="Sort and filter the map">' +
-    '<p class="q3ax">Rows: outcomes</p>' +
-    '<label>Sort <select data-sort="r">' + opts(SORTS, 'pack') + '</select></label>' + pick('r', S.rows, 'outcomes') +
-    '<p class="q3ax">Columns: interventions</p>' +
-    '<label>Sort <select data-sort="c">' + opts(SORTS, 'pack') + '</select></label>' + pick('c', S.cols, 'interventions') +
-    '<p class="q3ax">Cells</p>' +
-    '<label>Density <select data-min>' + opts(MINS, 0) + '</select></label>' +
-    '<label class="cb"><input type="checkbox" data-empty> Hide empty rows and columns</label></div></td>';
+  return '<td class="q3k"><p class="q3ax">Columns: interventions <span aria-hidden="true">→</span></p>' +
+    '<p class="q3ax">Rows: outcomes <span aria-hidden="true">↓</span></p></td>';
 }
 function cellHtml(x) {
   if (x.ty === 'g') return '<td class="q3g" data-c="' + esc(x.c) + '" data-q3-gap-id="' + esc(x.id) + '"><span class="vh">No evidence</span></td>';
@@ -142,17 +151,18 @@ function skeleton(D) {
         return cellHtml(S.cell[r.id + '|' + c.id]);
       }).join('') + '</tr>';
     }).join('') + '</tbody></table>';
-  return '<p class="q3sum">' + esc(D.summary) + '</p>' +
+  return bar() + '<p class="q3sum">' + esc(D.summary) + '</p>' +
     '<details class="q3dense"><summary>The ten densest cells (most studies)</summary><ol>' + dense + '</ol></details>' +
     '<div class="q3top">' + legend + '<div class="seg xp" role="group" aria-label="Export the map as shown">' +
     '<button type="button" class="tbtn" data-gm="csv">Export CSV</button><button type="button" class="tbtn" data-gm="xlsx">Export XLSX</button>' +
     '<button type="button" class="tbtn" data-gm="copy">Copy image</button></div></div>' +
-    '<div class="selbar q3st"><div class="acts" hidden><button type="button" class="tod">Details below</button>' +
+    '<div class="selbar q3st"><div class="acts" hidden><button type="button" class="tod">Go to details</button>' +
     '<button type="button" class="clr">Clear</button></div><div class="sd" role="status" aria-live="polite"></div></div>' +
-    '<div class="gcard q3card"><div class="q3box">' + table + '</div>' +
-    '<div class="gact"><p class="q3n"></p><button type="button" class="tbtn" data-gm="png">Download PNG</button></div></div>' +
-    '<section class="drawer q3dr" aria-labelledby="q3drh"><div class="dr-head"><h3 id="q3drh" tabindex="-1">Details</h3>' +
-    '<button type="button" class="x" aria-label="Close details">×</button></div><div class="dr-body"><p class="muted">' + EMPTY + '</p></div></section>' +
+    // The map, then the details column. The column is hidden until a cell is selected (see drawer()).
+    '<div class="q3stage"><div class="q3main"><div class="gcard q3card"><div class="q3scr"><div class="q3box">' + table + '</div></div>' +
+    '<div class="gact"><button type="button" class="tbtn" data-gm="png">Download PNG</button></div></div></div>' +
+    '<div class="q3dcol" hidden><section class="drawer q3dr" aria-labelledby="q3drh"><div class="dr-head"><h3 id="q3drh" tabindex="-1">Details</h3>' +
+    '<button type="button" class="x" aria-label="Close details">×</button></div><div class="dr-body"></div></section></div></div>' +
     '<details class="q3lim"><summary>Limitations and how this map was built</summary><ul class="lims">' +
     D.lims.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul><p>' + esc(D.how) + '</p>' +
     '<p>Certainty rule: <code>' + esc(D.rule) + '</code>. Source file: <code>answers/q3_grassland_gaps.json</code>.</p></details>';
@@ -212,6 +222,17 @@ function arrange() {
     var all = ax === 'r' ? S.rows : S.cols, k = all.filter(function (x) { return S.show[ax][x.id]; }).length;
     $('[data-pick="' + ax + '"] .q3ps', S.host).textContent = 'Show ' + k + ' of ' + all.length;
   });
+  edge();
+}
+// The map scrolls sideways in its box when it is wider than its column (always when the details
+// are open). A fade at the right edge shows that more columns are hidden there.
+function edge() { var b = S.box; S.scr.classList.toggle('q3cut', b.scrollLeft + b.clientWidth < b.scrollWidth - 2); }
+// Scroll the box (not the page) so the selected cell is clear of the sticky row labels and the fade.
+function reveal(el) {
+  var b = S.box.getBoundingClientRect(), r = el.getBoundingClientRect(), th = $('th', S.tr[S.pin.r]).getBoundingClientRect(), d = 0;
+  if (r.right > b.right - 40) d = r.right - b.right + 40;
+  else if (r.left < th.right + 6) d = r.left - th.right - 6;
+  if (d) S.box.scrollLeft += d;
 }
 function filtered() {
   return S.min > 0 || S.empty || S.rows.some(function (r) { return !S.show.r[r.id]; }) || S.cols.some(function (c) { return !S.show.c[c.id]; });
@@ -262,12 +283,20 @@ function detail(x) {
   h += '<p>Intervention: <b>' + esc(S.cl[x.c]) + '</b><br>Outcome: <b>' + esc(S.rl[x.r]) + '</b></p>';
   return h + Q.byPaper(S.cp, C.ids[x.id], 'Claims by paper');
 }
+// The details column: beside the map (sticky) from 900 px up, under it below. It shows only while a cell is selected.
+function drawer(on) {
+  S.dc.hidden = !on;
+  S.stage.classList.toggle('open', on);
+}
 function select(x, opener) {
   if (S.pin === x) { clear(true); return; }
   S.pin = x; S.opener = opener || x.el;
   mark(); status();
+  drawer(true);
+  reveal(x.el);
   $('h3', S.dr).textContent = lab(x);
   $('.dr-body', S.dr).innerHTML = '<p class="muted">Loading the claims…</p>';
+  S.dr.scrollTop = 0;
   claims().then(function () {
     if (S.pin !== x) return;
     $('.dr-body', S.dr).innerHTML = detail(x);
@@ -279,8 +308,9 @@ function select(x, opener) {
 function clear(refocus) {
   var o = S.opener;
   S.pin = null; mark(); status();
+  drawer(false);
   $('h3', S.dr).textContent = 'Details';
-  $('.dr-body', S.dr).innerHTML = '<p class="muted">' + EMPTY + '</p>';
+  $('.dr-body', S.dr).innerHTML = '';
   if (refocus && o && o.isConnected && o.getClientRects().length) o.focus();
 }
 
@@ -500,7 +530,13 @@ function wire() {
       return;
     }
     if (t.closest('.clr') || t.closest('.x')) { clear(true); return; }
-    if (t.closest('.tod')) { S.dr.scrollIntoView({block: 'start'}); $('h3', S.dr).focus({preventScroll: true}); return; }
+    if (t.closest('.tod')) {
+      // Beside the map the sticky details are already in view: scroll only when they are under the map.
+      var dt = S.dr.getBoundingClientRect().top;
+      if (dt < 0 || dt > innerHeight - 80) S.dr.scrollIntoView({block: 'start'});
+      $('h3', S.dr).focus({preventScroll: true});
+      return;
+    }
     if ((b = t.closest('[data-all], [data-none]'))) {
       var ax = b.getAttribute('data-all') || b.getAttribute('data-none'), on = b.hasAttribute('data-all');
       $$('input[data-ax="' + ax + '"]', H).forEach(function (i) { i.checked = on; S.show[ax][i.value] = on; });
@@ -516,9 +552,32 @@ function wire() {
     else return;
     arrange();
   });
-  // One list open at a time; a click outside closes it.
+  S.box.addEventListener('scroll', edge, {passive: true});
+  // --q3tb is the bar height: the details column sticks under the bar (gapmap.css).
+  function barH() { S.el.style.setProperty('--q3tb', S.bar.offsetHeight + 'px'); }
+  barH();
+  if (window.ResizeObserver) { new ResizeObserver(edge).observe(S.box); new ResizeObserver(barH).observe(S.bar); }
+  else addEventListener('resize', function () { edge(); barH(); });
+  // Keyboard focus is never hidden under the sticky bar: scroll by the overlap (app.js does the same for Q1).
+  S.el.addEventListener('focusin', function (e) {
+    var n = e.target, fv = true;
+    try { fv = n.matches(':focus-visible'); } catch (x) {}
+    if (!fv || S.bar.contains(n) || getComputedStyle(S.bar).position !== 'sticky') return;
+    setTimeout(function () {
+      var r = n.getBoundingClientRect(), t = S.bar.getBoundingClientRect();
+      if (r.top < t.bottom && r.bottom > t.top) scrollBy(0, r.top - t.bottom - 16);
+    }, 0);
+  });
+  // One list open at a time; a click outside closes it. An open list stays inside the window.
   $$('.q3pick', H).forEach(function (d) {
-    d.addEventListener('toggle', function () { if (d.open) $$('.q3pick', H).forEach(function (o) { if (o !== d) o.open = false; }); });
+    d.addEventListener('toggle', function () {
+      if (!d.open) return;
+      $$('.q3pick', H).forEach(function (o) { if (o !== d) o.open = false; });
+      var p = $('.q3pop', d), r;
+      p.style.left = '';
+      r = p.getBoundingClientRect();
+      if (r.right > root.clientWidth - 8) p.style.left = Math.min(0, root.clientWidth - 8 - r.right) + 'px';
+    });
   });
   doc.addEventListener('click', function (e) {
     $$('.q3pick[open]', H).forEach(function (d) { if (!d.contains(e.target)) d.open = false; });

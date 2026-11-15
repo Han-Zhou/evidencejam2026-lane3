@@ -16,6 +16,10 @@ the branch, commits ahead of and behind main, changed files, the last commit, th
 build result and the first-view weight. compare.html shows two previews side by side.
 While "serve" runs, the "Rebuild all" button rebuilds without a restart.
 
+A worktree with no work beyond main is hidden: all its commits are in main (it is
+merged, or its agent has not committed yet) and it has no uncommitted files. It is not
+built, and the gallery lists it by name at the bottom. It comes back when it has new work.
+
 Notes are git branch descriptions. All worktrees share them, and they never go into
 the files you merge. An agent sets its own note with:
     git config branch."$(git branch --show-current)".description "Edge labels on hover"
@@ -166,7 +170,7 @@ footer{padding:0 16px 24px}
 """
 
 
-def gallery(rows):
+def gallery(rows, hidden):
     e = html.escape
     sha = git("rev-parse", "--short", BASE, cwd=MAIN)
     trs = []
@@ -176,8 +180,6 @@ def gallery(rows):
         note = e(d["note"]) if d["note"] else '<span class="muted">No note</span>'
         if d["main"]:
             vs = '<span class="muted">base</span>'
-        elif not d["ahead"] and not d["dirty"]:
-            vs = '<span class="muted">No new work</span>'
         else:
             vs = "%d ahead" % d["ahead"]
         if d["behind"]:
@@ -204,17 +206,19 @@ def gallery(rows):
         cmp_ = "" if d["main"] or not (d["build_ok"] or d["stale"]) else '<a href="compare.html#a=main&amp;b=%s">vs main</a>' % e(s)
         trs.append("<tr><td>%s</td><td class=note>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
                    % (link, note, last, vs, ch, b, cmp_))
+    hid = ("<p>Hidden, no work beyond %s (merged, or nothing committed yet): %s</p>"
+           % (e(BASE), ", ".join("<code>%s</code>" % e(d["slug"]) for d in hidden))) if hidden else ""
     return """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Worktree previews</title><style>%s</style></head><body>
-<header><div><h1>Worktree previews</h1><div class="muted">Built %s · base <code>%s</code> at <code>%s</code> · %d worktrees</div></div>
+<header><div><h1>Worktree previews</h1><div class="muted">Built %s · base <code>%s</code> at <code>%s</code> · %d shown, %d hidden</div></div>
 <form method="post" action="/__rebuild"><button type="submit">Rebuild all</button> <a href="compare.html">Compare two</a></form></header>
 <div class="wrap"><table><thead><tr><th scope=col>Preview</th><th scope=col>Idea</th><th scope=col>Last commit · branch</th><th scope=col>vs main</th><th scope=col>Changed files</th><th scope=col>Build</th><th scope=col>Compare</th></tr></thead>
 <tbody>%s</tbody></table></div>
-<footer class="muted"><p>Set a note from inside a worktree: <code>git config branch."$(git branch --show-current)".description "Your idea"</code>
+<footer class="muted">%s<p>Set a note from inside a worktree: <code>git config branch."$(git branch --show-current)".description "Your idea"</code>
 or from the main checkout: <code>python3 prototypes/preview.py note &lt;slug&gt; "Your idea"</code>.</p>
 <p>"Rebuild all" works only under <code>python3 prototypes/preview.py serve</code>. Accept an idea: merge its branch. Abandon it: <code>git worktree remove</code> and delete the branch.</p></footer>
 </body></html>
-""" % (CSS, time.strftime("%H:%M:%S"), e(BASE), e(sha), len(rows), "\n".join(trs))
+""" % (CSS, time.strftime("%H:%M:%S"), e(BASE), e(sha), len(rows), len(hidden), "\n".join(trs), hid)
 
 
 def compare_page(rows):
@@ -247,7 +251,10 @@ addEventListener("hashchange",read);read();
 def build_all():
     with LOCK:
         OUT.mkdir(parents=True, exist_ok=True)
-        rows = [info(wt) for wt in worktrees() if Path(wt["worktree"]).is_dir()]
+        found = [info(wt) for wt in worktrees() if Path(wt["worktree"]).is_dir()]
+        # Merged (or not started) and clean: nothing to see beyond main.
+        hidden = [d for d in found if not d["main"] and not d["ahead"] and not d["dirty"]]
+        rows = [d for d in found if d not in hidden]
         for d in rows:
             build(d)
         keep = {d["slug"] for d in rows}
@@ -256,17 +263,19 @@ def build_all():
                 shutil.rmtree(p)
             elif p.suffix == ".log" and p.name.removesuffix(".build.log") not in {d["slug"] for d in rows if d["log"]}:
                 p.unlink()
-        (OUT / "index.html").write_text(gallery(rows), encoding="utf-8")
+        (OUT / "index.html").write_text(gallery(rows, hidden), encoding="utf-8")
         (OUT / "compare.html").write_text(compare_page(rows), encoding="utf-8")
-        return rows
+        return rows, hidden
 
 
-def report(rows):
+def report(rows, hidden):
     print("%-15s %-8s %5s %6s %5s  %s" % ("slug", "build", "ahead", "behind", "dirty", "note"))
     for d in rows:
         b = "ok" if d["build_ok"] else ("STALE" if d["stale"] else ("FAILED" if d["log"] else "-"))
         print("%-15s %-8s %5s %6s %5s  %s" % (d["slug"], b, d["ahead"] or "-", d["behind"] or "-",
                                               d["dirty"] or "-", d["note"] or "(no note)"))
+    if hidden:
+        print("hidden, no work beyond %s: %s" % (BASE, ", ".join(d["slug"] for d in hidden)))
     print("gallery: %s" % (OUT / "index.html"))
 
 
@@ -274,7 +283,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/__rebuild":
             return self.send_error(404)
-        report(build_all())
+        report(*build_all())
         self.send_response(303)
         self.send_header("Location", "/")
         self.end_headers()
@@ -305,7 +314,7 @@ def main():
         sys.exit("no worktree with slug %r (run preview.py to list slugs)" % args[1])
     if cmd not in ("build", "serve"):
         sys.exit(__doc__)
-    report(build_all())
+    report(*build_all())
     if cmd == "serve":
         port = int(args[1]) if len(args) > 1 else PORT
         srv = ThreadingHTTPServer(("127.0.0.1", port), partial(Handler, directory=str(OUT)))
