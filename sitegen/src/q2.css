@@ -11,13 +11,13 @@ html.js .q2-head .nojs { display: none; }
 html.js .q2-head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 html:not(.js) .q2 { margin-top: 56px; border-top: 1px solid var(--line-strong); }
 .q2-cov, .q2-clock, .q2-filters, .q2-board { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
-.q2-clock { padding: 14px 20px; }
-/* Evidence coverage bar (top of the panel): findings measured in each 5-year span. The count is
+.q2-clock { margin-bottom: 14px; padding: 14px 20px; }
+/* Evidence coverage bar (under the "Time to reference" box): findings measured in each 5-year span. The count is
    text in each cell; the fill is a plum-to-pink density tier, its own palette (not the Q3 indigo).
    Same tiers in both themes, so "darker: more findings" stays true. --cvN is the fill, --cvN-fg
    its text colour (AA: 14.7, 11.9, 7.0, 13.9 to 1). A span with no finding is hatched like a gap,
    never drawn as a light shade. */
-.q2-cov { margin-bottom: 14px; padding: 12px 20px 4px;
+.q2-cov { padding: 12px 20px 4px;
   --cv1: #FFE5F0; --cv2: #F7CAD0; --cv3: #8B3B76; --cv4: #4A1942;
   --cv1-fg: #1A1A1A; --cv2-fg: #1A1A1A; --cv3-fg: #FFFFFF; --cv4-fg: #FFFFFF; }
 .q2-cov h3 { margin: 0 0 8px; font: 600 .9rem var(--sans); }

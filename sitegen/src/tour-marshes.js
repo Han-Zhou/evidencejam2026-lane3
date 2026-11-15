@@ -71,7 +71,7 @@ Q1Tour.add('marshes', {
         'The <b>Lags</b> labels name attributes that are below the natural reference.'
     },
     {
-      // The coverage bar at the top of the panel.
+      // The coverage bar under the short answer.
       target: '.q2-cov',
       title: 'Evidence by marsh age',
       text: 'This bar counts the findings that studies measured at each marsh age. Darker means more findings. ' +

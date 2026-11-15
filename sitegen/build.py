@@ -1437,7 +1437,7 @@ def q2_section(Q):
         '<aside class="q2-dcol js-only"><section class="q2-drawer" aria-labelledby="q2-drh">'
         '<div class="dr-head"><h3 id="q2-drh" tabindex="-1">Details</h3><button type="button" class="q2-x" aria-label="Close details">×</button></div>'
         '<div class="q2-body"><p class="muted">%s</p></div></section></aside></div></section>'
-    ) % (esc(Q2_TITLE), esc(Q["question"]), Q2_PAGE, q2_coverage(Q), q2_clock(Q), q2_filters(Q), q2_board(Q),
+    ) % (esc(Q2_TITLE), esc(Q["question"]), Q2_PAGE, q2_clock(Q), q2_coverage(Q), q2_filters(Q), q2_board(Q),
          limits_html({"file": Q2_FILE, "src": Q}), esc(Q["how_built"]), esc(Q["rule"]), Q2_FILE, Q2_DRAWER_EMPTY)
 
 
