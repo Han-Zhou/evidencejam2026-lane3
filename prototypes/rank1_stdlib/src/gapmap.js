@@ -163,10 +163,13 @@ function skeleton(D) {
     // details stay at the right of them, and the boxes change from 4 to 2 per row when the details open.
     '<div class="q3stage"><div class="q3main"><div class="gcard q3card"><div class="q3scr"><div class="q3box">' + table + '</div></div>' +
     '<div class="gact"><button type="button" class="tbtn" data-gm="png">Download PNG</button></div></div>' +
-    // The limitations as a row of boxes: the same markup as build.py lim_boxes().
-    '<details class="q3lim"><summary>Limitations and how this map was built</summary><div class="limw"><ul class="liml" role="list">' +
-    D.lims.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div><p>' + esc(D.how) + '</p>' +
-    '<p>Certainty rule: <code>' + esc(D.rule) + '</code>. Source file: <code>answers/q3_grassland_gaps.json</code>.</p></details></div>' +
+    // The limitations show open, as a row of boxes: the same markup as build.py limits_html(), with
+    // an h3 (this panel has no h3 before it). How the map was built is in a dropdown, as in Q2.
+    '<div class="q3foot"><div class="limh"><h3>Limitations</h3><p class="lsrc">From the pack\'s answer file ' +
+    '<code>q3_grassland_gaps.json</code> (field <code>limitations</code>).</p></div><div class="limw"><ul class="liml" role="list">' +
+    D.lims.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>' +
+    '<details class="q3built"><summary>How this map was built</summary><p>' + esc(D.how) + '</p>' +
+    '<p>Certainty rule: <code>' + esc(D.rule) + '</code>. Source file: <code>answers/q3_grassland_gaps.json</code>.</p></details></div></div>' +
     '<div class="q3dcol" hidden><section class="drawer q3dr" aria-labelledby="q3drh"><div class="dr-head"><h3 id="q3drh" tabindex="-1">Details</h3>' +
     '<button type="button" class="x" aria-label="Close details">×</button></div><div class="dr-body"></div></section></div></div>';
 }

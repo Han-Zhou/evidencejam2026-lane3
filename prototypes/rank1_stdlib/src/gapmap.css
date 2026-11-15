@@ -105,9 +105,11 @@
 
 /* details: in the sticky column (style.css .drawer gives the box and its own scroll) */
 .q3dr { position: static; max-height: calc(100vh - var(--q3tb, 0px) - 32px); }
-.q3lim { margin-top: 18px; font-size: .9rem; color: var(--text-2); }
-.q3lim summary { cursor: pointer; color: var(--text); font-weight: 500; width: max-content; max-width: 100%; }
-.q3lim p { max-width: 90ch; }
+/* under the map: the limitations (open, style.css .limh and .liml), then "How this map was built" */
+.q3foot { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line); }
+.q3built { margin-top: 12px; font-size: .9rem; color: var(--text-2); }
+.q3built summary { cursor: pointer; color: var(--text); font-weight: 500; width: max-content; max-width: 100%; }
+.q3built p { max-width: 90ch; }
 
 @media (max-width: 1100px) {
   .q3stage.open { grid-template-columns: minmax(0, 1fr) 300px; }

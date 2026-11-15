@@ -193,7 +193,7 @@ html:not(.js) .vbar { display: none; }
 .gact { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; margin-bottom: 6px; }
 /* Limitations: the panel file's own strings, word for word (build.py limits_html). */
 .limh { flex: 1 1 26rem; min-width: 0; }
-.limh h4 { margin: 4px 0 0; font: 500 1.02rem/1.3 var(--serif); color: var(--text); letter-spacing: -.01em; }
+.limh h3, .limh h4 { margin: 4px 0 0; font: 500 1.02rem/1.3 var(--serif); color: var(--text); letter-spacing: -.01em; }
 .lsrc { margin: 2px 0 0; font-size: .78rem; color: var(--text-3); }
 /* One box per limitation, side by side. .limw is the container: 4 boxes per row when it is wide,
    2 when it is medium, 1 when it is narrow. There are 4 limitations in each file, so a row is
