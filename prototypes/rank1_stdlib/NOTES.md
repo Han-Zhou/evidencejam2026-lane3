@@ -164,11 +164,17 @@ no graph view. When the tab is open, the page heading and question switch to Q3.
   judging rules require this.
 - **Gaps** (`no_evidence`) have a neutral grey fill, a diagonal hatch and a dashed border, so they
   show as gaps. They never get an indigo fill and they never fade.
-- **Top-left block of the table:** sort rows and sort columns (pack order, A to Z, most filled
-  cells, most studies), a checklist of the rows and the columns to show, a minimum density (Any,
-  Some or denser, Dense or denser, Densest only) and "Hide empty rows and columns". "Most studies"
-  adds the study counts of the cells, so a study that counts in two cells counts twice. Cells below
-  the minimum density fade (they are not gaps) and leave the tab order.
+- **Sort and filter bar:** the first thing in the panel, like the Q1 toolbar (the same `.toolbar`
+  box, sticky 8 px from the top). It has one group for the rows (outcomes) and one for the columns
+  (interventions). Each group has a sort (pack order, A to Z, most filled cells, most studies) and
+  a checklist of the rows or columns to show. Then come a minimum density (Any, Some or denser,
+  Dense or denser, Densest only), "Hide empty rows and columns" and the count ("Showing 16 of 16
+  outcomes, …"). "Most studies" adds the study counts of the cells, so a study that counts in two
+  cells counts twice. Cells below the minimum density fade (they are not gaps) and leave the tab
+  order. An open checklist moves left to stay inside the window. Keyboard focus is never left
+  under the stuck bar: the page scrolls by the overlap, as `app.js` does for Q1. Below 701 px the
+  bar wraps and does not stick (Q1's one-row bar that scrolls sideways would clip the
+  checklists). The top-left cell of the table now only names the axes.
 - **The legend** is above the table. Its heading is "Density". It shows the four tiers (swatch,
   name, meaning, then the count of cells in brackets, for example "Thin · 1 study (72)") and the
   gap entry. The legend entries wrap, so the legend never widens the page on a phone. **Export CSV, Export XLSX and Copy image** are
@@ -184,9 +190,18 @@ no graph view. When the tab is open, the page heading and question switch to Q3.
     density tiers. The footer also has the source, the gap note and the filters.
   - `export.js` now exports its CSV and ZIP writers. `sheet()` takes `{v, s}` cells and `book()`
     takes optional fills, so Q1's exports do not change.
-- **Selecting a cell** shows a status line with "Details below" and "Clear". The details, under the
-  map, show the density tier first, then the certainty with its dots, the rationale, the counts,
-  the pack density, the study directions and the claims by paper with their quotes. A gap shows the gap note and `searched_for`.
+- **Selecting a cell** shows a status line with "Go to details" and "Clear", and opens the details.
+  The details show the density tier first, then the certainty with its dots, the rationale, the
+  counts, the pack density, the study directions and the claims by paper with their quotes. A gap
+  shows the gap note and `searched_for`.
+- **Where the details show:** the details column is hidden until a cell is selected. From 900 px
+  up, it opens at the right of the map (340 px, or 300 px below 1100 px) and sticks 12 px under
+  the sort and filter bar while the page scrolls (`--q3tb`, the bar height, set by `gapmap.js`). A
+  long drawer scrolls inside it. Below 900 px it opens under the map.
+  The map keeps its cell size, so with the details open it scrolls sideways in its box. The row
+  labels and the axis names stay at the left. When columns are hidden at the right, the
+  right edge fades. The selected cell is scrolled clear of the row labels and of the fade. "Clear",
+  ×, Escape or a second click on the cell closes the details, and focus goes back to the cell.
 - **Files:**
   - `gapmap.js` and `gapmap.css` load the first time the tab opens. `data/gapmap.json` (64 KB)
     loads with them.
@@ -804,8 +819,9 @@ the graph is still there.
 ## Q2 panel
 
 A third tab, "Created marshes", answers Q2 from `../../answers/q2_created_marshes.json`.
-It follows the design of `q2_export/q2_marshes.html`: a "Time to reference" card, filters, one
-findings board, a "When was it measured?" timeline and a details drawer.
+It follows the design of `q2_export/q2_marshes.html`: an "Evidence coverage by marsh age" bar
+at the top, a "Time to reference" card, filters, one findings board and a details drawer. Each
+board row that lists ages, and each with-age row, has a "When was it measured?" dropdown under it.
 
 What was added:
 
@@ -815,9 +831,18 @@ What was added:
 - The Q2 section (`#panel-marshes`) is not a `[data-panel]`, so the Q1 code in `app.js` never
   sets it up. Its rows carry `data-finding-id`, `data-direction`, `data-certainty`,
   `data-studies` and `data-claims` (or `data-gap-id`) with the pack values.
-- The timeline marks are placed in Python. The axis ends at the largest age in the file,
-  rounded up to 5. There is no "arrival" line: no study reports the year a created marsh
-  matches its reference, and the page says so.
+- The coverage bar and the dropdown marks are placed in Python. The axis ends at the largest
+  age in the file, rounded up to 5. There is no "arrival" line: no study reports the year a
+  created marsh matches its reference, and the page says so.
+- Coverage bar (`q2_coverage()`): one cell per 5-year span, with the number of findings that
+  have a measurement in it as text. A range counts in each span that it overlaps; a single
+  age counts in the span that holds it. The fill is the Q3 density tier (`--t1` to `--t4`),
+  scaled to the busiest span. A span with no finding is hatched, like a gap. The bar counts
+  all findings and does not follow the filters.
+- "When was it measured?" (`q2_when()`): a native `<details>` in a full-width `tr.q2-when`
+  under its finding row, so it opens without JS. The row has `data-q2-ref`, `data-attr` and
+  `data-certainty` (no `data-finding-id`), so the filters hide it and the selection marks it
+  with its finding row. On a phone the two rows show as one card.
 - `src/app.js`: the tabs loop finds the Q2 section by id, `select()` sets the class `mr` and
   loads `q2.js`, `route()` accepts `#marshes` and `#marshes/<id>`, and the key and focus
   handlers stop early on the Q2 tab.

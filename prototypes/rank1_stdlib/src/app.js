@@ -295,15 +295,43 @@ function claimLi(p, c) {
     ' →</span> ' + esc(C.o) + '</p><p class="cm">' + dirH(C.d) + ' · grade ' + CERT[C.g][1] + ' · ' + esc(C.et.map(un).join(', ')) +
     ' · comparator: ' + esc(un(C.c)) + '</p><blockquote>' + esc(C.q) + '</blockquote><p class="cid"><code>' + esc(c) + '</code></p></li>';
 }
-function byPaper(p, ids, heading) {
-  var D = p.data, g = {}, order = [], ix = {};
-  ids.forEach(function (c) { var d = D.claims[c].doc; if (!g[d]) { g[d] = []; order.push(d); } g[d].push(c); });
+// Papers ranked by the grades of their claims (each claim's certainty_grade, unchanged): the most
+// claims at the highest grade first, then at the next grade, and so on. In a paper, the claims go
+// from the highest grade down. A tie keeps the order of the ids.
+var GORD = ['high', 'moderate', 'low', 'very_low'];
+function rankPapers(ids, docOf, gradeOf) {
+  var g = {}, n = {}, order = [], ix = {}, pos = {};
+  ids.forEach(function (c, i) {
+    var d = docOf(c), k = gradeOf(c);
+    if (!(c in pos)) pos[c] = i;
+    if (!g[d]) { g[d] = []; n[d] = {}; order.push(d); }
+    g[d].push(c); n[d][k] = (n[d][k] || 0) + 1;
+  });
   order.forEach(function (d, i) { ix[d] = i; });
-  order.sort(function (a, b) { return g[b].length - g[a].length || ix[a] - ix[b]; });
-  return '<h4>' + heading + ' (' + pl(order.length, 'paper', 'papers') + ')</h4>' + order.map(function (d) {
-    var P_ = D.papers[d];
-    return '<section class="pp"><h5>' + paperT(P_) + '</h5><p class="pm">' + doiH(d, P_[2]) + ' · ' + pl(g[d].length, 'claim', 'claims') +
-      '</p><ol class="claims">' + g[d].map(function (c) { return claimLi(p, c); }).join('') + '</ol></section>';
+  function r(c) { var k = GORD.indexOf(gradeOf(c)); return k < 0 ? GORD.length : k; }
+  order.forEach(function (d) { g[d].sort(function (a, b) { return r(a) - r(b) || pos[a] - pos[b]; }); });
+  order.sort(function (a, b) {
+    for (var k = 0; k < GORD.length; k++) { var x = (n[b][GORD[k]] || 0) - (n[a][GORD[k]] || 0); if (x) return x; }
+    return ix[a] - ix[b];
+  });
+  return order.map(function (d) { return {d: d, ids: g[d], n: n[d]}; });
+}
+// The paper's grades as text: "Moderate", or "Moderate (3), Low (1)". The dots show the highest grade.
+function gradesH(n, word) {
+  var ks = GORD.filter(function (k) { return n[k]; });
+  if (!ks.length) return '';
+  return '<span class="dots" aria-hidden="true">' + dots(ks[0]) + '</span> ' + esc(ks.map(function (k) {
+    return word(k) + (ks.length > 1 ? ' (' + n[k] + ')' : '');
+  }).join(', '));
+}
+var RANKN = 'Ranked by claim grade, highest first.';
+function byPaper(p, ids, heading) {
+  var D = p.data, R = rankPapers(ids, function (c) { return D.claims[c].doc; }, function (c) { return D.claims[c].g; });
+  return '<h4>' + heading + ' (' + pl(R.length, 'paper', 'papers') + ')</h4><p class="pm">' + RANKN + '</p>' + R.map(function (x) {
+    var P_ = D.papers[x.d];
+    return '<section class="pp"><h5>' + paperT(P_) + '</h5><p class="pm">' + gradesH(x.n, function (k) { return CERT[k][1]; }) + ' · ' +
+      doiH(x.d, P_[2]) + ' · ' + pl(x.ids.length, 'claim', 'claims') +
+      '</p><ol class="claims">' + x.ids.map(function (c) { return claimLi(p, c); }).join('') + '</ol></section>';
   }).join('');
 }
 function edgeList(p, title, refs, from) {
@@ -323,6 +351,7 @@ function drawerHtml(p, ref) {
       var x = D.items[r], ids = x.ids ? x.ids : (x.ty === 'inter' ? [x.id] : []);
       var mine = ids.filter(function (c) { return D.claims[c].doc === id; });
       if (!mine.length) return;
+      mine = rankPapers(mine, function () { return id; }, function (c) { return D.claims[c].g; })[0].ids;
       h += '<section class="pp"><h4>' + go(r, x.ty === 'inter' ? 'Interaction claim' : esc(lab(x))) + '</h4><ol class="claims">' +
         mine.map(function (c) { return claimLi(p, c); }).join('') + '</ol></section>';
     });
@@ -805,7 +834,9 @@ function explore(p, btn) { need('explore', true).then(function () { window.Q1X.o
 // Shared with the modules that load later (snap.js, export.js). explore.js moves the panel's own SVG and needs none of it.
 window.Q1 = {DIR: DIR, CERT: CERT, DORD: DORD, P: P, load: load, related: related, passes: passes, inLens: inLens, kindOf: kindOf,
   // For the Q3 gap map (gapmap.js): module loader and the drawer pieces.
-  need: need, esc: esc, pl: pl, dots: dots, dirH: dirH, certH: certH, sdBar: sdBar, byPaper: byPaper};
+  need: need, esc: esc, pl: pl, dots: dots, dirH: dirH, certH: certH, sdBar: sdBar, byPaper: byPaper,
+  // For the Q2 drawer (q2.js): the same paper ranking.
+  rankPapers: rankPapers, gradesH: gradesH, RANKN: RANKN};
 
 $$('[data-panel]').forEach(setup);
 var tl = $('.cards');
