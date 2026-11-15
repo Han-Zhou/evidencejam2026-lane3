@@ -29,21 +29,24 @@ There is no install step.
 
 ## Files shipped (bytes)
 
-| File | v5 bytes | v4 bytes | When it loads |
+| File | v6 bytes | v5 bytes | When it loads |
 | --- | ---: | ---: | --- |
-| `index.html` | 64,886 | 115,807 | first view |
-| `style.css` | 22,434 | 23,375 | first view (`src/style.css` + `src/graph.css`) |
-| `app.js` | 32,147 | 33,274 | first view |
-| `explore.js` | 21,117 | 21,117 | on the first click on "Expand" |
-| `explore.css` | 6,519 | 6,519 | the same |
-| `snap.js` | 5,042 | – | on the first hover, focus or click on "Copy image" |
-| `export.js` | 10,458 | – | on the first click on "CSV" or "XLSX" |
+| `index.html` | 63,815 | 64,886 | first view |
+| `style.css` | 24,199 | 22,434 | first view (`src/style.css` + `src/graph.css`) |
+| `app.js` | 33,848 | 32,147 | first view |
+| `explore.js` | 20,973 | 21,117 | on the first click on "Expand" |
+| `explore.css` | 6,326 | 6,519 | the same |
+| `snap.js` | 5,042 | 5,042 | on the first hover, focus or click on "Copy image" |
+| `export.js` | 10,458 | 10,458 | on the first click on "Export CSV" or "Export XLSX" |
 | `data/findings.json` | 119,781 | 119,781 | on the first click, search or matrix in Findings |
 | `data/network.json` | 171,473 | 171,473 | the same, in Network |
-| `claims-findings.html` | 181,974 | 181,620 | only when a reader follows a link (the no-JS road to every quote) |
+| `claims-findings.html` | 181,974 | 181,974 | only when a reader follows a link (the no-JS road to every quote) |
 | `claims-network.html` | 259,241 | 259,241 | the same |
-| **Total** | 895,072 | 932,207 | |
-| **First view** | **119,467** | **172,456** | `index.html` + `style.css` + `app.js` (not gzipped; `http.server` does not compress) |
+| **Total** | 897,130 | 895,072 | |
+| **First view** | **121,862** | **119,467** | `index.html` + `style.css` + `app.js` (not gzipped; `http.server` does not compress) |
+
+v6 adds 2,395 bytes to the first view: the status-line descriptions, the pinned view bar, the
+action row and the matrix stack. The line-width and system-theme code that was removed was smaller.
 
 v5 cuts the first view by 52,989 bytes, because the tables, the glance strip and the HTML legend
 are commented out. The in-graph legend adds about 6.6 KB back.
@@ -53,6 +56,75 @@ the pathway code. The hover-card code that was removed was smaller than what was
 v3 adds 1,590 bytes more (the faint-line rules, the compact strips and one legend line).
 v4 adds 2,254 bytes more (the two Expand buttons, `data-label` on each node, the loader).
 The expanded view itself (27,636 bytes) loads only when a reader opens it.
+
+## Changes in v6
+
+Six requests drove this version. Four agents did the work in parallel, each in its own git
+worktree. The four branches were then merged.
+
+**1. One line width.** Line width does not show the number of studies any more. Every evidence
+line is 2.1 px (the old width for 1 study). Gap lines (1.6 px, dashed), moderation lines (3 px,
+dotted) and membership lines keep their own styles. `stroke_w()` is gone from `layout.py`. In
+its place, `LINE_W` holds the width for each line kind, and every arrowhead has one size
+(`ARROW_HW`). Ports still spread, so lines do not merge. The edge paths have no
+`stroke-width` attribute; CSS sets it. The "Line width" column is gone from the in-graph legend,
+and the legend direction swatch is 2.1 px to match. The expanded view does the same. Study counts
+stay in the chips' `aria-label`, the drawer, the status line and the exports.
+
+**2. Light is the default theme.** The page does not follow `prefers-color-scheme` any more.
+Dark shows only when the reader selects it with the toggle (`localStorage` `q1-theme`, applied
+before first paint as before). Without JS the page is always light. The one dark token block is
+`:root[data-theme="dark"]` (the same values, with `color-scheme: dark`).
+
+**3. The view bar is pinned at the top.** The row above the graph has three parts: Graph | Matrix,
+Expand and the status line. It is sticky. With the toolbar at the top, the row stays directly
+under the toolbar (`top: calc(var(--dockh) + 16px)`, `z-index` 19, under the toolbar's 20, so
+search results stay on top). With the toolbar at the bottom, left or right, the row stays at
+8 px from the top. Below 1100 px only the status line stays (`.vbar` is `display: contents`).
+When a node gets keyboard focus under the pinned row, the page scrolls so the node shows.
+
+**4. The status line describes the selection.** It uses only values from the pack. Direction is
+shown as a glyph and a word, and certainty as dots and a grade, never by colour alone:
+- Edge: `Mycorrhizal or soil inoculation → Seedling survival · ↕ Mixed (studies disagree) ·
+  ●●●○ Moderate certainty · 2 studies · 4 claims`
+- Moderation: `Fertilization at planting changes the effect of Site preparation → Seedling
+  growth & size · ↑ Increase · ●○○○ Very low certainty · 1 study · 2 claims`
+- Gap: `… → Seedling survival · No evidence · No study in this corpus tested this pairing. This
+  is a gap, not a negative result.`
+- Node: `Site preparation · Site treatment · Pathways: 12 edges (5 direct, 7 further)`. A second,
+  smaller line keeps the path note: "Lighter lines are further steps. Edges beyond the first
+  step are separate bodies of evidence. A path is not one tested effect."
+- Paper: `Paper: <title> (<year>) · cited by 6 edges`. Interaction claim (Findings): one claim,
+  not a pooled finding, not drawn in the graph.
+
+The live region (`.sd`, `role="status"`) holds only this text. Clear (and "Details below" under
+900 px) sit outside it. The text is rewritten only when it changes.
+
+**5. Copy image, Export CSV and Export XLSX are at the bottom right.** They are a right-aligned
+row (`.gact`) at the bottom of a new graph card (`.gcard`). The row is not over the graph. The
+`data-act` hooks and the lazy loading of `snap.js` and `export.js` are as before. "CSV" and
+"XLSX" are now "Export CSV" and "Export XLSX". In Matrix view, "Copy image" is hidden, because
+it copies the graph, and the graph is not on the screen.
+
+Items 4 and 5 make the area above the graph one short row: the status line no longer wraps
+beside six buttons. On Network at 1440 × 900 the graph card starts at 408 px (before: 428 px).
+
+**6. The matrix uses the same box as the graph.** At start-up, `stack()` in `app.js` puts `.gbox`
+and `.mbox` into one grid cell (`.vstack`). Thus the cell is as tall as the graph. In Matrix view
+the graph has `visibility: hidden`. It keeps its size, but it is not in the tab order or the
+accessibility tree. The browser keeps the two sizes the same on resize, on a tab change and in
+every dock position. No JS measures them. The table fills the width and the height: the row-header
+column is 11rem (8rem at 700 px or less) and the target columns share the rest. Below the minimum
+width, the box scrolls sideways, and the row labels stay in view. Box sizes at 1440 × 900: Network
+984 × 997, Findings 984 × 844, for the graph and for the matrix. Before, the Findings matrix was
+460 px wide.
+
+**Checks.** `check_site.py` PASS. Two builds are byte-identical. Headless Chrome with a dark
+system setting: the page opens light. Effect lines are all 2.1 px. The graph box and the matrix box
+are the same size in both panels. A matrix cell writes its description to the status line. After a
+scroll, the status line stays at 116 px. CSV download works. There is no horizontal scroll at
+390 px and there are no page errors. Each agent also tested its own part. Lighthouse and axe-core
+were not run.
 
 ## Changes in v5
 
@@ -247,7 +319,8 @@ Two requests drove this version.
   `data-theme` on `<html>` and stores the choice in `localStorage` (`q1-theme`, every call in
   `try/catch`). A one-line inline script in `<head>`, before the stylesheet, applies the stored
   choice, so there is no flash. The claims pages run the same line, so they follow the choice.
-  Without JS the button is hidden and the system theme still works.
+  Without JS the button is hidden and the system theme still works. (v6: the system theme is
+  not used any more. Light is the default; see v6.)
 - The SVG has no hard-coded colour. Nodes, edges, chips, markers, gaps and lane titles use the
   CSS variables, so both themes apply to the graph.
 - Look: cool grey page, flat near-white cards with 16 px radius and no shadow, serif for
@@ -308,7 +381,8 @@ the graph is still there.
   barycenter, then by first-seen order in the JSON.
 - Vertical places: isotonic regression (pool adjacent violators) keeps the order and the
   minimum spacing and pulls each item towards the mean of its neighbours.
-- Ports spread along each node side by line width, so thick lines do not merge.
+- Ports spread along each node side, so lines do not merge. (Before v6 the spread followed the
+  line width.)
 - Curves are cubic Béziers. Edges that skip the condition lane pass through their own slot
   in that lane, not through a node label.
 - The in-lane edge (Competing vegetation → Seedling nutrient status) is an arc on the lane's
@@ -326,7 +400,8 @@ the graph is still there.
   JS the cards are links and both panels show stacked. With JS they become a tablist (arrow
   keys work) and the hash records the panel and the selected item.
 - **Graph (SPEC 3).** Chips show a direction glyph and certainty dots. Colour is only
-  redundant. Line width = number of studies (1.5 px + 0.6 px per study, capped at 7.5 px).
+  redundant. All evidence lines are 2.1 px (v6). Before v6, line width showed the number of
+  studies (1.5 px + 0.6 px per study, capped at 7.5 px).
   Arrowheads sit at the target. Node kinds differ by shape: square corners for site
   treatments, a side bar for conditions, a double border for outcomes, a dashed border with
   member chips for the combination.
@@ -403,8 +478,9 @@ the graph is still there.
 - On a viewport shorter than the graph column (about 870 px for Network), the bottom of the
   drawer column is below the fold; the page scrolls to it. The drawer is not sticky any more,
   because a sticky drawer taller than the graph scrolled its own header off the screen.
-- The status line is a live region that contains two buttons. It is rewritten only when its
-  text changes, so a screen reader announces each new selection once.
+- A long selection description (most edges, gaps, the moderation edge, papers) uses two lines
+  of the status line at 1440 px. When the line count changes, the graph moves down about 20 px.
+  The full words "Mixed (studies disagree)" and "certainty" were kept on purpose.
 - `app.js` is only whitespace-stripped (32 KB). A real minifier would cut it by about half,
   but that needs a tool outside the standard library.
 - SVG label wrapping uses an estimated character width, not font metrics. A very wide

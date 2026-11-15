@@ -3,7 +3,7 @@
    It uses only its own classes (.glg and the classes below), no hook attributes and none
    of .ln .nd .chip .mem .gapl .dia .it, so the selection fade (.sel, .on, .off, .lo, .miss)
    never reaches it and explore.js never reads it. Colours are the theme tokens of style.css,
-   so the light theme, the dark theme and the system choice all apply. */
+   so the light theme and the dark theme both apply. */
 .glg text { font-size: 12px; fill: var(--text-2); }
 .glg .lh, .glg .lb { font-weight: 600; fill: var(--text); }
 .glg .g { font-weight: 700; fill: var(--c); }
