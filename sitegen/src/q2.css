@@ -4,7 +4,7 @@
 .d-above_reference, .d-comparable { --c: var(--inc); }
 .q2 { padding-top: 14px; }
 .q2 [hidden] { display: none !important; }
-.q2-q, .q2-cnote, .q2-note { max-width: 84ch; margin: 6px 0 10px; font: 1rem/1.55 var(--serif); color: var(--text-2); }
+.q2-q, .q2-cnote, .q2-note { margin: 6px 0 10px; font: 1rem/1.55 var(--serif); color: var(--text-2); }
 html.js .q2-head .nojs { display: none; }
 /* With JS the page header shows the Q2 title and subtitle, so this head (the h2 and the pack's
    exact question) is for screen readers only, the same as .phead in style.css. */
@@ -80,7 +80,7 @@ html.js .q2-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px;
 .q2-scale { display: flex; justify-content: space-between; margin-top: 3px; font-size: .68rem; color: var(--text-3); }
 .q2-dir, .q2-nodata { display: block; margin-top: 4px; font-size: .86rem; font-weight: 600; }
 .q2-nodata { font-style: italic; }
-.q2-rat { max-width: 46ch; margin: 4px 0 0; font: .86rem/1.45 var(--serif); color: var(--text-2); }
+.q2-rat { margin: 4px 0 0; font: .86rem/1.45 var(--serif); color: var(--text-2); }
 /* "When was it measured?": a dropdown row under its finding row. The marks are ages with
    evidence, not an arrival year. The finding row above it drops its bottom rule. */
 .q2-board tr.q2-hasw > * { border-bottom: 0; padding-bottom: 4px; }

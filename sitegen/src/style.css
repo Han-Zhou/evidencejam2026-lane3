@@ -67,14 +67,12 @@ header.top { padding-top: 22px; }
 .hrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .hrow h1 { margin: 0; }
 .eyebrow { margin: 0; color: var(--text-2); font-size: .85rem; letter-spacing: .02em; }
-.q { max-width: 84ch; font-size: 1.08rem; line-height: 1.6; color: var(--text-2); margin: 8px 0 16px; }
+.q { font-size: 1.08rem; line-height: 1.6; color: var(--text-2); margin: 8px 0 16px; }
 /* The title and subtitle follow the open tab: Q1 (Findings, Network), Q2 (Created marshes, class mr)
    or Q3 (Gap map, class q3). Without JS the header shows Q1; the Q2 and Q3 sections show their own. */
 .hq2, .hq3, html.mr .hq1, html.q3 .hq1 { display: none; }
 html.mr h1 .hq2, html.q3 h1 .hq3 { display: inline; }
 html.mr p.hq2, html.q3 p.hq3 { display: block; }
-/* The header subtitles use the full header width (no 84ch limit), so a short one stays on one line. */
-p.hq1, p.hq2, p.hq3 { max-width: none; }
 footer { padding-top: 28px; padding-bottom: 48px; color: var(--text-3); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 64px; }
 
 /* theme toggle */
@@ -131,7 +129,7 @@ html:not(.js) .js-only { display: none !important; }
 .built { flex: none; font-size: .92rem; }
 .built[open] { flex-basis: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
 .built summary { cursor: pointer; color: var(--text); font-weight: 500; }
-.built p { max-width: 74ch; color: var(--text-2); font-size: 1rem; line-height: 1.6; }
+.built p { color: var(--text-2); font-size: 1rem; line-height: 1.6; }
 .kinds div { display: flex; gap: 10px; }
 .kinds dt { font-family: var(--mono); font-size: .8rem; min-width: 10em; color: var(--text-2); }
 .kinds dd { margin: 0; color: var(--text-2); }
@@ -237,7 +235,7 @@ html:not(.js) .vbar { display: none; }
 /* Copy image copies the graph. In Matrix view the graph is not on screen, so the button hides there. */
 .js .viz.mxon [data-act="copy"] { display: none; }
 /* Path note under the Network graph (switched off in v5: it is in the in-graph legend now).
-.limit { font-size: .98rem; line-height: 1.55; color: var(--text-2); max-width: 90ch; margin: 14px 4px 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--text); }
+.limit { font-size: .98rem; line-height: 1.55; color: var(--text-2); margin: 14px 4px 0; padding: 2px 0 2px 14px; border-left: 2px solid var(--text); }
 .limit b { font-family: var(--sans); font-size: .85rem; color: var(--text); font-weight: 600; }
 */
 
@@ -371,7 +369,7 @@ html:not(.js) .vbar { display: none; }
 .drawer .big { font-size: 1rem; margin: .4em 0; color: var(--text); }
 .drawer p { color: var(--text-2); }
 .rat { display: block; color: var(--text-2); font-size: .92rem; line-height: 1.5; margin: 3px 0 0; }
-.note { font-size: 1rem; line-height: 1.55; color: var(--text-2); max-width: 80ch; }
+.note { font-size: 1rem; line-height: 1.55; color: var(--text-2); }
 .drawer .note { border-left: 2px solid var(--text); padding: 2px 0 2px 12px; color: var(--text-2); }
 .sdw { margin: 12px 0; }
 .sdl, .sdt { margin: 0; font-size: .78rem; color: var(--text-3); }
@@ -430,7 +428,7 @@ details.tb > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .tbl blockquote { font-size: .95rem; }
 .sdp { white-space: nowrap; margin-right: 6px; }
 .cites { list-style: none; margin: 0; padding: 0; font-size: .85rem; }
-.lims { max-width: 78ch; color: var(--text-2); font-size: 1rem; line-height: 1.6; }
+.lims { color: var(--text-2); font-size: 1rem; line-height: 1.6; }
 */
 
 /* claims pages */
